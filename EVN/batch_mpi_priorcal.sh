@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -N 2-2
+#SBATCH -N 1-1
 #SBATCH --tasks-per-node 12
 #SBATCH -J apriori_cal
 #SBATCH -m cyclic
