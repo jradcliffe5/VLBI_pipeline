@@ -5,11 +5,13 @@
 #SBATCH -m cyclic
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=jack.radcliffe@manchester.ac.uk
-#SBATCH -o flag_2.sh.stdout.log
-#SBATCH -e flag_2.sh.stderr.log
+#SBATCH -o initflag.sh.stdout.log
+#SBATCH -e initflag.sh.stderr.log
 #Run the application:
-#a2 b1 b2 c1 c2 c3 d1 d2 d3 e1 e2
-for VARIABLE in a1 
+#a1 a2 b1 b2 c1 c2 c3 d1 d2 d3 e1 e2
+# bad c2 e1 e2
+for VARIABLE in all
 do
 	/usr/bin/singularity exec /data/exp_soft/containers/kern5-dev.simg  "aoflagger" -strategy J1234_619.rfis -fields 1,3 "$VARIABLE"/VLBA_"$VARIABLE".ms
 done
+#/usr/bin/singularity exec /data/exp_soft/containers/kern5-dev.simg  "aoflagger" -strategy 0319+415.rfis -fields 0  VLBAGN_cal_all.ms
