@@ -60,7 +60,7 @@ usage = "usage %prog [options] wxfile fitsfile"
 parser = optparse.OptionParser(usage=usage)
 (options, args) = parser.parse_args(sys.argv[i:])
 
-# Check if we already have a WEATHER table
+# Check if we already have a WEATHERS table
 try:
     hdulist = pyfits.open(args[1])
     hdu = hdulist['WEATHER']
