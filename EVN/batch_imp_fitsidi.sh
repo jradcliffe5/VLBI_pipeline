@@ -10,8 +10,10 @@
 #Run the application:
 inbase=eg078g
 
-
-/usr/bin/singularity exec /data/exp_soft/containers/casa-stable-5.5.0-149.simg  "casa" --nologger --log2term --nogui -c append_tsys.py $inbase".antab" $inbase"_1_1.IDI"*
+for i in {1..5}
+do
+/usr/bin/singularity exec /data/exp_soft/containers/casa-stable-5.5.0-149.simg  "casa" --nologger --log2term --nogui -c append_tsys.py $inbase".antab" $inbase"_1_1.IDI"$i
+done
 rm "-r" $inbase".gc"
 /usr/bin/singularity exec /data/exp_soft/containers/casa-stable-5.5.0-149.simg  "casa" --nologger --log2term --nogui -c gc.py $inbase".antab" $inbase".gc"
 rm $inbase".CASA.flags.txt"
