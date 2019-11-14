@@ -21,7 +21,7 @@ refant = find_refants(['EF','T6','O8','WB','MC','TR','SV','BD','ZC'],mmsfile)
 flagmanager(vis=mmsfile,mode='save',versionname='flag_1')
 flagdata(vis=mmsfile,
          mode='manual',
-         spw='0:0~2;61~63, 1:0~2;61~63, 2:0~2;61~63, 3:0~2;61~63, 4:0~2;61~63, 5:0~2;61~63, 6:0~2;61~63,7:0~2;61~63')
+         spw='0:0~2;30~32, 1:0~2;30~32, 2:0~2;30~32, 3:0~2;30~32, 4:0~2;30~32, 5:0~2;30~32, 6:0~2;30~32,7:0~2;30~32')
 flagdata(vis=mmsfile, mode='manual',autocorr=True)
 
 os.system('rm -r %s.sbd'%inbase)
