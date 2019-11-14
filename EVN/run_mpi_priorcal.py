@@ -28,6 +28,10 @@ gencal(vis=mmsfile,\
 	   caltable='%s.gcal'%inbase,\
 	   infile='%s.gc'%inbase)
 
+flagdata(vis=mmsfile,
+	     mode='list',
+	     inpfile='%s.CASA.flags.txt'%inbase)
+
 	#ft(vis=mmsfile,
 	#   field='J1234+619',
 	#   model='J1234+619_7.model',
