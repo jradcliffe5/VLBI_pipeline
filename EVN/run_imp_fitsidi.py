@@ -8,4 +8,4 @@ for i in os.listdir('./'):
 
 os.system('rm -r %s.ms'%(inbase))
 importfitsidi(fitsidifile=idifiles,vis='%s.ms'%(inbase),
-	          constobsid=False, scanreindexgap_s=15.0)
+	          constobsid=True, scanreindexgap_s=15.0)

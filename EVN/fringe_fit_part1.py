@@ -32,14 +32,14 @@ fringefit(vis=mmsfile,
             zerorates=True,
             refant=refant,
             minsnr=5,
-            gaintable=['%s.tsys'%inbase,'%s.gc'%inbase],
+            gaintable=['%s.tsys'%inbase,'%s.gcal'%inbase],
             interp=['linearperobs,linear','linearperobs','linearperobs'],
             parang=True)
 
 bandpass(vis=mmsfile,
          caltable='%s.bpass'%inbase,
          field=sbdcal,
-         gaintable=['%s.tsys'%inbase,'%s.gc'%inbase,'%s.sbd'%inbase],
+         gaintable=['%s.tsys'%inbase,'%s.gcal'%inbase,'%s.sbd'%inbase],
          interp=['linearperobs','linearperobs,linear','linearperobs','linearperobs'],
          solnorm=True,
          fillgaps=4,
@@ -52,7 +52,7 @@ bandpass(vis=mmsfile,
 
 flagmanager(vis=mmsfile,mode='save',versionname='preapply_1')
 applycal(vis=mmsfile,
-         gaintable=['%s.tsys'%inbase,'%s.gc'%inbase,'%s.sbd'%inbase,\
+         gaintable=['%s.tsys'%inbase,'%s.gcal'%inbase,'%s.sbd'%inbase,\
                     '%s.bpass'%inbase],
          interp=['linearperobs','linearperobs,linear','linearperobs','linearperobs','linearperobs,linear'],
          spwmap=[[],[],[],[],[]],
