@@ -1,10 +1,10 @@
 import sys, os
-epoch =sys.argv[sys.argv.index(sys.argv[2])+1]
+inbase =sys.argv[sys.argv.index(sys.argv[2])+1]
 phasecal=sys.argv[sys.argv.index(sys.argv[2])+2]
 sbdcal=sys.argv[sys.argv.index(sys.argv[2])+3]
 
-inbase='%s/VLBA'%epoch
-mmsfile = '%s/VLBA_%s.ms'%(epoch,epoch)
+inbase='%s'%inbase
+mmsfile = '%s.ms'%inbase
 
 def find_refants(pref_ant,vis):
    tb.open('%s/ANTENNA'%vis)
@@ -16,12 +16,12 @@ def find_refants(pref_ant,vis):
          refant.append(i)
    return ",".join(refant)
 
-refant = find_refants(['PT','BR','HN','FD','KP','MK','NL','OV','SC'],mmsfile)
+refant = find_refants(['EF','T6','O8','WB','MC','TR','SV','BD','ZC'],mmsfile)
 
 flagmanager(vis=mmsfile,mode='save',versionname='flag_1')
 flagdata(vis=mmsfile,
          mode='manual',
-         spw='0:0~5;122~127, 1:0~5;122~127, 2:0~5;122~127, 3:0~5;122~127, 4:0~5;122~127, 5:0~5;122~127, 6:0~5;122~127,7:0~5;122~127')
+         spw='0:0~2;61~63, 1:0~2;61~63, 2:0~2;61~63, 3:0~2;61~63, 4:0~2;61~63, 5:0~2;61~63, 6:0~2;61~63,7:0~2;61~63')
 flagdata(vis=mmsfile, mode='manual',autocorr=True)
 
 os.system('rm -r %s.sbd'%inbase)
@@ -32,14 +32,14 @@ fringefit(vis=mmsfile,
             zerorates=True,
             refant=refant,
             minsnr=5,
-            gaintable=['%s.tsys'%inbase,'%s.gcal'%inbase,'%s.accor'%inbase],
+            gaintable=['%s.tsys'%inbase,'%s.gc'%inbase],
             interp=['linearperobs,linear','linearperobs','linearperobs'],
             parang=True)
 
 bandpass(vis=mmsfile,
          caltable='%s.bpass'%inbase,
          field=sbdcal,
-         gaintable=['%s.tsys'%inbase,'%s.gcal'%inbase,'%s.accor'%inbase,'%s.sbd'%inbase],
+         gaintable=['%s.tsys'%inbase,'%s.gc'%inbase,'%s.sbd'%inbase],
          interp=['linearperobs','linearperobs,linear','linearperobs','linearperobs'],
          solnorm=True,
          fillgaps=4,
@@ -52,7 +52,7 @@ bandpass(vis=mmsfile,
 
 flagmanager(vis=mmsfile,mode='save',versionname='preapply_1')
 applycal(vis=mmsfile,
-         gaintable=['%s.tsys'%inbase,'%s.gcal'%inbase,'%s.accor'%inbase,'%s.sbd'%inbase,\
+         gaintable=['%s.tsys'%inbase,'%s.gc'%inbase,'%s.sbd'%inbase,\
                     '%s.bpass'%inbase],
          interp=['linearperobs','linearperobs,linear','linearperobs','linearperobs','linearperobs,linear'],
          spwmap=[[],[],[],[],[]],
