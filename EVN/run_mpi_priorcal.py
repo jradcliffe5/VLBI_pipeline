@@ -1,38 +1,59 @@
-import os,sys
+import os
+#['a1','a2','b1','b2','c1','c2','c3','d1','d2','d3','e1','e2']
+# bad c2 e1 e2
+import os, sys
 
-inbase = sys.argv[sys.argv.index(sys.argv[2])+1]
+epoch=sys.argv[sys.argv.index(sys.argv[2])+1]
+cwd=sys.argv[sys.argv.index(sys.argv[2])+2]
+parallel=sys.argv[sys.argv.index(sys.argv[2])+3]
 
-msfile='%s.ms' %(inbase)
 
+msfile='%s/%s.ms' %(cwd,epoch)
+
+if parallel =='True':
+	mmsfile = '%s' % (msfile.split('.ms')[0]+'.mms')
+	## Make mms data-set
+	os.system('rm -r %s*'%mmsfile)
+	partition(vis=msfile, outputvis=mmsfile)
+	os.system('rm -r %s'%msfile)
+	os.system('mv %s %s'%(mmsfile,msfile))
+	os.system('mv %s.flagversions %s.flagversions'%(mmsfile,msfile))
 mmsfile=msfile
 
+## DiFX correlator sampling corrections
+#os.system('rm -r %s/VLBA.accor'%j)
+#accor(vis=mmsfile,\
+#      caltable='%s/VLBA.accor'%j,\
+#      solint='inf')
+#smoothcal(vis=mmsfile,
+#          tablein='%s/VLBA.accor'%j,
+#          caltable='%s/VLBA.accor'%j,
+#	   smoothtime=180.0)
 
 ### Run prior-cals
-os.system('rm -r %s.tsys'%inbase)
+
+flagdata(vis=mmsfile,mode='list',inpfile='%s/%s_casa.flag'%(cwd,epoch))
+
+os.system('rm -r %s/%s.tsys'%(cwd,epoch))
 gencal(vis=mmsfile,\
-	   caltype='tsys',\
-	   caltable='%s.tsys'%inbase,\
-	   uniform=False)
-#flagdata(vis='%s.tsys'%inbase,
-#		 mode='clip',
-#		 datacolumn='FPARAM',
-#		 clipminmax=[0,370])
+       caltype='tsys',\
+       caltable='%s/%s.tsys'%(cwd,epoch),\
+       uniform=False)
+
+#flagdata(vis='%s/VLBA.tsys'%j,
+#	 mode='clip',
+#	 datacolumn='FPARAM',
+#	 clipminmax=[0,370])
 smoothcal(vis=mmsfile,
-		  tablein='%s.tsys'%inbase,
-		  caltable='%s.tsys'%inbase,
-		  smoothtime=300.0)
+	  tablein='%s/%s.tsys'%(cwd,epoch),
+	  caltable='%s/%s.tsys'%(cwd,epoch),
+	  smoothtime=300.0)
 
-os.system('rm -r %s.gcal'%inbase)
+os.system('rm -r %s/%s.gcal'%(cwd,epoch))
 gencal(vis=mmsfile,\
-	   caltype='gc',\
-	   caltable='%s.gcal'%inbase,\
-	   infile='%s.gc'%inbase)
+       caltype='gc',\
+       caltable='%s/%s.gcal'%(cwd,epoch),\
+       infile='%s/%s.gc'%(cwd,epoch))
 
-flagdata(vis=mmsfile,
-	     mode='list',
-	     inpfile='%s.CASA.flags.txt'%inbase)
-
-	#ft(vis=mmsfile,
-	#   field='J1234+619',
-	#   model='J1234+619_7.model',
-	#   usescratch=True)
+os.system('rm %s/%s.listobs.txt'%(cwd,epoch))
+listobs(vis=mmsfile,listfile='%s/%s.listobs.txt'%(cwd,epoch))

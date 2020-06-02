@@ -2,7 +2,7 @@ import os
 step = sys.argv[sys.argv.index(sys.argv[2])+1]
 src = sys.argv[sys.argv.index(sys.argv[2])+2]
 src = '%03d'%int(src)
-target_path = '/users/jradcliffe5/idia/VLBA_GOODSN/targets/raw_fitsidi/'
+target_path = '/users/jradcliffe5/idia/VLBA_GOODSN/uncalibrated/targets/raw_fitsidi/'
 
 coords = {'049':['12h36m23.5436s','+62d16m42.754s'],
 		  '055':['12h37m16.6811s','+62d17m33.327s'],
@@ -57,23 +57,23 @@ if step == '2':
 			interp.append('linearperobs')
 	applycal(vis=vis,
 		     gaintable=gaintables[0:5],
-			 field='%s'%(int(src)+1),
+			 field='%s'%(int(src)),
 		     spwmap=spwmap[0:5],
 		     applymode='calflag',
 			 interp=interp,
 		     parang=True)
 	applycal(vis=vis,
-			 field='%s'%(int(src)+1),
+			 field='%s'%(int(src)),
 		     gaintable=gaintables,
 		     spwmap=spwmap,
 		     applymode='calonly',
 			 interp=interp,
 		     parang=True)
-	if src == '000':
+	if src == '':
 		src2 = '002'
 	else:
-		src2 = src
-	split(vis=vis,field='%s'%(int(src2)+1),\
+	    src2 = src
+	split(vis=vis,field='%s'%(int(src2)),\
 		  outputvis='VLBA_SRC%s_2.ms'%src,datacolumn='corrected')
 	os.system('rm -r VLBA_SRC%s.ms; mv VLBA_SRC%s_2.ms VLBA_SRC%s.ms'%(src,src,src))
 	

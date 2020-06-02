@@ -1,18 +1,62 @@
 import sys
-from casa import gaincal, applycal,tclean, imstat
-vis = sys.argv[sys.argv.index(sys.argv[2])+1]
-type = sys.argv[sys.argv.index(sys.argv[2])+2]
-field = sys.argv[sys.argv.index(sys.argv[2])+3]
-solint = sys.argv[sys.argv.index(sys.argv[2])+4]
-gaintable=sys.argv[sys.argv.index(sys.argv[2])+5]
-combine=sys.argv[sys.argv.index(sys.argv[2])+6]
-applytype=sys.argv[sys.argv.index(sys.argv[2])+7]
-epoch=sys.argv[sys.argv.index(sys.argv[2])+8]
+from casa import gaincal, applycal, tclean, imstat
+import json
 
-caltype=type.split(',')
+epoch =sys.argv[sys.argv.index(sys.argv[2])+1]
+cwd=sys.argv[sys.argv.index(sys.argv[2])+2]
+phasecal=str(sys.argv[sys.argv.index(sys.argv[2])+3])
+pcal_no=int(sys.argv[sys.argv.index(sys.argv[2])+4])
+caltype = sys.argv[sys.argv.index(sys.argv[2])+5]
+solint = sys.argv[sys.argv.index(sys.argv[2])+6]
+combine=sys.argv[sys.argv.index(sys.argv[2])+7]
+applytype=sys.argv[sys.argv.index(sys.argv[2])+8]
+try:
+	pad_ants=sys.argv[sys.argv.index(sys.argv[2])+9]
+except:
+	pad_ants = -1
+
+
+if pad_ants.find(",") > 0:
+   pad_ants = np.array(pad_ants.split(",")).astype(int)
+else:
+   pad_ants = np.array([pad_ants]).astype(int)
+
+caltype=caltype.split(',')
 solint=solint.split(',')
 combine=combine.split(',')
-gaintable=gaintable.split(',')
+
+inbase='%s/%s'%(cwd,epoch)
+vis = '%s/%s.ms'%(cwd,epoch)
+
+x = phasecal.find(",")
+if int(x) > 0:
+   field = phasecal.split(",")[pcal_no-1]
+else:
+   field = phasecal
+
+def pad_antennas(caltable='',ants=[],gain=False):
+	tb.open('%s'%caltable,nomodify=False)
+	flg=tb.getcol('FLAG')
+	#sol=tb.getcol('SOLUTION_OK')
+	ant=tb.getcol('ANTENNA1')
+	if gain == True:
+		g_col = 'CPARAM'
+		gain=tb.getcol(g_col)
+		repl_val = 1+0j
+	else:
+		g_col = 'FPARAM'
+		gain=tb.getcol(g_col)
+		repl_val = 0
+
+	for i in ants:
+		flg[:,:,(ant==i)] = 0
+		print(gain[:,:,(ant==i)])
+		gain[:,:,(ant==i)] = repl_val
+
+	tb.putcol('FLAG', flg)
+	tb.putcol(g_col, gain)
+
+	tb.close()
 
 def find_refants(pref_ant,vis):
    tb.open('%s/ANTENNA'%vis)
@@ -20,11 +64,11 @@ def find_refants(pref_ant,vis):
    tb.close()
    refant=[]
    for i in pref_ant:
-      if i in antennas:
-         refant.append(i)
+	  if i in antennas:
+		 refant.append(i)
    return ",".join(refant)
 
-refant = find_refants(['PT','BR','HN','FD','KP','MK','NL','OV','SC'],vis)
+refant = find_refants(['EF','T6','O8','SR','WB','JB','UR','TR','SV'],vis)
 
 #print(gaintable)
 #sys.exit()
@@ -103,6 +147,39 @@ def fill_flagged_soln_gain(caltable='', doplot=False):
 		tb.putcol('CPARAM', gain)
 		tb.done()
 
+def json_load_byteified(file_handle):
+	return _byteify(
+		json.load(file_handle, object_hook=_byteify),
+		ignore_dicts=True
+	)
+
+def json_loads_byteified(json_text):
+	return _byteify(
+		json.loads(json_text, object_hook=_byteify),
+		ignore_dicts=True
+	)
+
+def _byteify(data, ignore_dicts = False):
+	# if this is a unicode string, return its string representation
+	if isinstance(data, unicode):
+		return data.encode('utf-8')
+	# if this is a list of values, return list of byteified values
+	if isinstance(data, list):
+		return [ _byteify(item, ignore_dicts=True) for item in data ]
+	# if this is a dictionary, return dictionary of byteified keys and values
+	# but only if we haven't already byteified it
+	if isinstance(data, dict) and not ignore_dicts:
+		return {
+			_byteify(key, ignore_dicts=True): _byteify(value, ignore_dicts=True)
+			for key, value in data.iteritems()
+		}
+	# if it's anything else, return it in its original form
+	return data
+
+
+
+
+
 for i in range(len(caltype)):
 	if caltype[i] == 'K':
 		gaintype='K'
@@ -128,65 +205,75 @@ for i in range(len(caltype)):
 		combine_add = ''
 
 
-	spwmap=[]
-	interp=[]
-	for j in gaintable: 
-		if ('.mbd' in j) or ('combine' in j): 
-			spwmap.append(8*[0])
-			interp.append('linearperobs')
-		else: 
-			spwmap.append([])
-			interp.append('linearperobs')
-	os.system('rm -r %s/%s_%s%s.%s'%(epoch,field,str(int(i)+1),combine_add,caltype[i]))
+	with open('%s_calibtables.txt'%inbase, 'r') as filehandle:
+		tables = json_load_byteified(filehandle)
+	gaintable = tables[0]
+	interp = tables[1]
+	spwmap = tables[2]
+
+	os.system('rm -r %s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]))
 	gaincal(vis=vis,
-		    caltable='%s/%s_%s%s.%s'%(epoch,field,str(int(i)+1),combine_add,caltype[i]),
-		    field=field,
-		    solint=solint,
-		    refant=refant,
-		    minblperant=minblperant,
-		    solnorm=solnorm,
-		    combine=combine[i],
-		    gaintype=gaintype,
-		    calmode=calmode,
-		    gaintable=gaintable,
-		    spwmap=spwmap,
+			caltable='%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]),
+			field=field,
+			solint=solint,
+			refant=refant,
+			minblperant=minblperant,
+			solnorm=solnorm,
+			combine=combine[i],
+			gaintype=gaintype,
+			calmode=calmode,
+			gaintable=gaintable,
+			spwmap=spwmap,
 			interp=interp,
-		    parang=True)
+			parang=True)
 
-	fill_flagged_soln_gain(caltable='%s/%s_%s%s.%s'%(epoch,field,str(int(i)+1),combine_add,caltype[i]), doplot=False)
+	fill_flagged_soln_gain(caltable='%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]), doplot=False)
+	if pad_ants != -1:
+		pad_antennas(caltable='%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]),ants=pad_ants,gain=True)
 
-	gaintable.append('%s/%s_%s%s.%s'%(epoch,field,str(int(i)+1),combine_add,caltype[i]))
+	gaintable.append('%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]))
 
 	if combine_add == 'combine': 
 		spwmap.append(8*[0])
-		interp.append('linearperobs')
+		interp.append('linear')
 	else:
 		spwmap.append([])
-		interp.append('linearperobs')
+		interp.append('linear')
 
 	applycal(vis=vis,
-		     gaintable=gaintable,
-		     spwmap=spwmap,
-		     applymode=applytype,
+			 gaintable=gaintable,
+			 spwmap=spwmap,
+			 applymode=applytype,
 			 interp=interp,
-		     parang=True)
+			 parang=True)
 
-	os.system('rm -r %s/pcal_rms_%s'%(epoch,i+1))
+	tables = [gaintable,interp,spwmap]
+	with open('%s_calibtables.txt'%inbase, 'w') as filehandle:
+		json.dump(tables, filehandle)
+
+	tb.open(vis+'/FIELD')
+	phase_centre = tb.getcol('PHASE_DIR').T[tb.getcol('NAME')==field].squeeze()
+	phase_centre_offset = 1 #arcsec
+	phase_centre = 'J2000 %srad %srad'%(phase_centre[0],phase_centre[1]+((phase_centre_offset/3600.)*(np.pi/180.)))
+	tb.close()
+
+	os.system('rm -r %s_pc%s_sc%s_rms*'%(inbase,pcal_no,str(int(i)+1)))
 	tclean(vis=vis,
 			 field=field,
-			 imagename='%s/pcal_rms_%s'%(epoch,i+1),
+			 imagename='%s_pc%s_sc%s_rms'%(inbase,pcal_no,str(int(i)+1)),
 			 cell=['0.0005arcsec'],
 			 imsize=[640,640],
 			 deconvolver='mtmfs',
-			 phasecenter='J2000 12h34m11.743000s +61d58m34s',
+			 phasecenter=phase_centre,
 			 niter=1,
 			 parallel=False,
 			 usemask='user',
 			 savemodel='none')
-	rms = imstat(imagename='%s/pcal_rms_%s.image.tt0'%(epoch,i+1),box='20,20,620,620')['rms'][0]
+	rms = imstat(imagename='%s_pc%s_sc%s_rms.image.tt0'%(inbase,pcal_no,str(int(i)+1)),box='20,20,620,620')['rms'][0]
+	os.system('rm -r %s_pc%s_sc%s_IM*'%(inbase,pcal_no,str(int(i)+1)))
 	tclean(vis=vis,
 			 field=field,
-			 imagename='%s/pcal_sc_%s'%(epoch,i+1),
+			 imagename='%s_pc%s_sc%s_IM'%(inbase,pcal_no,str(int(i)+1)),
 			 cell=['0.0005arcsec'],
 			 imsize=[640,640],
 			 deconvolver='mtmfs',
@@ -194,5 +281,5 @@ for i in range(len(caltype)):
 			 threshold=rms,
 			 parallel=False,
 			 usemask='user',
-			 mask='FF.mask',
+			 mask='circle[[320pix, 320pix], 10pix]',
 			 savemodel='modelcolumn')
