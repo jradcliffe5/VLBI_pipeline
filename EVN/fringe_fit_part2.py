@@ -41,8 +41,8 @@ def find_refants(pref_ant,vis):
 
 refant = find_refants(['EF','T6','O8','SR','WB','JB','UR','TR','SV'],mmsfile)
 
-selectant = '!EF;!O8'
-selectspw = '0~3'
+selectant = ''
+selectspw = ''
 
 def pad_antennas(caltable='',ants=[],gain=False):
 	tb.open('%s'%caltable,nomodify=False)

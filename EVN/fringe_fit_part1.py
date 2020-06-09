@@ -87,9 +87,10 @@ sbdsolint='1min'
 refant = find_refants(['EF','T6','O8','SR','WB','JB','UR','TR','SV'],mmsfile)
 
 flagmanager(vis=mmsfile,mode='save',versionname='flag_1')
+edgechan='0~2;29~31'
 flagdata(vis=mmsfile,
 			mode='manual',
-			spw='0:0~2;30~32, 1:0~2;30~32, 2:0~2;30~32, 3:0~2;30~32')
+			spw='0:0~2;29~31, 1:0~2;29~31, 2:0~2;29~31, 3:0~2;29~31, 4:0~2;29~31, 5:0~2;29~31, 6:0~2;29~31, 7:0~2;29~31')
 flagdata(vis=mmsfile, mode='manual',autocorr=True)
 
 os.system('rm -r %s/%s.sbd'%(cwd,epoch))
@@ -135,7 +136,7 @@ applycal(vis=mmsfile,
 			antenna=selectant,
 			spw=selectspw,
 			spwmap=[[],[],[],[]],
-			applymode='calonly',
+			applymode='',
 			parang=True)
 
 flagmanager(vis=mmsfile,mode='save',versionname='flag_2')
