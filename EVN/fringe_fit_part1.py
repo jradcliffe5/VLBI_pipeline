@@ -105,15 +105,14 @@ fringefit(vis=mmsfile,
 				minsnr=5,
 				gaintable=['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch)],
 				interp=['linear,linear','linear'],
+				spwmap=[[],[]]
 				parang=True)
 
 
 bandpass(vis=mmsfile,
 			caltable='%s/%s.bpass'%(cwd,epoch),
 			field=sbdcal,
-			gaintable=['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch),'%s/%s.sbd'%(cwd,epoch)],
-			interp=['linear','linear,linear','linear'],
-			solnorm=False,
+			solnorm=True,
 			antenna=selectant,
 			spw=selectspw,
 			fillgaps=4,
@@ -121,7 +120,9 @@ bandpass(vis=mmsfile,
 			combine='scan',
 			refant=refant,
 			bandtype='B',
-			spwmap=[[],[],[],[]],
+			gaintable=['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch),'%s/%s.sbd'%(cwd,epoch)],
+			interp=['linear','linear,linear','linear'],
+			spwmap=[[],[],[]],
 			parang=True)
 
 fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,epoch), fringecal=True)
