@@ -72,7 +72,8 @@ refant = find_refants(['EF','T6','O8','SR','WB','JB','UR','TR','SV'],vis)
 
 #print(gaintable)
 #sys.exit()
-def fill_flagged_soln_gain(caltable='', doplot=False):
+
+def fill_flagged_soln(caltable='', fringecal=False):
 		"""
 		This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
 		one.
@@ -82,11 +83,15 @@ def fill_flagged_soln_gain(caltable='', doplot=False):
 		(when you are betting on self-cal) of observation (e.g L-band of the EVLA)..one can 
 		lose the whole hour of good data without realizing !
 		"""
+		if fringecal==False:
+			gaincol='CPARAM'
+		else:
+			gaincol='FPARAM'
 		tb.open(caltable, nomodify=False)
 		flg=tb.getcol('FLAG')
 		#sol=tb.getcol('SOLUTION_OK')
 		ant=tb.getcol('ANTENNA1')
-		gain=tb.getcol('CPARAM')
+		gain=tb.getcol(gaincol)
 		t=tb.getcol('TIME')
 		dd=tb.getcol('SPECTRAL_WINDOW_ID')
 		#dd=tb.getcol('CAL_DESC_ID')
@@ -96,13 +101,6 @@ def fill_flagged_soln_gain(caltable='', doplot=False):
 		nchan=len(gain[0,:,0])
 		
 		k=1
-		if(doplot):
-				pl.ion()
-				pl.figure(1)
-				pl.plot(t[(ant==k)], sol[0,0,(ant==k)], 'b+')
-				pl.plot(t[(ant==k)], flg[0,0,(ant==k)], 'r+')
-				pl.twinx()
-				pl.plot(t[(ant==k)], abs(gain[0,0,(ant==k)]), 'go')
 		print 'maxant', maxant
 		numflag=0.0
 		for k in range(maxant+1):
@@ -131,20 +129,11 @@ def fill_flagged_soln_gain(caltable='', doplot=False):
 
 
 		print 'numflag', numflag
-		if(doplot):
-				pl.figure(2)
-				k=1
-				#pl.clf()
-				pl.plot(t[(ant==k)], sol[0,0,(ant==k)], 'b+')
-				pl.plot(t[(ant==k)], flg[0,0,(ant==k)], 'r+')
-				pl.twinx()
-				pl.plot(t[(ant==k)], abs(gain[0,0,(ant==k)]), 'go')
-				pl.title('antenna='+str(k))
 		 
 		###
 		tb.putcol('FLAG', flg)
 		#tb.putcol('SOLUTION_OK', sol)
-		tb.putcol('CPARAM', gain)
+		tb.putcol(gaincol, gain)
 		tb.done()
 
 def json_load_byteified(file_handle):
@@ -210,11 +199,7 @@ for i in range(len(caltype)):
 	gaintable = tables[0]
 	interp = tables[1]
 	spwmap = tables[2]
-	
-	#if i==3:
-	#	solnorm=False
-	#else:
-	#	solnorm=True
+
 
 	os.system('rm -r %s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]))
 	gaincal(vis=vis,
@@ -232,14 +217,14 @@ for i in range(len(caltype)):
 			interp=interp,
 			parang=True)
 
-	fill_flagged_soln_gain(caltable='%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]), doplot=False)
+	fill_flagged_soln_gain(caltable='%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]), fringecal=False)
 	if pad_ants != -1:
 		pad_antennas(caltable='%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]),ants=pad_ants,gain=True)
 
 	gaintable.append('%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]))
 
 	if combine_add == 'combine': 
-		spwmap.append(4*[0])
+		spwmap.append(8*[0])
 		interp.append('linear')
 	else:
 		spwmap.append([])
