@@ -15,11 +15,11 @@ try:
 except:
 	pad_ants = -1
 
-
-if pad_ants.find(",") > 0:
-   pad_ants = np.array(pad_ants.split(",")).astype(int)
-else:
-   pad_ants = np.array([pad_ants]).astype(int)
+if pad_ants != -1:
+	if pad_ants.find(",") > 0:
+  		pad_ants = np.array(pad_ants.split(",")).astype(int)
+	else:
+   		pad_ants = np.array([pad_ants]).astype(int)
 
 if phasecal.find(",") > 0:
    phasecal = phasecal.split(",")[pcal_no-1]
@@ -41,6 +41,8 @@ def find_refants(pref_ant,vis):
 
 refant = find_refants(['EF','T6','O8','SR','WB','JB','UR','TR','SV'],mmsfile)
 
+selectant = '!EF;!O8'
+selectspw = '0~3'
 
 def pad_antennas(caltable='',ants=[],gain=False):
 	tb.open('%s'%caltable,nomodify=False)
@@ -266,6 +268,8 @@ fringefit(vis=mmsfile,
 	  field=phasecal,
 	  caltable='%s_pc%s.mbd%s'%(inbase,pcal_no,loop),
 	  combine='spw',
+	  antenna=selectant,
+	  spw=selectspw,
 	  solint='inf',
 	  zerorates=False,
 	  refant=refant,
@@ -284,7 +288,7 @@ if pad_ants != -1:
 
 gaintables.append('%s_pc%s.mbd%s'%(inbase,pcal_no,loop))
 interp.append('linear')
-spwmap.append(8*[0])
+spwmap.append(4*[0])
 
 #flagmanager(vis=mmsfile,mode='save',versionname='preapply_2')
 
@@ -292,6 +296,8 @@ spwmap.append(8*[0])
 applycal(vis=mmsfile,
 	 gaintable=gaintables,
 	 interp=interp,
+	 antenna=selectant,
+	 spw=selectspw,
 	 spwmap=spwmap,
 	 applymode='',
 	 parang=True)
@@ -308,20 +314,24 @@ if casa_tclean == 'True':
 		   field=phasecal,	
 		   imagename='%s_pc%s_rms_%s'%(inbase,pcal_no,loop),
 		   cell=['0.0005arcsec'],
+		   antenna=selectant,
+		   spw=selectspw,
 		   imsize=[640,640],
-		   deconvolver='mtmfs',
+		   deconvolver='clark',
 		   phasecenter=phase_centre,
 		   niter=1,
 		   parallel=False,
 		   usemask='user',
 		   savemodel='none')
-	rms = imstat(imagename='%s_pc%s_rms_%s.image.tt0'%(inbase,pcal_no,loop),box='20,20,620,620')['rms'][0]
+	rms = imstat(imagename='%s_pc%s_rms_%s.image'%(inbase,pcal_no,loop),box='20,20,620,620')['rms'][0]
 	tclean(vis=mmsfile,
 		   field=phasecal,
 		   imagename='%s_pc%s_pcal_loop_%s'%(inbase,pcal_no,loop),
 		   cell=['0.0005arcsec'],
+		   antenna=selectant,
+		   spw=selectspw,
 		   imsize=[640,640],
-		   deconvolver='mtmfs',
+		   deconvolver='clark',
 		   niter=1000,
 		   threshold=rms,
 		   parallel=False,

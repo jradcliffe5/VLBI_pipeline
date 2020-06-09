@@ -10,7 +10,8 @@
 #Run the application:
 
 epoch=eg078g
-cwd="/home/jradcliffe/lustre/EG078G/calibration"
+cwd="/Volumes/HD-LXU3/EG078G/calibration/CASA"
+CASApath="/Applications/CASA-5.7.app/Contents/MacOS"
 cd $cwd
 
-/mnt/lustre/users/jradcliffe/CASA_distros/casa-pipeline-release-5.6.2-3.el7/bin/casa --nologger --log2term --nogui -c run_imp_fitsidi.py $epoch $cwd 
+$CASApath"/casa" --nologger --log2term --nogui -c run_imp_fitsidi.py $epoch $cwd 

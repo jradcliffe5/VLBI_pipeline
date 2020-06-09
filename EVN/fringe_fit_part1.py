@@ -167,13 +167,14 @@ def fill_flagged_soln_gain(caltable='', doplot=False):
 		tb.putcol('CPARAM', gain)
 		tb.done()
 
-
+selectant = '!EF;!O8'
+selectspw = '0~3'
 refant = find_refants(['EF','T6','O8','SR','WB','JB','UR','TR','SV'],mmsfile)
 
 flagmanager(vis=mmsfile,mode='save',versionname='flag_1')
 flagdata(vis=mmsfile,
 			mode='manual',
-			spw='0:0~2;30~32, 1:0~2;30~32, 2:0~2;30~32, 3:0~2;30~32, 4:0~2;30~32, 5:0~2;30~32, 6:0~2;30~32,7:0~2;30~32')
+			spw='0:0~2;30~32, 1:0~2;30~32, 2:0~2;30~32, 3:0~2;30~32')
 flagdata(vis=mmsfile, mode='manual',autocorr=True)
 
 os.system('rm -r %s/%s.sbd'%(cwd,epoch))
@@ -181,20 +182,24 @@ fringefit(vis=mmsfile,
 				caltable='%s/%s.sbd'%(cwd,epoch),
 				field=sbdcal,
 				solint='inf',
+				antenna=selectant,
+				spw=selectspw,
 				zerorates=True,
 				refant=refant,
 				minsnr=5,
 				gaintable=['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch)],
 				interp=['linear,linear','linear'],
 				parang=True)
-fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,epoch), doplot=False)
+#fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,epoch), doplot=False)
 
 bandpass(vis=mmsfile,
 			caltable='%s/%s.bpass'%(cwd,epoch),
 			field=sbdcal,
 			gaintable=['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch),'%s/%s.sbd'%(cwd,epoch)],
-			interp=['linear','linear,linear','nearest'],
-			solnorm=True,
+			interp=['linear','linear,linear','linear'],
+			solnorm=False,
+			antenna=selectant,
+			spw=selectspw,
 			fillgaps=4,
 			solint='inf',
 			combine='scan',
@@ -209,14 +214,16 @@ flagmanager(vis=mmsfile,mode='save',versionname='preapply_1')
 applycal(vis=mmsfile,
 			gaintable=['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch),'%s/%s.sbd'%(cwd,epoch),\
 						  '%s/%s.bpass'%(cwd,epoch)],
-			interp=['linear','linear,linear','nearest','linear,linear'],
+			interp=['linear','linear,linear','linear','linear,linear'],
+			antenna=selectant,
+			spw=selectspw,
 			spwmap=[[],[],[],[]],
-			applymode='',
+			applymode='calonly',
 			parang=True)
 
 flagmanager(vis=mmsfile,mode='save',versionname='flag_2')
 
 tables = [['%s/%s.tsys'%(cwd,epoch),'%s/%s.gcal'%(cwd,epoch),'%s/%s.sbd'%(cwd,epoch),\
-						  '%s/%s.bpass'%(cwd,epoch)],['linear','linear,linear','nearest','linear,linear'],[[],[],[],[]]]
+						  '%s/%s.bpass'%(cwd,epoch)],['linear','linear,linear','linear','linear,linear'],[[],[],[],[]]]
 with open('%s_calibtables.txt'%epoch, 'w') as filehandle:
 	 json.dump(tables, filehandle)

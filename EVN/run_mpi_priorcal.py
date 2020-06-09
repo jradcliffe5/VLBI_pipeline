@@ -32,11 +32,13 @@ mmsfile=msfile
 
 ### Run prior-cals
 
-flagdata(vis=mmsfile,mode='list',inpfile='%s/%s_casa.flag'%(cwd,epoch))
+#flagdata(vis=mmsfile,mode='list',inpfile='%s/%s_casa.flag'%(cwd,epoch))
 
 os.system('rm -r %s/%s.tsys'%(cwd,epoch))
 gencal(vis=mmsfile,\
        caltype='tsys',\
+       spw='0~3',\
+       antenna='!EF;!O8',\
        caltable='%s/%s.tsys'%(cwd,epoch),\
        uniform=False)
 
@@ -44,14 +46,16 @@ gencal(vis=mmsfile,\
 #	 mode='clip',
 #	 datacolumn='FPARAM',
 #	 clipminmax=[0,370])
-smoothcal(vis=mmsfile,
-	  tablein='%s/%s.tsys'%(cwd,epoch),
-	  caltable='%s/%s.tsys'%(cwd,epoch),
-	  smoothtime=300.0)
+#smoothcal(vis=mmsfile,
+#	  tablein='%s/%s.tsys'%(cwd,epoch),
+#	  caltable='%s/%s.tsys'%(cwd,epoch),
+#	  smoothtime=300.0)
 
 os.system('rm -r %s/%s.gcal'%(cwd,epoch))
 gencal(vis=mmsfile,\
        caltype='gc',\
+       spw='0~3',\
+       antenna='!EF;!O8',\
        caltable='%s/%s.gcal'%(cwd,epoch),\
        infile='%s/%s.gc'%(cwd,epoch))
 

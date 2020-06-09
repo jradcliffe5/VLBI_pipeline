@@ -10,9 +10,10 @@
 
 epoch=eg078g
 fields="0,1,157"
-cwd="/home/jradcliffe/lustre/EG078G/calibration"
+cwd="/Volumes/HD-LXU3/EG078G/calibration/CASA"
 cd $cwd
 
-module load chpc/singularity 
-singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger -strategy $cwd"/J1234_619.rfis" -fields $fields $cwd"/"$epoch".ms"
+source /Volumes/HD-LXU3/anaconda2/anaconda2/bin/activate aoflag
+#module load chpc/singularity 
+aoflagger -strategy $cwd"/J1234_619.rfis" -fields $fields $cwd"/"$epoch".ms"
 

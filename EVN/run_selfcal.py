@@ -1,5 +1,5 @@
 import sys
-from casa import gaincal, applycal, tclean, imstat
+#from casa import gaincal, applycal, tclean, imstat
 import json
 
 epoch =sys.argv[sys.argv.index(sys.argv[2])+1]
@@ -15,11 +15,11 @@ try:
 except:
 	pad_ants = -1
 
-
-if pad_ants.find(",") > 0:
-   pad_ants = np.array(pad_ants.split(",")).astype(int)
-else:
-   pad_ants = np.array([pad_ants]).astype(int)
+if pad_ants != -1:
+	if pad_ants.find(",") > 0:
+   		pad_ants = np.array(pad_ants.split(",")).astype(int)
+	else:
+   		pad_ants = np.array([pad_ants]).astype(int)
 
 caltype=caltype.split(',')
 solint=solint.split(',')
@@ -210,6 +210,11 @@ for i in range(len(caltype)):
 	gaintable = tables[0]
 	interp = tables[1]
 	spwmap = tables[2]
+	
+	#if i==3:
+	#	solnorm=False
+	#else:
+	#	solnorm=True
 
 	os.system('rm -r %s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]))
 	gaincal(vis=vis,
@@ -234,7 +239,7 @@ for i in range(len(caltype)):
 	gaintable.append('%s_pc%s_sc%s_%s.%s'%(inbase,pcal_no,str(int(i)+1),combine_add,caltype[i]))
 
 	if combine_add == 'combine': 
-		spwmap.append(8*[0])
+		spwmap.append(4*[0])
 		interp.append('linear')
 	else:
 		spwmap.append([])
