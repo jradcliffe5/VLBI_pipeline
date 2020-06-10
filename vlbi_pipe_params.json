@@ -1,0 +1,46 @@
+{
+    "global":{
+        "project_code"      : "eg078d",
+        "cwd"               : "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
+        "job_manager"       : "bash|slurm|pbs",
+        "HPC_project_code"  : "ASTR1313",
+        "default_partition" : "normal",
+        "default_walltime"  : "10:00:00",
+        "default_nodes"     : 2,
+        "default_cpus"      : 24,
+        "default_mpiprocs"  : 24,
+        "default_nodetype"  : "haswell_reg",
+        "email_progress"    : "jack.f.radcliffe@gmail.com",
+        "parallel_process"  : true,
+        "CASA_path"         : "",
+        "AOflag_command"    : ["",""]
+    },
+    "prepare_EVN":{
+        "fitsidi_files"     : ["auto"],
+        "fitsidi_path"      : "raw_UV",
+        "antab_file"        : "auto",
+        "flag_file"         : "auto",
+        "gaincurve":{
+            "min_elevation": 0.0,
+            "max_elevation": 90.0
+        }
+    },
+    "import_fitsidi":{
+        "antab_file"        : "auto"
+    },
+    "mpi_priorcal":{
+        "antab_file"        : "auto"
+    },
+    "init_flag":{
+        "antab_file"        : "auto"
+    },
+    "sub_band_delay":{
+        "antab_file"        : "auto"
+    },
+    "multi_band_delay":{
+        "antab_file"        : "auto"
+    },
+    "self_cal_pc":{
+        "antab_file"        : "auto"
+    }
+}

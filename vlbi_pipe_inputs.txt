@@ -1,0 +1,20 @@
+### Inputs for the VLBI pipeline ###
+## Extra parameters to be set in vlbi_pipe_params.json
+
+
+parameter_file = VLBI_pipeline/vlbi_pipe_params.json
+make_scripts = True
+run_jobs = False
+
+## Steps to run ##
+prepare_EVN = 0
+import_fitsidi = 0
+mpi_priorcal = 0
+init_flag = 0
+sub_band_delay = 0
+multi_band_delay = 0
+self_cal_phasecal = 0
+apply_target = 0
+primary_beam_correction = 0
+
+
