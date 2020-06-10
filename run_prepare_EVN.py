@@ -75,13 +75,27 @@ else:
 
 
 ## Append tsys
+casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
 append_tsys(antabfile=antabfile, idifiles=idifiles)
 
 ### Convert gaincurve
 rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
-convert_gaincurve(antab=antabfile, gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_EVN']['gaincurve']['min_elevation'], max_elevation=params['prepare_EVN']['gaincurve']['min_elevation'])
+casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
+convert_gaincurve(antab=antabfile, gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_EVN']['gaincurve']['min_elevation'], max_elevation=params['prepare_EVN']['gaincurve']['max_elevation'])
 
-print(idifiles)
+if params["prepare_EVN"]["flag_file"] != "none":
+	casalog.post(origin=filename,message='Generating CASA-compatable observatory flags',priority='INFO')
+	if params["prepare_EVN"]["flag_file"] == "auto":
+		flagfile="%s/%s.uvflg"%(params['global']['cwd'],params['global']['project_code'])
+		if os.path.exists(flagfile) == False:
+			casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
+			sys.exit()
+	else:
+		flagfile="%s"%(params['prepare_EVN']['flag_file'])
+		if os.path.exists(flagfile) == False:
+			casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
+			sys.exit()
+	convert_flags(infile=flagfile, idifiles=idifiles, outfp=sys.stdout, outfile='%s_casa.flags'%params['global']['project_code'])
 
 
 
