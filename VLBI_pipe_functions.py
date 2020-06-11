@@ -202,10 +202,12 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		singularity='singularity exec'
 	else:
 		singularity=''
-	if params['global']['job_manager'] == 'pbs':
+	if ((params['global']['job_manager'] == 'pbs')&(parallel == True)):
 		job_commands='--map-by node -hostfile $PBS_NODEFILE'
+	else:
+		job_commands=''
 	
-	commands.append('%s %s %s --nologger --log2term -c %s/run_%s.py %s'%(mpicasapath,singularity,casapath,vlbipipepath,step,inputs['parameter_file']))
+	commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,inputs['parameter_file']))
 
 	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
 		for listitem in commands:
