@@ -38,7 +38,7 @@ casalog.post(priority='INFO',origin=filename,message='Initialising VLBI pipeline
 
 if os.path.exists('%s/%s'%(params['global']['cwd'],'vp_steps_run.json')) == False:
 	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating step logger')
-	init_pipe_run(inputs)
+	init_pipe_run(steps)
 else:
 	casalog.post(priority='INFO',origin=filename,message='A previous run has been detected')
 	casalog.post(priority='WARN',origin=filename,message='If you dont mean to do this please delete vlbi_pipe_step_run.json')

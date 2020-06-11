@@ -75,7 +75,8 @@ else:
 
 ## Append tsys
 casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
-append_tsys(antabfile=antabfile, idifiles=idifiles)
+for i in idifiles:
+	append_tsys(antabfile=antabfile, idifiles=i)
 
 ### Convert gaincurve
 rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])

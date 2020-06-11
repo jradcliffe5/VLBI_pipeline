@@ -84,8 +84,8 @@ def rmdirs(dirs):
 
 def init_pipe_run(inputs):
 	inputs2=copy.deepcopy(inputs)
-	for i in ['parameter_file','make_scripts','run_jobs']:
-		del inputs2[i]
+	#for i in ['parameter_file','make_scripts','run_jobs']:
+	#	del inputs2[i]
 	for i in inputs2.keys():
 		inputs2[i] = 0
 	with open('vp_steps_run.json', 'w') as filehandle:
