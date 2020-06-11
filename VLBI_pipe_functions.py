@@ -202,8 +202,11 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		singularity='singularity exec'
 	else:
 		singularity=''
-	if ((params['global']['job_manager'] == 'pbs')&(parallel == True)):
-		job_commands='--map-by node -hostfile $PBS_NODEFILE'
+	if (params['global']['job_manager'] == 'pbs'):
+		job_commands=''
+		command.append('cd %s'%params['global']['cwd'])
+		if (parallel == True):
+			job_commands='--map-by node -hostfile $PBS_NODEFILE'
 	else:
 		job_commands=''
 	
