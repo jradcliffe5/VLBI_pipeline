@@ -5,13 +5,6 @@ sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
 
-try:
-    # CASA 5
-    from casac import casac as ctools
-except:
-    # CASA 6
-    import casatools as ctools
-
 
 with open('vp_inputs.json', 'r') as f:
 	inputs = json_load_byteified(f)
@@ -73,6 +66,6 @@ importfitsidi(fitsidifile=idifiles,\
 	          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 
 steps_run['import_fitsidi'] = 1
-with open('%s/vp_inputs.json'%(params['global']['cwd']), 'w') as f:
+with open('%s/vp_steps_run.json'%(params['global']['cwd']), 'w') as f:
 	json.dump(steps_run, f,indent=4, separators=(',', ': '))
 f.close()

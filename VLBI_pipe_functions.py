@@ -223,10 +223,18 @@ def write_job_script(steps,job_manager):
 		if i==0:
 			depend=''
 		else:
-			depend='-W depend=afterany:$%s'%(steps[i-1])
+			if job_manager=='pbs':
+				depend='-W depend=afterany:$%s'%(steps[i-1])
+			if job_manager=='slurm':
+				depend='--dependency=afterany:$%s'%(steps[i-1])
+			if job_manager=='bash':
+				depend=''
 		if job_manager=='pbs':
 			commands.append("%s=$(qsub %s job_%s.pbs)"%(j,depend,j))
-
+		if job_manager=='slurm':
+			commands.append('%s=$(sbatch %s job_%s.slurm)'%(j,depend,j))
+		if job_manager=='bash':
+			commands.append('bash job_%s.bash'%(j))
 	
 
 	with open('vp_runfile.bash','w') as f:

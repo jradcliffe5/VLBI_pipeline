@@ -4,11 +4,11 @@
 
 parameter_file = VLBI_pipeline/vlbi_pipe_params.json
 make_scripts = True
-run_jobs = False
+run_jobs = True
 
 ## Steps to run ##
 prepare_EVN = 1
-import_fitsidi = 0
+import_fitsidi = 1
 mpi_priorcal = 0
 init_flag = 0
 sub_band_delay = 0

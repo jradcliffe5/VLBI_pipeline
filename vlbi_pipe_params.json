@@ -3,7 +3,7 @@
         "project_code"      : "eg078d",
         "cwd"               : "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
         "vlbipipe_path"     : "VLBI_pipeline",
-        "job_manager"       : "pbs",
+        "job_manager"       : "bash",
         "HPC_project_code"  : "ASTR1313",
         "default_partition" : "normal",
         "default_walltime"  : "10:00:00",
@@ -16,28 +16,37 @@
         "mpicasapath"       : "mpicasa",
         "casapath"          : "casa",
         "singularity"       : false,
-        "AOflag_command"    : ""
+        "AOflag_command"    : "",
+        "fitsidi_files"     : ["auto"],
+        "fitsidi_path"      : "raw_UV"
     },
     "prepare_EVN":{
-        "fitsidi_files"     : ["auto"],
-        "fitsidi_path"      : "raw_UV",
         "antab_file"        : "auto",
         "flag_file"         : "auto",
         "gaincurve":{
-            "min_elevation": 0.0,
-            "max_elevation": 90.0
+            "min_elevation" : 0.0,
+            "max_elevation" : 90.0
         },
         "hpc_options":{
-            "partition" : "default",
-            "walltime"  : "default",
-            "nodes"     : -1,
-            "cpus"      : -1,
-            "mpiprocs"  : -1,
-            "nodetype"  : "default"
+            "partition"     : "default",
+            "walltime"      : "default",
+            "nodes"         : -1,
+            "cpus"          : -1,
+            "mpiprocs"      : -1,
+            "nodetype"      : "default"
         }
     },
     "import_fitsidi":{
-        "antab_file"        : "auto"
+        "const_obs_id"      : true,
+        "scan_gap"          : 15.0,
+        "hpc_options":{
+            "partition"     : "default",
+            "walltime"      : "default",
+            "nodes"         : -1,
+            "cpus"          : -1,
+            "mpiprocs"      : -1,
+            "nodetype"      : "default"
+        }
     },
     "mpi_priorcal":{
         "antab_file"        : "auto"

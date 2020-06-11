@@ -44,14 +44,14 @@ else:
 	casalog.post(priority='WARN',origin=filename,message='If you dont mean to do this please delete vlbi_pipe_step_run.json')
 
 ## Time to build all scripts
-if bool(inputs['make_scripts']) == True:
+if inputs['make_scripts'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
 			write_hpc_headers(step=i,params=params)
 			write_commands(step=i,inputs=inputs,params=params,parallel=False,aoflag=False)
 
 
-if bool(inputs['run_jobs']) == True:
+if inputs['run_jobs'] == 'True':
 	jobs_to_run = []
 	for i in steps.keys():
 		if steps[i]==1:

@@ -97,6 +97,6 @@ if params["prepare_EVN"]["flag_file"] != "none":
 	convert_flags(infile=flagfile, idifiles=idifiles, outfp=sys.stdout, outfile='%s_casa.flags'%params['global']['project_code'])
 
 steps_run['prepare_EVN'] = 1
-with open('%s/vp_inputs.json'%(params['global']['cwd']), 'w') as f:
+with open('%s/vp_steps_run.json'%(params['global']['cwd']), 'w') as f:
 	json.dump(steps_run, f,indent=4, separators=(',', ': '))
 f.close()
