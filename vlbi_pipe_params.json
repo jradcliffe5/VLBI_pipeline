@@ -2,7 +2,7 @@
     "global":{
         "project_code"      : "eg078d",
         "cwd"               : "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
-        "job_manager"       : "bash|slurm|pbs",
+        "job_manager"       : "bash",
         "HPC_project_code"  : "ASTR1313",
         "default_partition" : "normal",
         "default_walltime"  : "10:00:00",
@@ -23,6 +23,14 @@
         "gaincurve":{
             "min_elevation": 0.0,
             "max_elevation": 90.0
+        },
+        "hpc_options":{
+            "partition" : "default",
+            "walltime"  : "default",
+            "nodes"     : -1,
+            "cpus"      : -1,
+            "mpiprocs"  : -1,
+            "nodetype"  : "default"
         }
     },
     "import_fitsidi":{

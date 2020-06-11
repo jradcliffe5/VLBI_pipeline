@@ -96,7 +96,3 @@ if params["prepare_EVN"]["flag_file"] != "none":
 			casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
 			sys.exit()
 	convert_flags(infile=flagfile, idifiles=idifiles, outfp=sys.stdout, outfile='%s_casa.flags'%params['global']['project_code'])
-
-
-
-
