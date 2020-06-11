@@ -36,7 +36,7 @@ f.close()
 
 casalog.post(priority='INFO',origin=filename,message='Initialising VLBI pipeline run')
 
-if os.path.exists('%s/%s'%(params['global']['cwd'],'vlbi_pipe_step_run.json')) == False:
+if os.path.exists('%s/%s'%(params['global']['cwd'],'vp_steps_run.json')) == False:
 	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating step logger')
 	init_pipe_run(inputs)
 else:
@@ -50,3 +50,10 @@ if bool(inputs['make_scripts']) == True:
 			write_hpc_headers(step=i,params=params)
 			write_commands(step=i,inputs=inputs,params=params,parallel=False,aoflag=False)
 
+
+if bool(inputs['run_jobs']) == True:
+	jobs_to_run = []
+	for i in steps.keys():
+		if steps[i]==1:
+			jobs_to_run.append(i)
+	write_job_script(steps=jobs_to_run,job_manager=params['global']['job_manager'])

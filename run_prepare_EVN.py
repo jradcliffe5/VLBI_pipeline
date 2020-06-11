@@ -15,27 +15,30 @@ f.close()
 with open(inputs['parameter_file'], "r") as f:
 	params = json_load_byteified(f)
 f.close()
+with open('vp_steps_run.json', "r") as f:
+	steps_run = json_load_byteified(f)
+f.close()
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles
-if params['prepare_EVN']['fitsidi_path'] == "":
-	params['prepare_EVN']['fitsidi_path'] = params['global']['cwd']
+if params['global']['fitsidi_path'] == "":
+	params['global']['fitsidi_path'] = params['global']['cwd']
 	casalog.post(origin=filename,message='Fitsidifile path not set ... assuming they are in the current working directory',priority='WARN')
 
-casalog.post(origin=filename,message='Fitsidifiles to be located in %s'%params['prepare_EVN']['fitsidi_path'])
+casalog.post(origin=filename,message='Fitsidifiles to be located in %s'%params['global']['fitsidi_path'])
 
 
 
 ## Find fitsfiles
-if params['prepare_EVN']['fitsidi_files'] == ["auto"]:
-	idifiles = find_fitsidi(idifilepath=params['prepare_EVN']['fitsidi_path'],\
+if params['global']['fitsidi_files'] == ["auto"]:
+	idifiles = find_fitsidi(idifilepath=params['global']['fitsidi_path'],\
 		         cwd=params['global']['cwd'])
 else:
 	casalog.post(origin=filename,message='Using idifiles specified in parameter file')
 	casalog.post(origin=filename,message='Checking whether specified idifiles exist')
-	idifiles = params['prepare_EVN']['fitsidi_files']
+	idifiles = params['global']['fitsidi_files']
 	for i,j in enumerate(idifiles):
-		fullidi = "%s/%s"%(params['prepare_EVN']['fitsidi_path'],j)
+		fullidi = "%s/%s"%(params['global']['fitsidi_path'],j)
 		idifiles[i] = fullidi
 		if os.path.exists(fullidi) == False:
 			casalog.post(priority='SEVERE',origin=filename,message='Fitsidifile %s does not exist ... exiting'%fullidi)
@@ -43,17 +46,17 @@ else:
 
 
 ## Copy idifiles to cwd if not originally there
-if params['prepare_EVN']['fitsidi_path'] != params['global']['cwd']:
+if params['global']['fitsidi_path'] != params['global']['cwd']:
 	casalog.post(origin=filename,message='Fitsidifiles in different directory. Moving to cwd.',priority='INFO')
 	for j,i in enumerate(idifiles):
-		rmfiles(['%s/%s'%(params['global']['cwd'],i.split(params['prepare_EVN']['fitsidi_path']+'/')[1])])
+		rmfiles(['%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])])
 		os.system('rsync --progress %s %s'%(i,params['global']['cwd']))
-		if os.path.exists('%s/%s'%(params['global']['cwd'],i.split(params['prepare_EVN']['fitsidi_path']+'/')[1])) == False:
+		if os.path.exists('%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])) == False:
 			os.system('cp %s %s'%(i,params['global']['cwd']))
-			if os.path.exists('%s/%s'%(params['global']['cwd'],i.split(params['prepare_EVN']['fitsidi_path']+'/')[1])) == False:
+			if os.path.exists('%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])) == False:
 				casalog.post(origin=filename,message='Could not move files with rsync or cp ... exiting',priority='SEVERE')
 				sys.exit()
-		idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['prepare_EVN']['fitsidi_path']+'/')[1])
+		idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])
 
 ## Find antab file (typical EVN antab files are <project_code>.antab)
 if params['prepare_EVN']['antab_file'] == 'auto':
@@ -92,3 +95,8 @@ if params["prepare_EVN"]["flag_file"] != "none":
 			casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
 			sys.exit()
 	convert_flags(infile=flagfile, idifiles=idifiles, outfp=sys.stdout, outfile='%s_casa.flags'%params['global']['project_code'])
+
+steps_run['prepare_EVN'] = 1
+with open('%s/vp_inputs.json'%(params['global']['cwd']), 'w') as f:
+	json.dump(steps_run, f,indent=4, separators=(',', ': '))
+f.close()

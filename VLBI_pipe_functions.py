@@ -88,7 +88,7 @@ def init_pipe_run(inputs):
 		del inputs2[i]
 	for i in inputs2.keys():
 		inputs2[i] = 0
-	with open('vlbi_pipe_step_run.json', 'w') as filehandle:
+	with open('vp_steps_run.json', 'w') as filehandle:
 		json.dump(inputs2, filehandle,indent=4, separators=(',', ': '))
 
 def find_fitsidi(idifilepath="",cwd="",project_code=""):
@@ -204,7 +204,7 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		singularity=''
 	if (params['global']['job_manager'] == 'pbs'):
 		job_commands=''
-		command.append('cd %s'%params['global']['cwd'])
+		commands.append('cd %s'%params['global']['cwd'])
 		if (parallel == True):
 			job_commands='--map-by node -hostfile $PBS_NODEFILE'
 	else:
@@ -216,6 +216,22 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
 
+def write_job_script(steps,job_manager):
+	func_name = inspect.stack()[0][3]
+	commands=['#!/bin/bash']
+	for i,j in enumerate(steps):
+		if i==0:
+			depend=''
+		else:
+			depend='-W depend=afterany:$%s'%(steps[i-1])
+		if job_manager=='pbs':
+			commands.append("%s=$(qsub %s job_%s.pbs)"%(j,depend,j))
 
+	
+
+	with open('vp_runfile.bash','w') as f:
+		for listitem in commands:
+			f.write('%s\n' % listitem)
+	f.close()
 
 
