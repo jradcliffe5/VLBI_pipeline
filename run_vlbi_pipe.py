@@ -19,6 +19,7 @@ except:
 ## Load global inputs
 inputs = headless(sys.argv[i])
 
+
 steps = copy.deepcopy(inputs)
 for i in steps:
 	if i in ['parameter_file','make_scripts','run_jobs']:
@@ -40,7 +41,7 @@ if os.path.exists('%s/%s'%(params['global']['cwd'],'vlbi_pipe_step_run.json')) =
 	init_pipe_run(inputs)
 else:
 	casalog.post(priority='INFO',origin=filename,message='A previous run has been detected')
-	casalog.post(priority='WARN',origin=filename,message='If you don\'t mean to do this please delete vlbi_pipe_step_run.json')
+	casalog.post(priority='WARN',origin=filename,message='If you dont mean to do this please delete vlbi_pipe_step_run.json')
 
 ## Time to build all scripts
 if bool(inputs['make_scripts']) == True:

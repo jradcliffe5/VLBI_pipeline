@@ -5,6 +5,7 @@ import inspect
 import sys
 from taskinit import casalog
 import collections
+import copy
 
 def json_load_byteified(file_handle):
 	return _byteify(
@@ -82,12 +83,13 @@ def rmdirs(dirs):
 	return
 
 def init_pipe_run(inputs):
+	inputs2=copy.deepcopy(inputs)
 	for i in ['parameter_file','make_scripts','run_jobs']:
-		del inputs[i]
-	for i in inputs.keys():
-		inputs[i] = 0
+		del inputs2[i]
+	for i in inputs2.keys():
+		inputs2[i] = 0
 	with open('vlbi_pipe_step_run.json', 'w') as filehandle:
-		json.dump(inputs, filehandle,indent=4, separators=(',', ': '))
+		json.dump(inputs2, filehandle,indent=4, separators=(',', ': '))
 
 def find_fitsidi(idifilepath="",cwd="",project_code=""):
 	func_name = inspect.stack()[0][3]
