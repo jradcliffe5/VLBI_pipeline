@@ -2,7 +2,8 @@
     "global":{
         "project_code"      : "eg078d",
         "cwd"               : "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
-        "job_manager"       : "bash",
+        "vlbipipe_path"     : "VLBI_pipeline",
+        "job_manager"       : "pbs",
         "HPC_project_code"  : "ASTR1313",
         "default_partition" : "normal",
         "default_walltime"  : "10:00:00",
@@ -12,8 +13,10 @@
         "default_nodetype"  : "haswell_reg",
         "email_progress"    : "jack.f.radcliffe@gmail.com",
         "parallel_process"  : true,
-        "CASA_path"         : "",
-        "AOflag_command"    : ["",""]
+        "mpicasapath"       : "mpicasa",
+        "casapath"          : "casa",
+        "singularity"       : false,
+        "AOflag_command"    : ""
     },
     "prepare_EVN":{
         "fitsidi_files"     : ["auto"],

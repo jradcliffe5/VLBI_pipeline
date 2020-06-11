@@ -109,7 +109,7 @@ def find_fitsidi(idifilepath="",cwd="",project_code=""):
 	else:
 		return fitsidifiles
 
-def write_hpc_headers(filename,step,params):
+def write_hpc_headers(step,params):
 	func_name = inspect.stack()[0][3]
 
 	hpc_opts = {}
@@ -135,7 +135,6 @@ def write_hpc_headers(filename,step,params):
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
 			hpc_opts[i] = params[step]["hpc_options"][i]
-	print(hpc_opts.keys())
 	
 
 	hpc_dict = {'slurm':{
@@ -182,12 +181,32 @@ def write_hpc_headers(filename,step,params):
 			if hpc_opts[i] != '':
 				if hpc_dict[hpc_opts['job_manager']][i] !='':
 					hpc_header.append(hpc_dict[hpc_opts['job_manager']][i])
-	#for i in ['job_name','error']:
-	#	hpc_header.append(hpc_dict[hpc_opts['job_manager']][i])
 
 
 	with open('job_%s.%s'%(step,hpc_opts['job_manager']), 'w') as filehandle:
 		for listitem in hpc_header:
+			filehandle.write('%s\n' % listitem)
+
+def write_commands(step,inputs,params,parallel,aoflag):
+	func_name = inspect.stack()[0][3]
+	commands=[]
+	casapath=params['global']['casapath']
+	vlbipipepath=params['global']["vlbipipe_path"]
+	if parallel == True:
+		mpicasapath = params['global']['mpicasapath']
+	else:
+		mpicasapath = ''
+	if params['global']['singularity'] == True:
+		singularity='singularity exec'
+	else:
+		singularity=''
+	if params['global']['job_manager'] == 'pbs':
+		job_commands='--map-by node -hostfile $PBS_NODEFILE'
+	
+	commands.append('%s %s %s --nologger --log2term -c %s/run_%s.py %s'%(mpicasapath,singularity,casapath,vlbipipepath,step,inputs['parameter_file']))
+
+	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
+		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
 
 

@@ -7,18 +7,14 @@ from casavlbitools.fitsidi import append_tsys, convert_flags
 from casavlbitools.casa import convert_gaincurve
 from VLBI_pipe_functions import *
 
-## Imports input_file
-try:
-	i = sys.argv.index("-c") + 2
-except:
-	i = 1
-	pass
 
-## Load global inputs
-inputs = headless(sys.argv[i])
-## Load parameters
+
+with open('vp_inputs.json', 'r') as f:
+	inputs = json_load_byteified(f)
+f.close()
 with open(inputs['parameter_file'], "r") as f:
 	params = json_load_byteified(f)
+f.close()
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles

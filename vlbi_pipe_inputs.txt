@@ -7,7 +7,7 @@ make_scripts = True
 run_jobs = False
 
 ## Steps to run ##
-prepare_EVN = 0
+prepare_EVN = 1
 import_fitsidi = 0
 mpi_priorcal = 0
 init_flag = 0
