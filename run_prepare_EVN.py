@@ -7,17 +7,9 @@ from casavlbitools.fitsidi import append_tsys, convert_flags
 from casavlbitools.casa import convert_gaincurve
 from VLBI_pipe_functions import *
 
-
-
-with open('vp_inputs.json', 'r') as f:
-	inputs = json_load_byteified(f)
-f.close()
-with open(inputs['parameter_file'], "r") as f:
-	params = json_load_byteified(f)
-f.close()
-with open('vp_steps_run.json', "r") as f:
-	steps_run = json_load_byteified(f)
-f.close()
+inputs = load_json('vp_inputs.json')
+params = load_json(inputs['parameter_file'])
+steps_run = load_json('vp_steps_run.json')
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles
@@ -98,6 +90,4 @@ if params["prepare_EVN"]["flag_file"] != "none":
 	convert_flags(infile=flagfile, idifiles=idifiles, outfp=sys.stdout, outfile='%s_casa.flags'%params['global']['project_code'])
 
 steps_run['prepare_EVN'] = 1
-with open('%s/vp_steps_run.json'%(params['global']['cwd']), 'w') as f:
-	json.dump(steps_run, f,indent=4, separators=(',', ': '))
-f.close()
+save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

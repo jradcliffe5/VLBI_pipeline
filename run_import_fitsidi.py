@@ -5,16 +5,11 @@ sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
 
+## Load params
+inputs = load_json('vp_inputs.json')
+params = load_json(inputs['parameter_file'])
+steps_run = load_json('vp_steps_run.json')
 
-with open('vp_inputs.json', 'r') as f:
-	inputs = json_load_byteified(f)
-f.close()
-with open(inputs['parameter_file'], "r") as f:
-	params = json_load_byteified(f)
-f.close()
-with open('vp_steps_run.json', "r") as f:
-	steps_run = json_load_byteified(f)
-f.close()
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles
@@ -66,6 +61,4 @@ importfitsidi(fitsidifile=idifiles,\
 	          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 
 steps_run['import_fitsidi'] = 1
-with open('%s/vp_steps_run.json'%(params['global']['cwd']), 'w') as f:
-	json.dump(steps_run, f,indent=4, separators=(',', ': '))
-f.close()
+save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

@@ -12,7 +12,6 @@
         "default_mpiprocs"  : 24,
         "default_nodetype"  : "haswell_reg",
         "email_progress"    : "jack.f.radcliffe@gmail.com",
-        "parallel_process"  : true,
         "mpicasapath"       : "mpicasa",
         "casapath"          : "casa",
         "singularity"       : false,
@@ -48,7 +47,19 @@
             "nodetype"      : "default"
         }
     },
-    "mpi_priorcal":{
+    "make_mms":{
+        "separationaxis"    : "auto",
+        "numsubms"          : "auto",
+        "hpc_options":{
+            "partition"     : "default",
+            "walltime"      : "default",
+            "nodes"         : -1,
+            "cpus"          : -1,
+            "mpiprocs"      : -1,
+            "nodetype"      : "default"
+        }
+    },
+    "apriori_cal":{
         "antab_file"        : "auto"
     },
     "init_flag":{

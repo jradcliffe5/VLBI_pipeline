@@ -19,7 +19,7 @@ def json_loads_byteified(json_text):
 		ignore_dicts=True
 	)
 
-def _byteify(data, ignore_dicts = False):
+def _byteify(data, ignore_dicts=False):
 	# if this is a unicode string, return its string representation
 	if isinstance(data, unicode):
 		return data.encode('utf-8')
@@ -35,6 +35,21 @@ def _byteify(data, ignore_dicts = False):
 		}
 	# if it's anything else, return it in its original form
 	return data
+
+def load_json(filename):
+	with open(filename, "r") as f:
+		json_data = json_load_byteified(f)
+	f.close()
+	return json_data
+
+def save_json(filename,array,append=False):
+	if append==False:
+		write_mode='w'
+	else:
+		write_mode='a'
+	with open(filename, write_mode) as f:
+		json.dump(array, f,indent=4, separators=(',', ': '))
+	f.close()
 
 def headless(inputfile):
 	''' Parse the list of inputs given in the specified file. (Modified from evn_funcs.py)'''
@@ -88,8 +103,7 @@ def init_pipe_run(inputs):
 	#	del inputs2[i]
 	for i in inputs2.keys():
 		inputs2[i] = 0
-	with open('vp_steps_run.json', 'w') as filehandle:
-		json.dump(inputs2, filehandle,indent=4, separators=(',', ': '))
+	save_json(filename='vp_steps_run.json',array=inputs2,append=False)
 
 def find_fitsidi(idifilepath="",cwd="",project_code=""):
 	func_name = inspect.stack()[0][3]

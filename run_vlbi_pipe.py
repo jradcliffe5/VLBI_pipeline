@@ -26,29 +26,33 @@ for i in steps:
 		del steps[i]
 
 ## Load parameters
-with open(inputs['parameter_file'], "r") as f:
-	params = json_load_byteified(f)
-f.close()
+params=load_json(inputs['parameter_file'])
 
-with open('%s/vp_inputs.json'%(params['global']['cwd']), 'w') as f:
-	json.dump(inputs, f,indent=4, separators=(',', ': '))
-f.close()
+save_json(filename='%s/vp_inputs.json'%(params['global']['cwd']),array=inputs,append=False)
 
 casalog.post(priority='INFO',origin=filename,message='Initialising VLBI pipeline run')
 
 if os.path.exists('%s/%s'%(params['global']['cwd'],'vp_steps_run.json')) == False:
 	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating step logger')
 	init_pipe_run(steps)
+	steps_run=load_json('vp_steps_run.json')
 else:
 	casalog.post(priority='INFO',origin=filename,message='A previous run has been detected')
-	casalog.post(priority='WARN',origin=filename,message='If you dont mean to do this please delete vlbi_pipe_step_run.json')
+	casalog.post(priority='WARN',origin=filename,message='If you dont mean to do this please delete vp_steps_run.json')
+	steps_run=load_json('vp_steps_run.json')
 
 ## Time to build all scripts
 if inputs['make_scripts'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
 			write_hpc_headers(step=i,params=params)
-			write_commands(step=i,inputs=inputs,params=params,parallel=False,aoflag=False)
+			if i in ['prepare_EVN','import_fitsidi']:
+				parallel=False
+			elif ((steps['make_mms'] == 1)|(steps_run['make_mms']==1)):
+				parallel=True
+			else:
+				parallel=False
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False)
 
 
 if inputs['run_jobs'] == 'True':
