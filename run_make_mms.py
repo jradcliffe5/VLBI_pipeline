@@ -11,7 +11,7 @@ steps_run = load_json('vp_steps_run.json')
 
 
 mmsfile='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])
-msfile='%s_2.ms'%(mmsfile,mmsfile.split('.ms')[0])
+msfile='%s_2.ms'%(mmsfile.split('.ms')[0])
 
 ## Make mms data-set
 os.system('mv %s %s_2.ms'%(mmsfile,msfile))
