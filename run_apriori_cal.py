@@ -8,7 +8,8 @@ from VLBI_pipe_functions import *
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json')
+steps_run = load_json('vp_steps_run.json',Odict=True)
+gaintables = load_gaintables(params)
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -16,11 +17,7 @@ p_c=params['global']['project_code']
 
 msinfo = get_ms_info(msfile)
 
-gaintables=OrderedDict({'gaintable':[],
-			'gainfield':[],
-			'spwmap':[],
-			'interp':[]})
-
+'''
 if params['apriori_cal']['correlator'] !='default':
 	if re.match(params['apriori_cal']['correlator'], 'difx', re.IGNORECASE) == True:
 		doaccor=True
@@ -50,8 +47,9 @@ if doaccor==True:
 if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
 	if steps_run['apriori_cal'] == 1:
 		flagmanager(vis=msfile,mode='restore',versionname='original_flags')
-	flagmanager(vis=msfile,mode='save',versionname='original_flags')
-	flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
+	else:
+		flagmanager(vis=msfile,mode='save',versionname='original_flags')
+	#flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
 
 rmdirs(['%s/%s.tsys'%(cwd,p_c)])
 gencal(vis=msfile,\
@@ -60,7 +58,6 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
-
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'','',''])
 
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
@@ -87,3 +84,4 @@ listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apriori_cal'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+'''

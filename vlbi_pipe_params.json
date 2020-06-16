@@ -15,7 +15,7 @@
         "mpicasapath"       : "mpicasa",
         "casapath"          : "casa",
         "singularity"       : false,
-        "AOflag_command"    : "",
+        "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      : "raw_UV"
     },
@@ -82,7 +82,16 @@
         }
     },
     "init_flag":{
-        "antab_file"        : "auto"
+        "flag_strategy"        : "auto",
+        "flag_fields"          : ["J1241+602","J1234+619"],
+        "hpc_options":{
+            "partition"     : "default",
+            "walltime"      : "default",
+            "nodes"         : -1,
+            "cpus"          : -1,
+            "mpiprocs"      : -1,
+            "nodetype"      : "default"
+        }
     },
     "sub_band_delay":{
         "antab_file"        : "auto"

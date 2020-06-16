@@ -8,6 +8,7 @@ import collections
 import copy
 from scipy.interpolate import interp1d
 import numpy
+from collections import OrderedDict
 
 try:
 	# CASA 5
@@ -28,6 +29,28 @@ def json_loads_byteified(json_text):
 		ignore_dicts=True
 	)
 
+def json_load_byteified_dict(file_handle):
+	return convert(_byteify(
+		json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
+		ignore_dicts=True
+	))
+
+def json_loads_byteified_dict(json_text):
+	return convert(_byteify(
+		json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
+		ignore_dicts=True)
+	)
+
+def convert(data):
+    if isinstance(data, basestring):
+        return str(data)
+    elif isinstance(data, collections.Mapping):
+        return OrderedDict(map(convert, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(convert, data))
+    else:
+        return data
+
 def _byteify(data, ignore_dicts=False):
 	# if this is a unicode string, return its string representation
 	if isinstance(data, unicode):
@@ -45,10 +68,15 @@ def _byteify(data, ignore_dicts=False):
 	# if it's anything else, return it in its original form
 	return data
 
-def load_json(filename):
-	with open(filename, "r") as f:
-		json_data = json_load_byteified(f)
-	f.close()
+def load_json(filename,Odict=False):
+	if Odict==False:
+		with open(filename, "r") as f:
+			json_data = json_load_byteified(f)
+		f.close()
+	else:
+		with open(filename, "r") as f:
+			json_data = json_load_byteified_dict(f)
+		f.close()
 	return json_data
 
 def save_json(filename,array,append=False):
@@ -107,7 +135,9 @@ def rmdirs(dirs):
 	return
 
 def init_pipe_run(inputs):
-	inputs2=copy.deepcopy(inputs)
+	inputs2=OrderedDict({})
+	for a,b in zip(inputs.keys(),inputs.values()):
+		inputs2[a]=b
 	#for i in ['parameter_file','make_scripts','run_jobs']:
 	#	del inputs2[i]
 	for i in inputs2.keys():
@@ -217,27 +247,40 @@ def write_commands(step,inputs,params,parallel,aoflag):
 	commands=[]
 	casapath=params['global']['casapath']
 	vlbipipepath=params['global']["vlbipipe_path"]
-	if parallel == True:
-		mpicasapath = params['global']['mpicasapath']
+	if aoflag==False:
+		if parallel == True:
+			mpicasapath = params['global']['mpicasapath']
+		else:
+			mpicasapath = ''
+		if params['global']['singularity'] == True:
+			singularity='singularity exec'
+		else:
+			singularity=''
+		if (params['global']['job_manager'] == 'pbs'):
+			job_commands=''
+			commands.append('cd %s'%params['global']['cwd'])
+			if (parallel == True):
+				job_commands='--map-by node -hostfile $PBS_NODEFILE'
+		else:
+			job_commands=''
+		
+		commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	else:
-		mpicasapath = ''
-	if params['global']['singularity'] == True:
-		singularity='singularity exec'
-	else:
-		singularity=''
-	if (params['global']['job_manager'] == 'pbs'):
-		job_commands=''
-		commands.append('cd %s'%params['global']['cwd'])
-		if (parallel == True):
-			job_commands='--map-by node -hostfile $PBS_NODEFILE'
-	else:
-		job_commands=''
-	
-	commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		for i in params['global']['AOflag_command']:
+			commands.append(i)
+		msfile='%s.ms'%params['global']['project_code']
+		fields=params[step]['flag_fields']
+		msinfo = get_ms_info(msfile)
+		ids = []
+		for i in fields:
+			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
+		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
+		commands[-1] = commands[-1]+'-strategy %s '%(params[step]['flag_strategy'])
 
 	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
+
 
 def write_job_script(steps,job_manager):
 	func_name = inspect.stack()[0][3]
@@ -271,7 +314,10 @@ def get_ms_info(msfile):
 	## antenna information
 	tb.open('%s/ANTENNA'%msfile)
 	ants = tb.getcol('NAME')
-	msinfo['ANTENNAS']=dict(zip(ants, np.arange(0,len(ants),1)))
+	ant={}
+	ant['anttoID'] =dict(zip(ants, np.arange(0,len(ants),1)))
+	ant['IDtoant'] = dict(zip(np.arange(0,len(ants),1),ants))
+	msinfo['ANTENNAS']=ant
 	tb.close()
 
 	## get spw information
@@ -298,12 +344,17 @@ def get_ms_info(msfile):
 	## Get field information
 	tb.open('%s/FIELD'%msfile)
 	fields = tb.getcol('NAME')
-	msinfo['FIELD']=dict(zip(fields, np.arange(0,len(fields),1)))
+	field = {}
+	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
+	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1),fields))
+	msinfo['FIELD'] = field
+	save_json('vp_fields_to_id.json',field)
 	tb.close()
 	## Get telescope_name
 	tb.open('%s/OBSERVATION'%msfile)
 	msinfo['TELE_NAME'] = tb.getcol('TELESCOPE_NAME')[0]
 	tb.close()
+
 	return msinfo
 
 def fill_flagged_soln(caltable='', fringecal=False):
@@ -479,10 +530,20 @@ def detect_jump_and_smooth(array,jump_pc):
 				array[low:high] = smooth_series(array[low:high],diff)
 			else:
 				jump=False
-	return array,jump
-
+	return array, jump
 
 def append_gaintable(gaintables,caltable_params):
+	print(gaintables)
 	for i,j in enumerate(gaintables.keys()):
 		gaintables[j].append(caltable_params[i])
+	return gaintables
+
+def load_gaintables(params):
+	cwd=params['global']['cwd']
+	if os.path.exists('%s/vp_gaintables.json'%(cwd)) == False:
+		gaintables=OrderedDict({})
+		for a,b in zip(('gaintable','gainfield','spwmap','interp'), ([],[],[],[])):
+			gaintables[a]=b
+	else:
+		gaintables=load_json('%s/vp_gaintables.json'%(cwd),Odict=True)
 	return gaintables
