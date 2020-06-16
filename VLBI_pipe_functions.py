@@ -6,6 +6,15 @@ import sys
 from taskinit import casalog
 import collections
 import copy
+from scipy.interpolate import interp1d
+import numpy
+
+try:
+	# CASA 5
+	from casac import casac as casatools
+except:
+	# CASA 6
+	import casatools
 
 def json_load_byteified(file_handle):
 	return _byteify(
@@ -256,4 +265,218 @@ def write_job_script(steps,job_manager):
 			f.write('%s\n' % listitem)
 	f.close()
 
+def get_ms_info(msfile):
+	tb = casatools.table()
+	msinfo={}
+	## antenna information
+	tb.open('%s/ANTENNA'%msfile)
+	ants = tb.getcol('NAME')
+	msinfo['ANTENNAS']=dict(zip(ants, np.arange(0,len(ants),1)))
+	tb.close()
 
+	## get spw information
+	tb.open('%s/SPECTRAL_WINDOW'%msfile)
+	spw={}
+	spw['nspws'] = len(tb.getcol('TOTAL_BANDWIDTH'))
+	spw['bwidth'] = np.sum(tb.getcol('TOTAL_BANDWIDTH'))
+	spw['spw_bw'] = spw['bwidth']/spw['nspws']
+	spw['freq_range'] = [tb.getcol('CHAN_FREQ')[0][0],tb.getcol('CHAN_FREQ')[0][0]+spw['bwidth']]
+	spw['cfreq'] = np.average(spw['freq_range'])
+	if ((np.max(tb.getcol('CHAN_WIDTH')) == np.min(tb.getcol('CHAN_WIDTH')))&(np.max(tb.getcol('NUM_CHAN')) == np.min(tb.getcol('NUM_CHAN')))) == True:
+		spw['same_spws'] = True
+	else:
+		spw['same_spws'] = False
+	if spw['same_spws'] == True:
+		spw['chan_width'] = tb.getcol('CHAN_WIDTH')[0][0]
+	else:
+		spw['chan_width'] = np.average(tb.getcol('CHAN_WIDTH'))
+	tb.close()
+	tb.open('%s/POLARIZATION'%msfile)
+	spw['npol'] = tb.getcol('NUM_CORR')[0]
+	tb.close()
+	msinfo['SPECTRAL_WINDOW'] = spw
+	## Get field information
+	tb.open('%s/FIELD'%msfile)
+	fields = tb.getcol('NAME')
+	msinfo['FIELD']=dict(zip(fields, np.arange(0,len(fields),1)))
+	tb.close()
+	## Get telescope_name
+	tb.open('%s/OBSERVATION'%msfile)
+	msinfo['TELE_NAME'] = tb.getcol('TELESCOPE_NAME')[0]
+	tb.close()
+	return msinfo
+
+def fill_flagged_soln(caltable='', fringecal=False):
+		"""
+		This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
+		one.
+		If you do not do that and applycal blindly with the table your data gets 
+		flagged between  calibration runs that have a bad/flagged solution at one edge.
+		Can be pretty bad when you calibrate every hour or more 
+		(when you are betting on self-cal) of observation (e.g L-band of the EVLA)..one can 
+		lose the whole hour of good data without realizing !
+		"""
+		if fringecal==False:
+			gaincol='CPARAM'
+		else:
+			gaincol='FPARAM'
+		tb.open(caltable, nomodify=False)
+		flg=tb.getcol('FLAG')
+		#sol=tb.getcol('SOLUTION_OK')
+		ant=tb.getcol('ANTENNA1')
+		gain=tb.getcol(gaincol)
+		t=tb.getcol('TIME')
+		dd=tb.getcol('SPECTRAL_WINDOW_ID')
+		#dd=tb.getcol('CAL_DESC_ID')
+		maxant=np.max(ant)
+		maxdd=np.max(dd)
+		npol=len(gain[:,0,0])
+		nchan=len(gain[0,:,0])
+		
+		k=1
+		print 'maxant', maxant
+		numflag=0.0
+		for k in range(maxant+1):
+				for j in range (maxdd+1):
+						subflg=flg[:,:,(ant==k) & (dd==j)]
+						subt=t[(ant==k) & (dd==j)]
+						#subsol=sol[:,:,(ant==k) & (dd==j)]
+						subgain=gain[:,:,(ant==k) & (dd==j)]
+						#print 'subgain', subgain.shape
+						for kk in range(1, len(subt)):
+								for chan in range(nchan):
+										for pol in range(npol):
+												if(subflg[pol,chan,kk] and not subflg[pol,chan,kk-1]):
+														numflag += 1.0
+														subflg[pol,chan,kk]=False
+														#subsol[pol, chan, kk]=True
+														subgain[pol,chan,kk]=subgain[pol,chan,kk-1]
+												if(subflg[pol,chan,kk-1] and not subflg[pol,chan,kk]):
+														numflag += 1.0
+														subflg[pol,chan,kk-1]=False
+														#subsol[pol, chan, kk-1]=True
+														subgain[pol,chan,kk-1]=subgain[pol,chan,kk]
+						flg[:,:,(ant==k) & (dd==j)]=subflg
+						#sol[:,:,(ant==k) & (dd==j)]=subsol
+						gain[:,:,(ant==k) & (dd==j)]=subgain
+
+
+		print 'numflag', numflag
+		 
+		###
+		tb.putcol('FLAG', flg)
+		#tb.putcol('SOLUTION_OK', sol)
+		tb.putcol(gaincol, gain)
+		tb.done()
+
+def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
+	tb.open(caltable, nomodify=False)
+	flg=tb.getcol('FLAG')
+	#sol=tb.getcol('SOLUTION_OK')
+	gaincol='FPARAM'
+	ant=tb.getcol('ANTENNA1')
+	gain=tb.getcol(gaincol)
+	gain_edit = copy.deepcopy(gain)*0
+	t=tb.getcol('TIME')
+	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	npol=gain.shape[0]
+	for k in range(npol):
+		print('npol=%s'%k)
+		for i in np.unique(ant):
+			print('nant=%s'%i)
+			for j in np.unique(dd):
+				print('nspw=%s'%j)
+				flg_temp=flg[k,0,((ant==i)&(dd==j))]
+				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
+				gain_uflg = gain_uflg2[flg_temp==0]
+				t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
+				gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
+				gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
+				#gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 5 ,n_sigmas=2.5)
+				gain_uflg,jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
+				if jump == False:
+					gain_uflg = smooth_series(gain_uflg, 21)
+				gain_uflg2[flg_temp==0] = gain_uflg
+				gain_edit[k,0,((ant==i)&(dd==j))]= gain_uflg2
+
+	tb.putcol('FPARAM',gain_edit)
+	tb.flush()
+	tb.close()
+
+def smooth_series(y, box_pts):
+	box = np.ones(box_pts)/box_pts
+	#print(box_pts)
+	y_smooth = np.convolve(y, box, mode='valid')
+	y_smooth = np.hstack([np.ones(box_pts/2)*y_smooth[0],y_smooth])
+	y_smooth = np.hstack([y_smooth,np.ones(box_pts/2)*y_smooth[-1]])
+	return y_smooth
+
+def hampel_filter(input_series, window_size, n_sigmas=3):
+	
+	n = len(input_series[1])
+	new_series = input_series.copy()
+	k = 1.4826 # scale factor for Gaussian distribution
+	
+	indices = []
+	
+	# possibly use np.nanmedian 
+	for i in range((window_size),(n - window_size)):
+		x0 = np.median(input_series[1][(i - window_size):(i + window_size)])
+		S0 = k * np.median(np.abs(input_series[1][(i - window_size):(i + window_size)] - x0))
+		if (np.abs(input_series[1][i] - x0) > n_sigmas * S0):
+			new_series[1][i] = x0
+			indices.append(i)
+
+	detected_outliers = np.array(indices)
+	already_tagged=[]
+	for i in range(len(input_series[1])):
+		if i<input_series[0].shape[0]-1:
+			if i in detected_outliers:
+				if i not in already_tagged:
+					low=i-1
+					t_low=input_series[0][low]
+					while i+1 in detected_outliers:
+						i+=1
+						already_tagged.append(i)
+
+					high=i+1
+					t_high=input_series[0][high]
+					#m=(gain_uflg[high]-gain_uflg[low])/(t_high-t_low)
+					#c=gain_uflg[low]-(m*t_low)
+
+					f = interp1d(x=[t_low,t_high], y=[input_series[1][low],input_series[1][high]])
+					#print(t_temp2[np.arange(low,high,1)])
+					#t_interp=t_temp2[np.arange(low,high,1)]
+					
+					input_series[1][low:high]= f(input_series[0][np.arange(low,high,1)])
+
+	return input_series[1],detected_outliers
+
+
+
+def detect_jump_and_smooth(array,jump_pc):
+	jump_pc=jump_pc/100.
+	for i,j in enumerate(array):
+		if i<array.shape[0]-2:
+			if (array[i+1] > 1.1*array[i])|(array[i+1]<0.9*array[i]):
+				jump=True
+				low=i
+				if i < len(array)-1:
+					#print(i+1)
+					i+=1
+					#print(i)
+					while ((array[i+1] > (1+jump_pc)*array[i])==False)&((array[i+1]<(1-jump_pc)*array[i])==False):
+						if i > (len(array)-3):
+							#print(i)
+							break
+						else:
+							#print(i)
+							i+=1
+				high=i+1
+				diff=int((high-low)/2.)
+				if diff%2 == 0:
+					diff=diff+1
+				array[low:high] = smooth_series(array[low:high],diff)
+			else:
+				jump=False
+	return array,jump

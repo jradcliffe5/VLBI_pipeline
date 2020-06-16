@@ -14,7 +14,7 @@ mmsfile='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])
 msfile='%s_2.ms'%(mmsfile.split('.ms')[0])
 
 ## Make mms data-set
-os.system('mv %s %s_2.ms'%(mmsfile,msfile))
+os.system('mv %s %s'%(mmsfile,msfile))
 
 partition(vis=msfile,\
 		  outputvis=mmsfile,

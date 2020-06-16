@@ -1,0 +1,7 @@
+taskname           = "browsetable"
+tablename          =  ""
+mightedit          =  False
+sortlist           =  ""
+taql               =  ""
+skipcols           =  ""
+#browsetable(tablename="",mightedit=False,sortlist="",taql="",skipcols="")
