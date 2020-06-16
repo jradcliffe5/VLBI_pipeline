@@ -1,4 +1,5 @@
 import inspect, os, sys, json, re
+from collections import OrderedDict
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
@@ -14,6 +15,11 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 msinfo = get_ms_info(msfile)
+
+gaintables=OrderedDict({'gaintable':[],
+			'gainfield':[],
+			'spwmap':[],
+			'interp':[]})
 
 if params['apriori_cal']['correlator'] !='default':
 	if re.match(params['apriori_cal']['correlator'], 'difx', re.IGNORECASE) == True:
@@ -31,16 +37,21 @@ if doaccor==True:
 	rmdirs(['rm -r %s/%s.accor'%(cwd,p_c)])
 	accor(vis=msfile,
 	      caltable='%s/%s.accor'%(cwd,p_c),
-	      solint=params['accor_options']['solint'])
+	      solint=params['apriori_cal']['accor_options']['solint'])
+	append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'','',''])
 	if params['accor_options']['smooth'] == True:
 		smoothcal(vis=msfile,
 		          tablein='%s/%s.accor'%(cwd,p_c),
 		          caltable='%s/%s.accor'%(cwd,p_c),
-			      smoothtime=params['accor_options']['smoothtime'])
+			      smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
 
 ### Run prior-cals
 
-#flagdata(vis=mmsfile,mode='list',inpfile='%s/%s_casa.flag'%(cwd,epoch))
+if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
+	if steps_run['apriori_cal'] == 1:
+		flagmanager(vis=msfile,mode='restore',versionname='original_flags')
+	flagmanager(vis=msfile,mode='save',versionname='original_flags')
+	flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
 
 rmdirs(['%s/%s.tsys'%(cwd,p_c)])
 gencal(vis=msfile,\
@@ -50,12 +61,15 @@ gencal(vis=msfile,\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
 
-if params['tsys_options']['interp_flag'] == True:
+gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'','',''])
+
+if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	fill_flagged_soln(caltable='%s/%s.tsys'%(cwd,p_c),fringecal=True)
-if params['tsys_options']['smooth'] == True:
+if params['apriori_cal']['tsys_options']['smooth'] == True:
 	rmdirs(['%s/%s.tsys_original'%(cwd,p_c)])
-	os.system('mv %s/%s.tsys %s/%s.tsys_original'%(cwd,p_c,cwd,p_c))
-	filter_tsys_auto(caltable='%s/%s.tsys'%(cwd,p_c),nsig=[2.5,2.],jump_pc=20)
+	os.system('cp -r %s/%s.tsys %s/%s.tsys_original'%(cwd,p_c,cwd,p_c))
+	filter_tsys_auto(caltable='%s/%s.tsys'%(cwd,p_c),nsig=params['apriori_cal']['tsys_options']['outlier_SN'],jump_pc=params['apriori_cal']['tsys_options']['jump_ident_pc'])
+
 
 rmdirs(['%s/%s.gcal'%(cwd,p_c)])
 gencal(vis=msfile,\
@@ -65,5 +79,11 @@ gencal(vis=msfile,\
        caltable='%s/%s.gcal'%(cwd,p_c),\
        infile='%s/%s.gc'%(cwd,p_c))
 
+gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'','',''])
+
 rmfiles(['%s/%s.listobs.txt'%(cwd,p_c)])
 listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))
+
+save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
+steps_run['apriori_cal'] = 1
+save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

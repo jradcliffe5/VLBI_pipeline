@@ -67,9 +67,10 @@
             "smoothtime"    : 180.0
         },
         "tsys_options":{
-            "interp_flags"   : true,
+            "interp_flags"  : true,
             "smooth"        : true,
-            "smoothtime"    : 180.0
+            "outlier_SN"    : [2.5,2.0],
+            "jump_ident_pc" : 20
         },
         "hpc_options":{
             "partition"     : "default",

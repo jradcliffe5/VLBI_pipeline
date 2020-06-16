@@ -320,6 +320,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 			gaincol='CPARAM'
 		else:
 			gaincol='FPARAM'
+		tb=casatools.table()
 		tb.open(caltable, nomodify=False)
 		flg=tb.getcol('FLAG')
 		#sol=tb.getcol('SOLUTION_OK')
@@ -370,6 +371,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 		tb.done()
 
 def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
+	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
 	#sol=tb.getcol('SOLUTION_OK')
@@ -452,8 +454,6 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 
 	return input_series[1],detected_outliers
 
-
-
 def detect_jump_and_smooth(array,jump_pc):
 	jump_pc=jump_pc/100.
 	for i,j in enumerate(array):
@@ -480,3 +480,9 @@ def detect_jump_and_smooth(array,jump_pc):
 			else:
 				jump=False
 	return array,jump
+
+
+def append_gaintable(gaintables,caltable_params):
+	for i,j in enumerate(gaintables.keys()):
+		gaintables[j].append(caltable_params[i])
+	return gaintables
