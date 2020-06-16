@@ -100,5 +100,8 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# CASA stuff
+.last
+
 # mypy
 .mypy_cache/
