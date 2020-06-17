@@ -266,14 +266,14 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		
 		commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	else:
+		if (params['global']['job_manager'] == 'pbs'):
+			commands.append('cd %s'%params['global']['cwd'])
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
 		msfile='%s.ms'%params['global']['project_code']
 		fields=params[step]['flag_fields']
 		msinfo = get_ms_info(msfile)
 		ids = []
-		if (params['global']['job_manager'] == 'pbs'):
-			commands.append('cd %s'%params['global']['cwd'])
 		for i in fields:
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
