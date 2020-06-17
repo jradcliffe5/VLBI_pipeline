@@ -281,7 +281,6 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
 
-
 def write_job_script(steps,job_manager):
 	func_name = inspect.stack()[0][3]
 	commands=['#!/bin/bash']

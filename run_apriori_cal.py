@@ -17,7 +17,7 @@ p_c=params['global']['project_code']
 
 msinfo = get_ms_info(msfile)
 
-'''
+
 if params['apriori_cal']['correlator'] !='default':
 	if re.match(params['apriori_cal']['correlator'], 'difx', re.IGNORECASE) == True:
 		doaccor=True
@@ -84,4 +84,3 @@ listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apriori_cal'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
-'''
