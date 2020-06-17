@@ -275,7 +275,7 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		for i in fields:
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
-		commands[-1] = commands[-1]+'-strategy %s '%(params[step]['flag_strategy'])
+		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['flag_strategy'],msfile)
 
 	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
 		for listitem in commands:
