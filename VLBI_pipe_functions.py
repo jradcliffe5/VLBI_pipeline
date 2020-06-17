@@ -272,6 +272,8 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		fields=params[step]['flag_fields']
 		msinfo = get_ms_info(msfile)
 		ids = []
+		if (params['global']['job_manager'] == 'pbs'):
+			commands.append('cd %s'%params['global']['cwd'])
 		for i in fields:
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
