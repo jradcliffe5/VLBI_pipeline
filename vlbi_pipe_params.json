@@ -1,89 +1,128 @@
 {
     "global":{
-        "project_code"      : "eg078d",
-        "cwd"               : "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
-        "vlbipipe_path"     : "VLBI_pipeline",
-        "job_manager"       : "bash",
-        "HPC_project_code"  : "ASTR1313",
-        "default_partition" : "normal",
-        "default_walltime"  : "10:00:00",
-        "default_nodes"     : 2,
-        "default_cpus"      : 24,
-        "default_mpiprocs"  : 24,
-        "default_nodetype"  : "haswell_reg",
-        "email_progress"    : "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       : "mpicasa",
-        "casapath"          : "casa",
-        "singularity"       : false,
+        "project_code"      :  "eg078d",
+        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
+        "vlbipipe_path"     :  "VLBI_pipeline",
+        "job_manager"       :  "bash",
+        "HPC_project_code"  :  "ASTR1313",
+        "default_partition" :  "normal",
+        "default_walltime"  :  "10:00:00",
+        "default_nodes"     :     2,
+        "default_cpus"      :    24,
+        "default_mpiprocs"  :    24,
+        "default_nodetype"  :  "haswell_reg",
+        "email_progress"    :  "jack.f.radcliffe@gmail.com",
+        "mpicasapath"       :  "mpicasa",
+        "casapath"          :  "casa",
+        "singularity"       :  false,
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
         "fitsidi_files"     : ["auto"],
-        "fitsidi_path"      : "raw_UV"
+        "fitsidi_path"      :  "raw_UV",
+        "refant"            : ["EF","T6","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "do_parang"         :  true
     },
     "prepare_EVN":{
-        "antab_file"        : "auto",
-        "flag_file"         : "auto",
+        "antab_file"        :  "auto",
+        "flag_file"         :  "auto",
         "gaincurve":{
-            "min_elevation" : 0.0,
-            "max_elevation" : 90.0
+            "min_elevation" :   0.0,
+            "max_elevation" :  90.0
         },
         "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
-            "nodes"         : -1,
-            "cpus"          : -1,
-            "mpiprocs"      : -1,
-            "nodetype"      : "default"
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
         }
     },
     "import_fitsidi":{
-        "const_obs_id"      : true,
-        "scan_gap"          : 15.0,
+        "const_obs_id"      :  true,
+        "scan_gap"          :  15.0,
         "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
-            "nodes"         : -1,
-            "cpus"          : -1,
-            "mpiprocs"      : -1,
-            "nodetype"      : "default"
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
         }
     },
     "make_mms":{
-        "separationaxis"    : "auto",
-        "numsubms"          : "auto",
+        "separationaxis"    :  "auto",
+        "numsubms"          :  "auto",
         "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
-            "nodes"         : -1,
-            "cpus"          : -1,
-            "mpiprocs"      : -1,
-            "nodetype"      : "default"
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
         }
     },
     "apriori_cal":{
-        "correlator"        : "default",
+        "correlator"        :  "default",
         "accor_options":{
-            "solint"        : "inf",
-            "smooth"        : true,
-            "smoothtime"    : 180.0
+            "solint"        :  "inf",
+            "smooth"        :  true,
+            "smoothtime"    : 180.0,
+            "interp"        : "linear"
         },
         "tsys_options":{
-            "interp_flags"  : true,
-            "smooth"        : true,
+            "interp_flags"  :  true,
+            "smooth"        :  true,
             "outlier_SN"    : [2.5,2.0],
-            "jump_ident_pc" : 20
+            "jump_ident_pc" :    20,
+            "interp"        : "linear,linear"
         },
         "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
-            "nodes"         : -1,
-            "cpus"          : -1,
-            "mpiprocs"      : -1,
-            "nodetype"      : "default"
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
         }
     },
     "init_flag":{
-        "flag_strategy"        : "auto",
-        "flag_fields"          : ["J1241+602","J1234+619"],
+        "AO_flag_strategy"  :  "auto",
+        "AO_flag_fields"    : ["J1241+602","J1234+619"],
+        "flag_edge_chans":{
+            "run"           :  true,
+            "edge_chan_flag":  "5%"
+        },
+        "autocorrelations"  :  true,
+        "quack_data":{
+            "run"           :  true,
+            "quack_time"    :  10.0,
+            "quack_mode"    :  "beg"
+        },
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "sub_band_delay":{
+        "calibrators"       : ["3C345","DA193"], 
+        "time_range"        : ["",""],
+        "sol_interval"      :  "1min",
+        "min_snr"           : 10,       
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "multi_band_delay":{
+        "antab_file"        :  "auto",
         "hpc_options":{
             "partition"     : "default",
             "walltime"      : "default",
@@ -93,13 +132,7 @@
             "nodetype"      : "default"
         }
     },
-    "sub_band_delay":{
-        "antab_file"        : "auto"
-    },
-    "multi_band_delay":{
-        "antab_file"        : "auto"
-    },
     "self_cal_pc":{
-        "antab_file"        : "auto"
+        "antab_file"        :  "auto"
     }
 }

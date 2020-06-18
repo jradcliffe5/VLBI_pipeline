@@ -265,7 +265,36 @@ def write_commands(step,inputs,params,parallel,aoflag):
 			job_commands=''
 		
 		commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
-	else:
+	elif aoflag=='both':
+		for i in params['global']['AOflag_command']:
+			commands.append(i)
+		msfile='%s.ms'%params['global']['project_code']
+		fields=params[step]['AO_flag_fields']
+		msinfo = get_ms_info(msfile)
+		ids = []
+		for i in fields:
+			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
+		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
+		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'],msfile)
+		if parallel == True:
+			mpicasapath = params['global']['mpicasapath']
+		else:
+			mpicasapath = ''
+		if params['global']['singularity'] == True:
+			singularity='singularity exec'
+		else:
+			singularity=''
+		if (params['global']['job_manager'] == 'pbs'):
+			job_commands=''
+			commands.append('cd %s'%params['global']['cwd'])
+			if (parallel == True):
+				job_commands='--map-by node -hostfile $PBS_NODEFILE'
+		else:
+			job_commands=''
+		
+		commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+
+	elif aoflag==True:
 		if (params['global']['job_manager'] == 'pbs'):
 			commands.append('cd %s'%params['global']['cwd'])
 		for i in params['global']['AOflag_command']:
@@ -278,6 +307,9 @@ def write_commands(step,inputs,params,parallel,aoflag):
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
 		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['flag_strategy'],msfile)
+	else:
+		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
+		sys.exit()
 
 	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
 		for listitem in commands:
@@ -331,8 +363,10 @@ def get_ms_info(msfile):
 	spw['cfreq'] = np.average(spw['freq_range'])
 	if ((np.max(tb.getcol('CHAN_WIDTH')) == np.min(tb.getcol('CHAN_WIDTH')))&(np.max(tb.getcol('NUM_CHAN')) == np.min(tb.getcol('NUM_CHAN')))) == True:
 		spw['same_spws'] = True
+		spw['nchan'] = np.max(tb.getcol('NUM_CHAN'))
 	else:
 		spw['same_spws'] = False
+		spw['nchan'] = tb.getcol('NUM_CHAN')
 	if spw['same_spws'] == True:
 		spw['chan_width'] = tb.getcol('CHAN_WIDTH')[0][0]
 	else:
@@ -534,17 +568,45 @@ def detect_jump_and_smooth(array,jump_pc):
 	return array, jump
 
 def append_gaintable(gaintables,caltable_params):
-	print(gaintables)
 	for i,j in enumerate(gaintables.keys()):
-		gaintables[j].append(caltable_params[i])
+		if j != 'parang':
+			gaintables[j].append(caltable_params[i])
 	return gaintables
 
 def load_gaintables(params):
 	cwd=params['global']['cwd']
 	if os.path.exists('%s/vp_gaintables.json'%(cwd)) == False:
 		gaintables=OrderedDict({})
-		for a,b in zip(('gaintable','gainfield','spwmap','interp'), ([],[],[],[])):
+		for a,b in zip(('gaintable','gainfield','spwmap','interp','parang'), ([],[],[],[],params['global']['do_parang'])):
 			gaintables[a]=b
 	else:
 		gaintables=load_json('%s/vp_gaintables.json'%(cwd),Odict=True)
 	return gaintables
+
+def find_refants(pref_ant,msinfo):
+	antennas = msinfo['ANTENNAS']['anttoID'].keys()
+	refant=[]
+	for i in pref_ant:
+		if i in antennas:
+			refant.append(i)
+	return ",".join(refant)
+
+def calc_edge_channels(value,nspw,nchan):
+	func_name = inspect.stack()[0][3]
+	print(nchan)
+	if (type(value) == str):
+		if value.endswith('%'):
+			value=np.round((float(value.split('%')[0])/100.)*float(nchan),0).astype(int)
+		else:
+			casalog.post(priority='SEVERE',origin=func_name,message='Edge channels either needs to be an integer (number of channels) or a string with a percentage i.e. 5%')
+			sys.exit()
+	elif (type(value)==int):
+		value=value
+	else:
+		casalog.post(priority='SEVERE',origin=func_name,message='Edge channels either needs to be an integer (number of channels) or a string with a percentage i.e. 5%')
+		sys.exit()
+	flag_chans=[]
+	for i in range(nspw):
+		flag_chans.append('%d:0~%d;%d~%d'%(i,value-1,(nchan-1)-(value-1),(nchan-1)))
+	return ",".join(flag_chans)
+

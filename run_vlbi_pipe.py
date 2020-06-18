@@ -52,10 +52,10 @@ if inputs['make_scripts'] == 'True':
 				parallel=True
 			else:
 				parallel=False
-			if i!='init_flag':
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False)
+			if i=='init_flag':
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both')
 			else:
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=True)
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False)
 
 
 if inputs['run_jobs'] == 'True':
