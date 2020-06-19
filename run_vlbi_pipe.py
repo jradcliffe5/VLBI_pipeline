@@ -2,12 +2,23 @@ import inspect, os, sys, json
 import copy
 ## Python 2 will need to adjust for casa 6
 import collections
-from taskinit import casalog
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
+
+try:
+	# CASA 6
+	import casatools
+	from casatasks import *
+	casalog.showconsole(True)
+	casa6=True
+except:
+	# CASA 5
+	from casac import casac as casatools
+	from taskinit import casalog
+	casa6=False
 
 ## Imports input_file
 try:
@@ -21,7 +32,7 @@ inputs = headless(sys.argv[i])
 
 
 steps = copy.deepcopy(inputs)
-for i in steps:
+for i in inputs:
 	if i in ['parameter_file','make_scripts','run_jobs']:
 		del steps[i]
 
@@ -53,9 +64,9 @@ if inputs['make_scripts'] == 'True':
 			else:
 				parallel=False
 			if i=='init_flag':
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both')
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
 			else:
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False)
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
 
 
 if inputs['run_jobs'] == 'True':

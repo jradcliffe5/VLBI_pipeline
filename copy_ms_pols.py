@@ -2,13 +2,22 @@ import inspect, os, sys, json
 import copy
 ## Python 2 will need to adjust for casa 6
 import collections
-from taskinit import casalog
 import optparse
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
+
+try:
+  # CASA 6
+  import casatools
+  from casatasks import *
+  casalog.showconsole(True)
+except:
+  # CASA 5
+  from casac import casac as casatools
+  from taskinit import casalog
 
 ## Imports input_file
 try:
@@ -53,25 +62,26 @@ pol_to_ID={'Undefined':0,
 }
 
 def copy_pols(msfile,antenna,pol,newpol):
+  tb=casatools.table()
 	tb.open(msfile+'/POLARIZATION')
 	pol_code = tb.getcol('CORR_TYPE')
 	pol=np.where(pol_code==pol)[0][0]
 	newpol=np.where(pol_code==newpol)[0][0]
-	t = tbtool()
 
-	t.open(msfile, nomodify=False)
+
+	tb.open(msfile, nomodify=False)
 	ram_restrict = 100000
-	ranger = list(range(0,t.nrows(),ram_restrict))
+	ranger = list(range(0,tb.nrows(),ram_restrict))
 	
 	for j in ranger:
 		if j == ranger[-1]:
 			ram_restrict = t.nrows()%ram_restrict
-		gain = t.getcol('DATA',startrow=j, nrow=ram_restrict, rowincr=1)
-		ant1 = t.getcol('ANTENNA1',startrow=j, nrow=ram_restrict, rowincr=1)
-		ant2 = t.getcol('ANTENNA2',startrow=j, nrow=ram_restrict, rowincr=1)
+		gain = tb.getcol('DATA',startrow=j, nrow=ram_restrict, rowincr=1)
+		ant1 = tb.getcol('ANTENNA1',startrow=j, nrow=ram_restrict, rowincr=1)
+		ant2 = tb.getcol('ANTENNA2',startrow=j, nrow=ram_restrict, rowincr=1)
 		gain[newpol,:,((ant1==ant)|(ant2==ant))]=gain[pol,:,((ant1==ant)|(ant2==ant))]
-		t.putcol('DATA',gain,startrow=j, nrow=ram_restrict, rowincr=1)
-	t.close()
+		tb.putcol('DATA',gain,startrow=j, nrow=ram_restrict, rowincr=1)
+	tb.close()
 
 usage = "usage casa [options] -c copy_ms_pols.py <measurement set> <pol_copy_inputs>"
 parser = optparse.OptionParser(usage=usage)

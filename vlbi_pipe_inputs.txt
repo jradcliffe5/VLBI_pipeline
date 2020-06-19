@@ -8,11 +8,11 @@ run_jobs = True
 
 ## Steps to run ##
 prepare_EVN = 0
-import_fitsidi = 0
-make_mms = 0
+import_fitsidi = 1
+make_mms = 1
 apriori_cal = 0
-init_flag = 1
-sub_band_delay = 1
+init_flag = 0
+sub_band_delay = 0
 multi_band_delay = 0
 self_cal_phasecal = 0
 apply_target = 0

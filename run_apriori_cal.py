@@ -6,6 +6,16 @@ sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
 
+try:
+	# CASA 6
+	import casatools
+	from casatasks import *
+	casalog.showconsole(True)
+except:
+	# CASA 5
+	from casac import casac as casatools
+	from taskinit import casalog
+
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json',Odict=True)
@@ -35,7 +45,7 @@ if doaccor==True:
 	accor(vis=msfile,
 	      caltable='%s/%s.accor'%(cwd,p_c),
 	      solint=params['apriori_cal']['accor_options']['solint'])
-	append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'','',params['apriori_cal']['accor_options']['interp']])
+	append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
 	if params['accor_options']['smooth'] == True:
 		smoothcal(vis=msfile,
 		          tablein='%s/%s.accor'%(cwd,p_c),
@@ -59,7 +69,7 @@ gencal(vis=msfile,\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
 
-gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'','',params['apriori_cal']['tsys_options']['interp']])
+gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
 
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	fill_flagged_soln(caltable='%s/%s.tsys'%(cwd,p_c),fringecal=True)
@@ -76,7 +86,7 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.gcal'%(cwd,p_c),\
        infile='%s/%s.gc'%(cwd,p_c))
-gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'','',''])
+gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],''])
 
 rmfiles(['%s/%s.listobs.txt'%(cwd,p_c)])
 listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))

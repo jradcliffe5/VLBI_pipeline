@@ -3,7 +3,6 @@ import numpy as np
 import json
 import inspect
 import sys
-from taskinit import casalog
 import collections
 import copy
 from scipy.interpolate import interp1d
@@ -11,11 +10,26 @@ import numpy
 from collections import OrderedDict
 
 try:
-	# CASA 5
-	from casac import casac as casatools
-except:
 	# CASA 6
 	import casatools
+	from casatasks import *
+	casalog.showconsole(True)
+except:
+	# CASA 5
+	from casac import casac as casatools
+	from taskinit import casalog
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
+
 
 def json_load_byteified(file_handle):
 	return _byteify(
@@ -42,29 +56,46 @@ def json_loads_byteified_dict(json_text):
 	)
 
 def convert(data):
-    if isinstance(data, basestring):
-        return str(data)
-    elif isinstance(data, collections.Mapping):
-        return OrderedDict(map(convert, data.iteritems()))
-    elif isinstance(data, collections.Iterable):
-        return type(data)(map(convert, data))
-    else:
-        return data
+	try:
+		basestring
+	except:
+		basestring=str
+	if isinstance(data, basestring):
+		return str(data)
+	elif isinstance(data, collections.Mapping):
+		try:
+			return OrderedDict(map(convert, data.iteritems()))
+		except:
+			return OrderedDict(map(convert, data.items()))
+	elif isinstance(data, collections.Iterable):
+		return type(data)(map(convert, data))
+	else:
+		return data
 
 def _byteify(data, ignore_dicts=False):
 	# if this is a unicode string, return its string representation
-	if isinstance(data, unicode):
-		return data.encode('utf-8')
+	try:
+		if isinstance(data, unicode):
+			return data.encode('utf-8')
+	except: 
+		if isinstance(data, str):
+			return data
 	# if this is a list of values, return list of byteified values
 	if isinstance(data, list):
 		return [ _byteify(item, ignore_dicts=True) for item in data ]
 	# if this is a dictionary, return dictionary of byteified keys and values
 	# but only if we haven't already byteified it
 	if isinstance(data, dict) and not ignore_dicts:
-		return {
-			_byteify(key, ignore_dicts=True): _byteify(value, ignore_dicts=True)
-			for key, value in data.iteritems()
-		}
+		try:
+			return {
+				_byteify(key, ignore_dicts=True): _byteify(value, ignore_dicts=True)
+				for key, value in data.iteritems()
+			}
+		except:
+			return {
+				_byteify(key, ignore_dicts=True): _byteify(value, ignore_dicts=True)
+				for key, value in data.items()
+			}
 	# if it's anything else, return it in its original form
 	return data
 
@@ -85,7 +116,7 @@ def save_json(filename,array,append=False):
 	else:
 		write_mode='a'
 	with open(filename, write_mode) as f:
-		json.dump(array, f,indent=4, separators=(',', ': '))
+		json.dump(array, f,indent=4, separators=(',', ': '),cls=NpEncoder)
 	f.close()
 
 def headless(inputfile):
@@ -242,7 +273,7 @@ def write_hpc_headers(step,params):
 		for listitem in hpc_header:
 			filehandle.write('%s\n' % listitem)
 
-def write_commands(step,inputs,params,parallel,aoflag):
+def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	func_name = inspect.stack()[0][3]
 	commands=[]
 	casapath=params['global']['casapath']
@@ -263,8 +294,10 @@ def write_commands(step,inputs,params,parallel,aoflag):
 				job_commands='--map-by node -hostfile $PBS_NODEFILE'
 		else:
 			job_commands=''
-		
-		commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		if casa6 == False:
+			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		else:
+			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	elif aoflag=='both':
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
@@ -292,7 +325,10 @@ def write_commands(step,inputs,params,parallel,aoflag):
 		else:
 			job_commands=''
 		
-		commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		if casa6 == False:
+			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		else:
+			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 
 	elif aoflag==True:
 		if (params['global']['job_manager'] == 'pbs'):
@@ -349,7 +385,7 @@ def get_ms_info(msfile):
 	ants = tb.getcol('NAME')
 	ant={}
 	ant['anttoID'] =dict(zip(ants, np.arange(0,len(ants),1)))
-	ant['IDtoant'] = dict(zip(np.arange(0,len(ants),1),ants))
+	ant['IDtoant'] = dict(zip(np.arange(0,len(ants),1).astype(str),ants))
 	msinfo['ANTENNAS']=ant
 	tb.close()
 
@@ -381,7 +417,7 @@ def get_ms_info(msfile):
 	fields = tb.getcol('NAME')
 	field = {}
 	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
-	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1),fields))
+	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1).astype(str),fields))
 	msinfo['FIELD'] = field
 	save_json('vp_fields_to_id.json',field)
 	tb.close()
@@ -421,7 +457,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 		nchan=len(gain[0,:,0])
 		
 		k=1
-		print 'maxant', maxant
 		numflag=0.0
 		for k in range(maxant+1):
 				for j in range (maxdd+1):
@@ -448,7 +483,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 						gain[:,:,(ant==k) & (dd==j)]=subgain
 
 
-		print 'numflag', numflag
+		print('numflag', numflag)
 		 
 		###
 		tb.putcol('FLAG', flg)
@@ -593,7 +628,6 @@ def find_refants(pref_ant,msinfo):
 
 def calc_edge_channels(value,nspw,nchan):
 	func_name = inspect.stack()[0][3]
-	print(nchan)
 	if (type(value) == str):
 		if value.endswith('%'):
 			value=np.round((float(value.split('%')[0])/100.)*float(nchan),0).astype(int)

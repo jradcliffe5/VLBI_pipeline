@@ -7,6 +7,16 @@ from casavlbitools.fitsidi import append_tsys, convert_flags
 from casavlbitools.casa import convert_gaincurve
 from VLBI_pipe_functions import *
 
+try:
+	# CASA 6
+	import casatools
+	from casatasks import *
+	casalog.showconsole(True)
+except:
+	# CASA 5
+	from casac import casac as casatools
+	from taskinit import casalog
+
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json')

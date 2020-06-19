@@ -6,6 +6,16 @@ sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
 
+try:
+	# CASA 6
+	import casatools
+	from casatasks import *
+	casalog.showconsole(True)
+except:
+	# CASA 5
+	from casac import casac as casatools
+	from taskinit import casalog
+
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json',Odict=True)
@@ -26,6 +36,7 @@ if timerange == ['','']:
 else:
 	timerange='%s~%s'%(timerange[0],timerange[1])
 
+print(gaintables['spwmap'])
 rmdirs(['%s/%s.sbd'%(cwd,p_c)])
 fringefit(vis=msfile,
 		  caltable='%s/%s.sbd'%(cwd,p_c),
@@ -42,3 +53,4 @@ fringefit(vis=msfile,
 		  interp=gaintables['interp'],
 		  spwmap=gaintables['spwmap'],
 		  parang=gaintables['parang'])
+fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,p_c),fringecal=True)

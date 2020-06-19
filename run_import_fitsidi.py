@@ -5,6 +5,15 @@ sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
 
+try:
+	# CASA 6
+	import casatools
+	from casatasks import *
+except:
+	# CASA 5
+	from casac import casac as casatools
+	from taskinit import casalog
+
 ## Load params
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
