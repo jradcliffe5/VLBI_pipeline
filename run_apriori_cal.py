@@ -11,14 +11,16 @@ try:
 	import casatools
 	from casatasks import *
 	casalog.showconsole(True)
+	casa6=True
 except:
 	# CASA 5
 	from casac import casac as casatools
 	from taskinit import casalog
+	casa6=False
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json',Odict=True)
+steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
 gaintables = load_gaintables(params)
 
 cwd = params['global']['cwd']
@@ -87,6 +89,12 @@ gencal(vis=msfile,\
        caltable='%s/%s.gcal'%(cwd,p_c),\
        infile='%s/%s.gc'%(cwd,p_c))
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],''])
+
+applycal(vis=msfile,
+	     gaintable=gaintables['gaintable'],
+	     interp=gaintables['interp'],
+	     gainfield=gaintables['gainfield'],
+	     spwmap=gaintables['spwmap'])
 
 rmfiles(['%s/%s.listobs.txt'%(cwd,p_c)])
 listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))

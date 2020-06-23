@@ -11,14 +11,16 @@ try:
 	import casatools
 	from casatasks import *
 	casalog.showconsole(True)
+	casa6=True
 except:
 	# CASA 5
 	from casac import casac as casatools
 	from taskinit import casalog
+	casa6=False
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json',Odict=True)
+steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
 gaintables = load_gaintables(params)
 
 cwd = params['global']['cwd']
@@ -53,4 +55,4 @@ fringefit(vis=msfile,
 		  interp=gaintables['interp'],
 		  spwmap=gaintables['spwmap'],
 		  parang=gaintables['parang'])
-fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,p_c),fringecal=True)
+#fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,p_c),fringecal=True)

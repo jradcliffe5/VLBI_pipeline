@@ -8,6 +8,10 @@ import copy
 from scipy.interpolate import interp1d
 import numpy
 from collections import OrderedDict
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 
 try:
 	# CASA 6
@@ -30,7 +34,6 @@ class NpEncoder(json.JSONEncoder):
         else:
             return super(NpEncoder, self).default(obj)
 
-
 def json_load_byteified(file_handle):
 	return _byteify(
 		json.load(file_handle, object_hook=_byteify),
@@ -43,19 +46,41 @@ def json_loads_byteified(json_text):
 		ignore_dicts=True
 	)
 
-def json_load_byteified_dict(file_handle):
-	return convert(_byteify(
-		json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
-		ignore_dicts=True
-	))
+def json_load_byteified_dict(file_handle,casa6):
+	if casa6==True:
+		return convert_temp(_byteify(
+			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
+			ignore_dicts=True
+		))
+	else:
+		return convert(_byteify(
+			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
+			ignore_dicts=True
+		))
 
-def json_loads_byteified_dict(json_text):
-	return convert(_byteify(
-		json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
-		ignore_dicts=True)
-	)
+def json_loads_byteified_dict(json_text,casa6):
+	if casa6==True:
+		return convert_temp(_byteify(
+			json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
+			ignore_dicts=True)
+		)
+	else:
+		return convert(_byteify(
+			json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
+			ignore_dicts=True)
+		)
 
 def convert(data):
+	if isinstance(data, basestring):
+		return str(data)
+	elif isinstance(data, collections.Mapping):
+		return OrderedDict(map(convert, data.iteritems()))
+	elif isinstance(data, collections.Iterable):
+		return type(data)(map(convert, data))
+	else:
+		return data
+
+def convert_temp(data):
 	try:
 		basestring
 	except:
@@ -68,6 +93,7 @@ def convert(data):
 		except:
 			return OrderedDict(map(convert, data.items()))
 	elif isinstance(data, collections.Iterable):
+		print(data)
 		return type(data)(map(convert, data))
 	else:
 		return data
@@ -99,14 +125,14 @@ def _byteify(data, ignore_dicts=False):
 	# if it's anything else, return it in its original form
 	return data
 
-def load_json(filename,Odict=False):
+def load_json(filename,Odict=False,casa6=False):
 	if Odict==False:
 		with open(filename, "r") as f:
 			json_data = json_load_byteified(f)
 		f.close()
 	else:
 		with open(filename, "r") as f:
-			json_data = json_load_byteified_dict(f)
+			json_data = json_load_byteified_dict(f,casa6)
 		f.close()
 	return json_data
 
@@ -478,6 +504,19 @@ def fill_flagged_soln(caltable='', fringecal=False):
 														subflg[pol,chan,kk-1]=False
 														#subsol[pol, chan, kk-1]=True
 														subgain[pol,chan,kk-1]=subgain[pol,chan,kk]
+						for kk in range(len(subt)-2,-1, -1):
+								for chan in range(nchan):
+										for pol in range(npol):
+												if(subflg[pol,chan,kk] and not subflg[pol,chan,kk+1]):
+														numflag += 1.0
+														subflg[pol,chan,kk]=False
+														#subsol[pol, chan, kk]=True
+														subgain[pol,chan,kk]=subgain[pol,chan,kk+1]
+												if(subflg[pol,chan,kk] and not subflg[pol,chan,kk]):
+														numflag += 1.0
+														subflg[pol,chan,kk+1]=False
+														#subsol[pol, chan, kk-1]=True
+														subgain[pol,chan,kk+1]=subgain[pol,chan,kk]
 						flg[:,:,(ant==k) & (dd==j)]=subflg
 						#sol[:,:,(ant==k) & (dd==j)]=subsol
 						gain[:,:,(ant==k) & (dd==j)]=subgain
@@ -643,4 +682,214 @@ def calc_edge_channels(value,nspw,nchan):
 	for i in range(nspw):
 		flag_chans.append('%d:0~%d;%d~%d'%(i,value-1,(nchan-1)-(value-1),(nchan-1)))
 	return ",".join(flag_chans)
+
+def time_convert(mytime, myunit='s'):
+	qa = casatools.quanta()
+	if type(mytime) != list: 
+		mytime=[mytime]
+	myTimestr = []
+	for i,time in enumerate(mytime):
+		q1=qa.quantity(time,myunit)
+		time1=qa.time(q1,form='ymd')[0]
+		z=0
+		if i!=0:
+			if split_str(time1,'/',3)[0] == split_str(myTimestr[z],'/',3)[0]:
+				time1 = split_str(time1,'/',3)[1]
+			else:
+				z=i
+		myTimestr.append(time1)
+	return myTimestr
+
+def split_str(strng, sep, pos):
+    strng = strng.split(sep)
+    return sep.join(strng[:pos]), sep.join(strng[pos:])
+
+def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
+	TOL=solint/2.
+	tb = casatools.table()
+	tb.open(caltable)
+	ant = tb.getcol('ANTENNA1')
+	value = tb.getcol('FPARAM')
+	flag = tb.getcol('FLAG')
+	time_a = tb.getcol('TIME')
+	time = np.unique(tb.getcol('TIME'))
+	time = np.unique(np.floor(time/TOL).astype(int))*TOL
+	field_id = tb.getcol('FIELD_ID')
+	solns = np.sum(table_array[0],axis=0)
+	for z in fid.keys():
+		maxsoln = np.max(solns[fid[z][0]:fid[z][1]])
+		for j in range(fid[z][0],fid[z][1]+1):
+			result = np.isclose(time_a, time[j], atol=TOL,rtol=1e-10)
+			if solns[j] < passmark*maxsoln:
+				flag[:,0,(result)] = True
+	
+	tb.open(caltable, nomodify=False)
+	tb.putcol('FLAG',np.multiply(flag, 1).astype(int))
+	tb.close()
+
+def interpolate_spw(table_array, passmark, caltable, solint):
+	table_array=table_array[0]/table_array[1]
+	interp_spw = np.where((table_array>=passmark)&(table_array!=1.0))
+	tb = casatools.table()
+	TOL = solint/2.
+	tb.open(caltable)
+	ant = tb.getcol('ANTENNA1')
+	value = tb.getcol('FPARAM')
+	flag = tb.getcol('FLAG')
+	time_a = tb.getcol('TIME')
+	time = np.unique(tb.getcol('TIME'))
+	time = np.unique(np.floor(time/TOL).astype(int))*TOL
+	field_id = tb.getcol('FIELD_ID')
+	tb.close()
+
+	for j,i in enumerate(interp_spw[1]):
+		k=interp_spw[0][j]
+		result = np.isclose(time_a, time[i], atol = 30.,rtol=1e-10)
+		for z in range(value.shape[0]):
+			value_t=value[z,0,(result)&(ant==k)]
+			flag_t=flag[z,0,(result)&(ant==k)]
+			x=np.arange(0,8,1)
+			yp = value_t[flag_t==False]
+			xp = x[flag_t==False]
+			inter = np.interp(x=x,xp=xp,fp=yp)
+			value[z,0,(result)&(ant==k)] = inter
+			flag[z,0,(result)&(ant==k)] = False
+
+	nointerp_spw = np.where((table_array<passmark)&(table_array!=0.0))
+	for j,i in enumerate(nointerp_spw[1]):
+		k=nointerp_spw[0][j]
+		result = np.isclose(time_a, time[i], atol = 30.,rtol=1e-10)
+		flag[:,0,(result)&(ant==k)] = True
+
+	tb.open(caltable, nomodify=False)
+	tb.putcol('FPARAM',value)
+	tb.putcol('FLAG',np.multiply(flag, 1).astype(int))
+	tb.close()
+
+def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
+	TOL = solint/2.
+	tb = casatools.table()
+	qa = casatools.quanta()
+	tb.open(caltable, nomodify=False)
+	ant = tb.getcol('ANTENNA1')
+	value = tb.getcol('FPARAM')
+	flag = tb.getcol('FLAG')
+	time_a = tb.getcol('TIME')
+	time = np.unique(tb.getcol('TIME'))
+	field_id = tb.getcol('FIELD_ID')
+	tb.close()
+
+	nant = len(msinfo['ANTENNAS']['anttoID'])
+
+	time = np.unique(np.floor(time/TOL).astype(int))*TOL
+	numerator=np.zeros([nant,len(time)])
+	denominator=np.zeros([nant,len(time)])
+	fid = np.zeros([nant,len(time)])
+	for k in range(nant):
+		for j,i in enumerate(time):
+			result = np.isclose(time_a, i, atol=30.,rtol=1e-10)
+			value_t=value[0,0,(result)&(ant==k)]
+			flag_t=flag[0,0,(result)&(ant==k)]
+			numerator[k][j] = len(value_t[flag_t==False].flatten())
+			denominator[k][j] = len(value_t.flatten())
+			fid[k][j] = np.average(field_id[(result)&(ant==k)]).astype(int)
+
+	fid = np.average(fid,axis=0).astype(int)
+	fid_t = {}
+	for i in np.unique(fid):
+		fid_t[msinfo['FIELD']['IDtofield'][str(i)]]=[np.min(np.where(fid==i)),np.max(np.where(fid==i))]
+	flag_stats = [numerator,denominator]
+
+	if plotfile!='':
+		Ants=np.arange(0,nant,1)
+		Ant = []
+		for i,j in enumerate(Ants):
+			Ant.append(msinfo['ANTENNAS']['IDtoant'][str(j)])
+		Time=time_convert(time.tolist(),'s')
+		fig = plt.figure(1,figsize=(9,9))
+		ax = fig.add_subplot(111)
+		axes2 = ax.secondary_xaxis('top')  # mirror them
+		axes3 = ax.secondary_yaxis('right') 
+		#im = axes2.imshow(numerator/denominator,cmap='jet',zorder=-1000)
+		im = ax.imshow(flag_stats[0]/flag_stats[1],cmap='jet')
+		# We want to show all ticks...
+		ax.set_xticks(np.arange(len(Time)))
+		ax.set_yticks(np.arange(len(Ant)))
+		# ... and label them with the respective list entries
+		ax.set_xticklabels(Time)
+		ax.set_yticklabels(Ant)
+		axes2.set_xticks(np.arange(len(Time)))
+		# ... and label them with the respective list entries
+		axes2.set_xticklabels(np.sum(flag_stats[0],axis=0).astype(int).tolist())
+		axes3.set_yticks(np.arange(len(Ant)))
+		# ... and label them with the respective list entries
+		axes3.set_yticklabels(np.sum(flag_stats[0],axis=1).astype(int).tolist())
+		# Rotate the tick labels and set their alignment.
+		plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+		         rotation_mode="anchor")
+		bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
+		for i in fid_t.keys():
+			rect=patches.Rectangle((fid_t[i][0]-0.4,-0.4),(fid_t[i][1]-fid_t[i][0])+0.8,len(Ant)-0.2,linewidth=1,edgecolor='r',facecolor='none')
+			ax.text(((fid_t[i][0]-0.4)+fid_t[i][1])/2., 0.5, '%s'%(i),
+		                       ha="center", va="center", color="k",size=12,bbox=bbox_props)
+			ax.add_patch(rect)
+		# Loop over data dimensions and create text annotations.
+		for i in range(len(Ant)):
+		    for j in range(len(Time)):
+		        text = ax.text(j, i, '%d/%d'%(flag_stats[0][i, j],flag_stats[1][i,j]),
+		                       ha="center", va="center", color="w")
+		ax.set_title("%s"%caltable)
+		fig.savefig('%s'%plotfile)
+		plt.close()
+
+	if plotonly==True:
+		return
+	else:
+		return flag_stats, fid_t
+
+def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip):
+	msfile='eg078d.ms'
+	msinfo = get_ms_info(msfile)
+
+	flag_stats, fid = get_caltable_flag_stats(caltable='eg078d.sbd',
+											  msinfo=msinfo,
+											  solint=60.,
+											  plotonly=False,
+											  plotfile='test.pdf')
+
+	clip_bad_solutions(fid=fid, 
+					   table_array=flag_stats,
+					   caltable=caltable, 
+					   solint=solint, 
+					   passmark=bad_soln_clip)
+
+	os.system('cp -r %s %s.bpasscal'%(caltable,caltable))
+
+	flag_stats, fid = get_caltable_flag_stats(caltable=caltable,
+						  					  msinfo=msinfo,
+						 					  solint=solint,
+						  					  plotonly=False,
+						  	  			      plotfile='test2.pdf')
+
+	interpolate_spw(table_array=flag_stats, 
+		            passmark=spw_pass, 
+		            caltable=caltable, 
+		            solint=solint)
+
+
+	get_caltable_flag_stats(caltable='eg078d.sbd',
+						  	msinfo=msinfo,
+						 	solint=60.,
+						  	plotonly=True,
+						  	plotfile='test3.pdf')
+
+	fill_flagged_soln(caltable='eg078d.sbd', 
+		              fringecal=True)
+
+	get_caltable_flag_stats(caltable='eg078d.sbd',
+						  	msinfo=msinfo,
+						 	solint=60.,
+						  	plotonly=True,
+						  	plotfile='test4.pdf')
+
 

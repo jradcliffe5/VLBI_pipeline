@@ -10,14 +10,16 @@ try:
 	import casatools
 	from casatasks import *
 	casalog.showconsole(True)
+	casa6=True
 except:
 	# CASA 5
 	from casac import casac as casatools
 	from taskinit import casalog
+	casa6=False
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json')
+steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
 
 rmdirs(['%s/%s.ms.flagversions'%(params['global']['cwd'],params['global']['project_code'])])
 mmsfile='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])

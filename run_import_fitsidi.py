@@ -9,15 +9,18 @@ try:
 	# CASA 6
 	import casatools
 	from casatasks import *
+	casalog.showconsole(True)
+	casa6=True
 except:
 	# CASA 5
 	from casac import casac as casatools
 	from taskinit import casalog
+	casa6=False
 
 ## Load params
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json')
+steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
 
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
