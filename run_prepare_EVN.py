@@ -21,7 +21,7 @@ except:
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
+steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles

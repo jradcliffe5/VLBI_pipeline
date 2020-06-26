@@ -20,8 +20,8 @@ except:
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
-gaintables = load_gaintables(params)
+steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
+gaintables = load_gaintables(params, casa6=casa6)
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])

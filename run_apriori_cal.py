@@ -20,8 +20,8 @@ except:
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
-steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
-gaintables = load_gaintables(params)
+steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
+gaintables = load_gaintables(params, casa6=casa6)
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -61,7 +61,7 @@ if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
 		flagmanager(vis=msfile,mode='restore',versionname='original_flags')
 	else:
 		flagmanager(vis=msfile,mode='save',versionname='original_flags')
-	#flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
+	flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
 
 rmdirs(['%s/%s.tsys'%(cwd,p_c)])
 gencal(vis=msfile,\
@@ -94,7 +94,8 @@ applycal(vis=msfile,
 	     gaintable=gaintables['gaintable'],
 	     interp=gaintables['interp'],
 	     gainfield=gaintables['gainfield'],
-	     spwmap=gaintables['spwmap'])
+	     spwmap=gaintables['spwmap'],
+	     parang=gaintables['parang'])
 
 rmfiles(['%s/%s.listobs.txt'%(cwd,p_c)])
 listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))

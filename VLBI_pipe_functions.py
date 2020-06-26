@@ -47,28 +47,25 @@ def json_loads_byteified(json_text):
 	)
 
 def json_load_byteified_dict(file_handle,casa6):
+	print(casa6)
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
-			ignore_dicts=True
-		))
+			ignore_dicts=True))
 	else:
 		return convert(_byteify(
 			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
-			ignore_dicts=True
-		))
+			ignore_dicts=True))
 
 def json_loads_byteified_dict(json_text,casa6):
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
-			ignore_dicts=True)
-		)
+			ignore_dicts=True))
 	else:
 		return convert(_byteify(
 			json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
-			ignore_dicts=True)
-		)
+			ignore_dicts=True))
 
 def convert(data):
 	if isinstance(data, basestring):
@@ -81,20 +78,13 @@ def convert(data):
 		return data
 
 def convert_temp(data):
-	try:
-		basestring
-	except:
-		basestring=str
-	if isinstance(data, basestring):
+	if isinstance(data, str):
 		return str(data)
 	elif isinstance(data, collections.Mapping):
-		try:
-			return OrderedDict(map(convert, data.iteritems()))
-		except:
-			return OrderedDict(map(convert, data.items()))
+		return OrderedDict(map(convert_temp, data.items()))
 	elif isinstance(data, collections.Iterable):
 		print(data)
-		return type(data)(map(convert, data))
+		return type(data)(map(convert_temp, data))
 	else:
 		return data
 
@@ -569,8 +559,8 @@ def smooth_series(y, box_pts):
 	box = np.ones(box_pts)/box_pts
 	#print(box_pts)
 	y_smooth = np.convolve(y, box, mode='valid')
-	y_smooth = np.hstack([np.ones(box_pts/2)*y_smooth[0],y_smooth])
-	y_smooth = np.hstack([y_smooth,np.ones(box_pts/2)*y_smooth[-1]])
+	y_smooth = np.hstack([np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[0],y_smooth])
+	y_smooth = np.hstack([y_smooth,np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[-1]])
 	return y_smooth
 
 def hampel_filter(input_series, window_size, n_sigmas=3):
@@ -647,14 +637,14 @@ def append_gaintable(gaintables,caltable_params):
 			gaintables[j].append(caltable_params[i])
 	return gaintables
 
-def load_gaintables(params):
+def load_gaintables(params,casa6):
 	cwd=params['global']['cwd']
 	if os.path.exists('%s/vp_gaintables.json'%(cwd)) == False:
 		gaintables=OrderedDict({})
 		for a,b in zip(('gaintable','gainfield','spwmap','interp','parang'), ([],[],[],[],params['global']['do_parang'])):
 			gaintables[a]=b
 	else:
-		gaintables=load_json('%s/vp_gaintables.json'%(cwd),Odict=True)
+		gaintables=load_json('%s/vp_gaintables.json'%(cwd),Odict=True,casa6=casa6)
 	return gaintables
 
 def find_refants(pref_ant,msinfo):
@@ -705,7 +695,7 @@ def split_str(strng, sep, pos):
     return sep.join(strng[:pos]), sep.join(strng[pos:])
 
 def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
-	TOL=solint/2.
+	TOL=solint/2.01
 	tb = casatools.table()
 	tb.open(caltable)
 	ant = tb.getcol('ANTENNA1')
@@ -731,7 +721,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 	table_array=table_array[0]/table_array[1]
 	interp_spw = np.where((table_array>=passmark)&(table_array!=1.0))
 	tb = casatools.table()
-	TOL = solint/2.
+	TOL = solint/2.01
 	tb.open(caltable)
 	ant = tb.getcol('ANTENNA1')
 	value = tb.getcol('FPARAM')
@@ -744,7 +734,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 
 	for j,i in enumerate(interp_spw[1]):
 		k=interp_spw[0][j]
-		result = np.isclose(time_a, time[i], atol = 30.,rtol=1e-10)
+		result = np.isclose(time_a, time[i], atol =TOL,rtol=1e-10)
 		for z in range(value.shape[0]):
 			value_t=value[z,0,(result)&(ant==k)]
 			flag_t=flag[z,0,(result)&(ant==k)]
@@ -758,7 +748,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 	nointerp_spw = np.where((table_array<passmark)&(table_array!=0.0))
 	for j,i in enumerate(nointerp_spw[1]):
 		k=nointerp_spw[0][j]
-		result = np.isclose(time_a, time[i], atol = 30.,rtol=1e-10)
+		result = np.isclose(time_a, time[i], atol=TOL,rtol=1e-10)
 		flag[:,0,(result)&(ant==k)] = True
 
 	tb.open(caltable, nomodify=False)
@@ -767,7 +757,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 	tb.close()
 
 def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
-	TOL = solint/2.
+	TOL = solint/(2.01)
 	tb = casatools.table()
 	qa = casatools.quanta()
 	tb.open(caltable, nomodify=False)
@@ -781,15 +771,15 @@ def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
 
 	nant = len(msinfo['ANTENNAS']['anttoID'])
 
-	time = np.unique(np.floor(time/TOL).astype(int))*TOL
+	time = np.unique(np.floor(time/TOL))*TOL
 	numerator=np.zeros([nant,len(time)])
 	denominator=np.zeros([nant,len(time)])
 	fid = np.zeros([nant,len(time)])
 	for k in range(nant):
 		for j,i in enumerate(time):
-			result = np.isclose(time_a, i, atol=30.,rtol=1e-10)
-			value_t=value[0,0,(result)&(ant==k)]
-			flag_t=flag[0,0,(result)&(ant==k)]
+			result = np.isclose(time_a, i, atol=TOL,rtol=1e-10)
+			value_t=value[4,0,(result)&(ant==k)]
+			flag_t=flag[4,0,(result)&(ant==k)]
 			numerator[k][j] = len(value_t[flag_t==False].flatten())
 			denominator[k][j] = len(value_t.flatten())
 			fid[k][j] = np.average(field_id[(result)&(ant==k)]).astype(int)
@@ -801,6 +791,10 @@ def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
 	flag_stats = [numerator,denominator]
 
 	if plotfile!='':
+		try:
+			caltable = caltable.split('/')[-1]
+		except:
+			caltable=caltable
 		Ants=np.arange(0,nant,1)
 		Ant = []
 		for i,j in enumerate(Ants):
@@ -847,16 +841,25 @@ def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
 	else:
 		return flag_stats, fid_t
 
-def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip):
+def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 	msfile='eg078d.ms'
 	msinfo = get_ms_info(msfile)
 
+	if solint[-1] == 's':
+		solint=float(solint.split('s')[0])
+	elif solint[-1] == 'm' or solint[-3:]=="min":
+		solint=float(solint.split('m')[0])*60.
+	print(solint)
+
+	os.system('cp -r %s %s.original'%(caltable,caltable))
+
+
 	flag_stats, fid = get_caltable_flag_stats(caltable='eg078d.sbd',
 											  msinfo=msinfo,
-											  solint=60.,
+											  solint=solint,
 											  plotonly=False,
 											  plotfile='test.pdf')
-
+	'''
 	clip_bad_solutions(fid=fid, 
 					   table_array=flag_stats,
 					   caltable=caltable, 
@@ -879,7 +882,7 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip):
 
 	get_caltable_flag_stats(caltable='eg078d.sbd',
 						  	msinfo=msinfo,
-						 	solint=60.,
+						 	solint=solint,
 						  	plotonly=True,
 						  	plotfile='test3.pdf')
 
@@ -888,8 +891,8 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip):
 
 	get_caltable_flag_stats(caltable='eg078d.sbd',
 						  	msinfo=msinfo,
-						 	solint=60.,
+						 	solint=solint,
 						  	plotonly=True,
 						  	plotfile='test4.pdf')
-
+	'''
 

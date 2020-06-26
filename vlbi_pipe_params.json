@@ -12,13 +12,16 @@
         "default_mpiprocs"  :    24,
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "mpicasa",
-        "casapath"          :  "casa",
+        "mpicasapath"       :  "",
+        "casapath"          :  "python",
         "singularity"       :  false,
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["EF","T6","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "refant"            : ["T6","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "fringe_finders"    : ["3C345","DA193"],
+        "phase_calibrators" : ["J1241+602","J1234+619"],
+        "targets"           : ["HDFC0155"],
         "do_parang"         :  true
     },
     "prepare_EVN":{
@@ -86,8 +89,8 @@
         }
     },
     "init_flag":{
-        "AO_flag_strategy"  :  "auto",
-        "AO_flag_fields"    : ["J1241+602","J1234+619"],
+        "AO_flag_strategy"  :  "J1234.rfis",
+        "AO_flag_fields"    : ["J1241+602","J1234+619","HDFC0155"],
         "flag_edge_chans":{
             "run"           :  true,
             "edge_chan_flag":  "5%"
@@ -108,10 +111,15 @@
         }
     },
     "sub_band_delay":{
-        "calibrators"       : ["3C345","DA193"], 
+        "select_calibrators": [""], 
         "time_range"        : ["",""],
-        "sol_interval"      :  "1min",
-        "min_snr"           : 10,       
+        "sol_interval"      :  "60s",
+        "min_snr"           :  10.0,
+        "modify_sbd":{
+            "run"           :  true,
+            "spw_passmark"  :  0.5,
+            "clip_badtimes" :  0.66
+        },       
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -119,6 +127,20 @@
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
             "nodetype"      :  "default"
+        }
+    },
+    "bandpass_cal":{
+        "select_calibrators": [""], 
+        "time_range"        : ["",""],
+        "sol_interval"      :  "inf",
+        "min_snr"           : 3.0,
+        "hpc_options":{
+            "partition"     : "default",
+            "walltime"      : "default",
+            "nodes"         : -1,
+            "cpus"          : -1,
+            "mpiprocs"      : -1,
+            "nodetype"      : "default"
         }
     },
     "multi_band_delay":{
