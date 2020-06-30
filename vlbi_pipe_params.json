@@ -111,10 +111,11 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [""], 
-        "time_range"        : ["",""],
-        "sol_interval"      :  "60s",
-        "min_snr"           :  10.0,
+        "select_calibrators": [["default"], ["J1241+602"]], 
+        "time_range"        : ["","2016/03/06/11:00:00.0~2016/03/06/11:05:00.0"],
+        "sol_interval"      : ["60s", "150s"],
+        "min_snr"           : [30.0,7.0],
+        "fringe_niter"      :  300,
         "modify_sbd":{
             "run"           :  true,
             "spw_passmark"  :  0.5,
@@ -130,7 +131,8 @@
         }
     },
     "bandpass_cal":{
-        "select_calibrators": [""], 
+        "same_as_sbd_cal"   : true,
+        "select_calibrators": [["default"]], 
         "time_range"        : ["",""],
         "sol_interval"      :  "inf",
         "min_snr"           : 3.0,

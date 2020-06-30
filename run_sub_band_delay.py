@@ -31,35 +31,36 @@ msinfo = get_ms_info(msfile)
 
 refant = find_refants(params['global']['refant'],msinfo)
 
-
-timerange=params['sub_band_delay']['time_range']
-if timerange == ['','']:
-	timerange=''
-else:
-	timerange='%s~%s'%(timerange[0],timerange[1])
-
-if params['sub_band_delay']['select_calibrators'] == ['']:
-	fields=",".join(params['global']['fringe_finders'])
-else:
-	fields=",".join(params['sub_band_delay']['select_calibrators'])
-
 rmdirs(['%s/%s.sbd'%(cwd,p_c)])
-fringefit(vis=msfile,
-		  caltable='%s/%s.sbd'%(cwd,p_c),
-		  field=fields,
-		  solint=params['sub_band_delay']['sol_interval'],
-		  antenna='',
-		  spw='',
-		  timerange=timerange,
-		  zerorates=True,
-		  niter=100,
-		  refant=refant,
-		  minsnr=params['sub_band_delay']['min_snr'],
-		  gaintable=gaintables['gaintable'],
-		  gainfield=gaintables['gainfield'],
-		  interp=gaintables['interp'],
-		  spwmap=gaintables['spwmap'],
-		  parang=gaintables['parang'])
+for i in range(len(params['sub_band_delay']['select_calibrators'])):
+#for i in range(1):
+	if i==0:
+		append=False
+	else:
+		append=True
+
+	if params['sub_band_delay']['select_calibrators'][i] == ['default']:
+		fields=",".join(params['global']['fringe_finders'])
+	else:
+		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
+
+	fringefit(vis=msfile,
+			  caltable='%s/%s.sbd'%(cwd,p_c),
+			  field=fields,
+			  solint=params['sub_band_delay']['sol_interval'][i],
+			  antenna='',
+			  spw='',
+			  timerange=params['sub_band_delay']['time_range'][i],
+			  zerorates=True,
+			  niter=params['sub_band_delay']['fringe_niter'],
+			  refant=refant,
+			  append=append,
+			  minsnr=params['sub_band_delay']['min_snr'][i],
+			  gaintable=gaintables['gaintable'],
+			  gainfield=gaintables['gainfield'],
+			  interp=gaintables['interp'],
+			  spwmap=gaintables['spwmap'],
+			  parang=gaintables['parang'])
 
 
 if params['sub_band_delay']['modify_sbd']['run'] == True:
@@ -72,9 +73,7 @@ if params['sub_band_delay']['modify_sbd']['run'] == True:
 		               plot=False)
 
 gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
-'''
+
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['sub_band_delay'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
-#fill_flagged_soln(caltable='%s/%s.sbd'%(cwd,p_c),fringecal=True)
-'''

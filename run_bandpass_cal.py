@@ -31,16 +31,6 @@ msinfo = get_ms_info(msfile)
 
 refant = find_refants(params['global']['refant'],msinfo)
 
-timerange=params['bandpass_cal']['time_range']
-if timerange == ['','']:
-	timerange=''
-else:
-	timerange='%s~%s'%(timerange[0],timerange[1])
-
-if params['bandpass_cal']['select_calibrators'] == ['']:
-	fields=",".join(params['global']['fringe_finders'])
-else:
-	fields=",".join(params['bandpass_cal']['select_calibrators'])
 
 gaintab = []
 for i in gaintables['gaintable']:
@@ -51,26 +41,45 @@ for i in gaintables['gaintable']:
 		gaintab.append(i)
 
 applycal(vis=msfile,
-		 field=fields,
-	     gaintable=gaintab,
+		 field='',
+	     gaintable=gaintables['gaintable'],
 	     interp=gaintables['interp'],
 	     gainfield=gaintables['gainfield'],
-	     spwmap=gaintables['spwmap'])
+	     spwmap=gaintables['spwmap'],
+	     parang=gaintables['parang'])
 
 rmdirs(['%s/%s.bpass'%(cwd,p_c)])
-bandpass(vis=msfile,
-		 caltable='%s/%s.bpass'%(cwd,p_c),
-		 field=fields,
-		 solint=params['bandpass_cal']['sol_interval'],
-		 antenna='',
-		 spw='',
-		 combine='field,scan',
-		 solnorm=True,
-		 timerange=timerange,
-		 refant=refant,
-		 minsnr=params['bandpass_cal']['min_snr'],
-		 gaintable=gaintab,
-		 gainfield=gaintables['gainfield'],
-		 interp=gaintables['interp'],
-		 spwmap=gaintables['spwmap'],
-		 parang=gaintables['parang'])
+
+if params['bandpass_cal']['same_as_sbd_cal'] == True:
+	substep='sub_band_delay'
+else:
+	substep='bandpass_cal'
+
+for i in range(len(params[substep]['select_calibrators'])):
+	if i==0:
+		append=False
+	else:
+		append=True
+
+	if params[substep]['select_calibrators'][i] == ['default']:
+		fields=",".join(params['global']['fringe_finders'])
+	else:
+		fields=",".join(params[substep]['select_calibrators'][i])
+	bandpass(vis=msfile,
+			 caltable='%s/%s.bpass'%(cwd,p_c),
+			 field=fields,
+			 solint=params['bandpass_cal']['sol_interval'],
+			 antenna='',
+			 spw='',
+			 combine='field',
+			 solnorm=True,
+			 timerange=params[substep]['time_range'][i],
+			 refant=refant,
+			 append=append,
+			 fillgaps=16,
+			 minsnr=params['bandpass_cal']['min_snr'],
+			 gaintable=gaintab,
+			 gainfield=gaintables['gainfield'],
+			 interp=gaintables['interp'],
+			 spwmap=gaintables['spwmap'],
+			 parang=gaintables['parang'])

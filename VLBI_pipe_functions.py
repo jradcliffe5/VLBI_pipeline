@@ -842,7 +842,6 @@ def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
 		return flag_stats, fid_t
 
 def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
-	msfile='eg078d.ms'
 	msinfo = get_ms_info(msfile)
 
 	if solint[-1] == 's':
@@ -851,23 +850,25 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 		solint=float(solint.split('m')[0])*60.
 	print(solint)
 
-	os.system('cp -r %s %s.original'%(caltable,caltable))
+	os.system('cp -r %s %s_original'%(caltable,caltable))
 
-
-	flag_stats, fid = get_caltable_flag_stats(caltable='eg078d.sbd',
+	'''
+	flag_stats, fid = get_caltable_flag_stats(caltable=caltable,
 											  msinfo=msinfo,
 											  solint=solint,
 											  plotonly=False,
 											  plotfile='test.pdf')
-	'''
+	
 	clip_bad_solutions(fid=fid, 
 					   table_array=flag_stats,
 					   caltable=caltable, 
 					   solint=solint, 
 					   passmark=bad_soln_clip)
+	'''
 
 	os.system('cp -r %s %s.bpasscal'%(caltable,caltable))
-
+	fill_flagged_soln(caltable=caltable,fringecal=True)
+	'''
 	flag_stats, fid = get_caltable_flag_stats(caltable=caltable,
 						  					  msinfo=msinfo,
 						 					  solint=solint,
