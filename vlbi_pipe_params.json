@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078d",
-        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
+        "project_code"      :  "eg078e",
+        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078E/calibration/CASA",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",
@@ -16,9 +16,10 @@
         "casapath"          :  "python",
         "singularity"       :  false,
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
+        "wsclean_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["T6","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
         "fringe_finders"    : ["3C345","DA193"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
         "targets"           : ["HDFC0155"],
@@ -76,15 +77,15 @@
             "interp_flags"  :  true,
             "smooth"        :  true,
             "outlier_SN"    : [2.5,2.0],
-            "jump_ident_pc" :    20,
+            "jump_ident_pc" :  20,
             "interp"        : "linear,linear"
         },
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
-            "nodes"         :    -1,
-            "cpus"          :    -1,
-            "mpiprocs"      :    -1,
+            "nodes"         :   -1,
+            "cpus"          :   -1,
+            "mpiprocs"      :   -1,
             "nodetype"      :  "default"
         }
     },
@@ -95,26 +96,38 @@
             "run"           :  true,
             "edge_chan_flag":  "5%"
         },
-        "autocorrelations"  :  true,
+        "autocorrelations"  :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  10.0,
+            "quack_time"    :  {"3C345":150.0,"DA193":90.0,"*":10.0},
             "quack_mode"    :  "beg"
         },
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
-            "nodes"         :    -1,
-            "cpus"          :    -1,
-            "mpiprocs"      :    -1,
+            "nodes"         :   -1,
+            "cpus"          :   -1,
+            "mpiprocs"      :   -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "fit_autocorrs":{
+        "select_calibrators": ["J1241+602"],
+        "interp_bad_solutions": true, 
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :   -1,
+            "cpus"          :   -1,
+            "mpiprocs"      :   -1,
             "nodetype"      :  "default"
         }
     },
     "sub_band_delay":{
         "select_calibrators": [["default"], ["J1241+602"]], 
-        "time_range"        : ["","2016/03/06/11:00:00.0~2016/03/06/11:05:00.0"],
+        "time_range"        : ["","2016/03/08/01:00:00.0~2016/03/08/01:05:00.0"],
         "sol_interval"      : ["60s", "150s"],
-        "min_snr"           : [30.0,7.0],
+        "min_snr"           : [50.0,7.0],
         "fringe_niter"      :  300,
         "modify_sbd":{
             "run"           :  true,
@@ -124,39 +137,44 @@
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
+            "nodes"         :   -1,
+            "cpus"          :   -1,
+            "mpiprocs"      :   -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "bandpass_cal":{
+        "same_as_sbd_cal"   :  true,
+        "select_calibrators": [["default"]], 
+        "time_range"        : ["",""],
+        "sol_interval"      :  "inf",
+        "min_snr"           :  3.0,
+        "hpc_options":{
+            "partition"     : "default",
+            "walltime"      : "default",
+            "nodes"         :  -1,
+            "cpus"          :  -1,
+            "mpiprocs"      :  -1,
+            "nodetype"      : "default"
+        }
+    },
+    "phase_referencing":{        
+        "select_calibrators": "default",
+        "cal_type"          : [["F"],[]],   
+        "sol_interval"      : [["inf"],[]],
+        "combine"           : [[""],[]],
+        "interp_flagged"    : [[true],[]],
+        "pad_ant"           : [""],
+        "fringe_niter"      : 300,
+        "min_snr"           : 5.0,
+        "imaging_params"    : "auto",
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
             "nodetype"      :  "default"
         }
-    },
-    "bandpass_cal":{
-        "same_as_sbd_cal"   : true,
-        "select_calibrators": [["default"]], 
-        "time_range"        : ["",""],
-        "sol_interval"      :  "inf",
-        "min_snr"           : 3.0,
-        "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
-            "nodes"         : -1,
-            "cpus"          : -1,
-            "mpiprocs"      : -1,
-            "nodetype"      : "default"
-        }
-    },
-    "multi_band_delay":{
-        "antab_file"        :  "auto",
-        "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
-            "nodes"         : -1,
-            "cpus"          : -1,
-            "mpiprocs"      : -1,
-            "nodetype"      : "default"
-        }
-    },
-    "self_cal_pc":{
-        "antab_file"        :  "auto"
     }
 }

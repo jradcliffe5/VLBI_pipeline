@@ -75,7 +75,7 @@ if params['init_flag']['quack_data']['run'] == True:
 	if type(quack_ints)==dict:
 		for i in quack_ints.keys():
 			flagdata(vis=msfile,
-				     antenna=i,
+				     field=i,
 				     mode='quack',
 				     quackinterval=quack_ints[i],
 				     quackmode=quack_mode)

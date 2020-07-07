@@ -11,28 +11,32 @@ from collections import OrderedDict
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-
+from matplotlib import gridspec
+from scipy.optimize import least_squares
+from scipy import signal
 
 try:
 	# CASA 6
 	import casatools
 	from casatasks import *
 	casalog.showconsole(True)
+	casa6=True
 except:
 	# CASA 5
 	from casac import casac as casatools
-	from taskinit import casalog
+	from taskinit import *
+	casa6=False
 
 class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(NpEncoder, self).default(obj)
+	def default(self, obj):
+		if isinstance(obj, np.integer):
+			return int(obj)
+		elif isinstance(obj, np.floating):
+			return float(obj)
+		elif isinstance(obj, np.ndarray):
+			return obj.tolist()
+		else:
+			return super(NpEncoder, self).default(obj)
 
 def json_load_byteified(file_handle):
 	return _byteify(
@@ -691,8 +695,8 @@ def time_convert(mytime, myunit='s'):
 	return myTimestr
 
 def split_str(strng, sep, pos):
-    strng = strng.split(sep)
-    return sep.join(strng[:pos]), sep.join(strng[pos:])
+	strng = strng.split(sep)
+	return sep.join(strng[:pos]), sep.join(strng[pos:])
 
 def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
 	TOL=solint/2.01
@@ -820,18 +824,18 @@ def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
 		axes3.set_yticklabels(np.sum(flag_stats[0],axis=1).astype(int).tolist())
 		# Rotate the tick labels and set their alignment.
 		plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-		         rotation_mode="anchor")
+				 rotation_mode="anchor")
 		bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
 		for i in fid_t.keys():
 			rect=patches.Rectangle((fid_t[i][0]-0.4,-0.4),(fid_t[i][1]-fid_t[i][0])+0.8,len(Ant)-0.2,linewidth=1,edgecolor='r',facecolor='none')
 			ax.text(((fid_t[i][0]-0.4)+fid_t[i][1])/2., 0.5, '%s'%(i),
-		                       ha="center", va="center", color="k",size=12,bbox=bbox_props)
+							   ha="center", va="center", color="k",size=12,bbox=bbox_props)
 			ax.add_patch(rect)
 		# Loop over data dimensions and create text annotations.
 		for i in range(len(Ant)):
-		    for j in range(len(Time)):
-		        text = ax.text(j, i, '%d/%d'%(flag_stats[0][i, j],flag_stats[1][i,j]),
-		                       ha="center", va="center", color="w")
+			for j in range(len(Time)):
+				text = ax.text(j, i, '%d/%d'%(flag_stats[0][i, j],flag_stats[1][i,j]),
+							   ha="center", va="center", color="w")
 		ax.set_title("%s"%caltable)
 		fig.savefig('%s'%plotfile)
 		plt.close()
@@ -870,30 +874,161 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 	fill_flagged_soln(caltable=caltable,fringecal=True)
 	'''
 	flag_stats, fid = get_caltable_flag_stats(caltable=caltable,
-						  					  msinfo=msinfo,
-						 					  solint=solint,
-						  					  plotonly=False,
-						  	  			      plotfile='test2.pdf')
+											  msinfo=msinfo,
+											  solint=solint,
+											  plotonly=False,
+											  plotfile='test2.pdf')
 
 	interpolate_spw(table_array=flag_stats, 
-		            passmark=spw_pass, 
-		            caltable=caltable, 
-		            solint=solint)
+					passmark=spw_pass, 
+					caltable=caltable, 
+					solint=solint)
 
 
 	get_caltable_flag_stats(caltable='eg078d.sbd',
-						  	msinfo=msinfo,
-						 	solint=solint,
-						  	plotonly=True,
-						  	plotfile='test3.pdf')
+							msinfo=msinfo,
+							solint=solint,
+							plotonly=True,
+							plotfile='test3.pdf')
 
 	fill_flagged_soln(caltable='eg078d.sbd', 
-		              fringecal=True)
+					  fringecal=True)
 
 	get_caltable_flag_stats(caltable='eg078d.sbd',
-						  	msinfo=msinfo,
-						 	solint=solint,
-						  	plotonly=True,
-						  	plotfile='test4.pdf')
+							msinfo=msinfo,
+							solint=solint,
+							plotonly=True,
+							plotfile='test4.pdf')
 	'''
+
+def scipy_clipper(data):
+	x = np.arange(0,len(data),1)
+	b, a = signal.butter(1, 0.25)
+	y = signal.filtfilt(b,a, data)
+	return y
+
+def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalise='none', filter_RFI=True):
+	'''
+	This function will fit to the autocorrelations of each antenna on a spw by spw and pol basis
+	'''
+
+	msfile = '%s.ms'%epoch
+
+
+	rmdirs(['%s.auto.bpass'%(epoch)])
+	bandpass(vis=msfile,
+		     caltable='%s.auto.bpass'%(epoch),
+			 field=','.join(calibrators),
+			 solint='inf',
+			 antenna='',
+			 spw='',
+			 combine='scan',
+			 solnorm=False,
+			 refant='0,1,2,3,4,5,6,7,8,9,10',
+			 fillgaps=0,
+			 minsnr=10.)
+
+	tb = casatools.table()
+	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
+	npol = msinfo['SPECTRAL_WINDOW']['npol']
+	nants = len(msinfo['ANTENNAS']['anttoID'])
+	nchan = msinfo['SPECTRAL_WINDOW']['nchan']
+
+	nrows=int(np.ceil(float(nants)/3.))
+	gs = gridspec.GridSpec(nrows=nrows,ncols=3, width_ratios=np.ones(3), height_ratios=np.ones(nrows)/3.)
+	
+	tbnrows = len(calibrators)*nspw*nants
+	TIME = np.empty(tbnrows)
+	FIELD_ID = np.empty(tbnrows)
+	SPECTRAL_WINDOW_ID = np.empty(tbnrows)
+	ANTENNA1 = np.empty(tbnrows)
+	ANTENNA2 = np.zeros(tbnrows)
+	INTERVAL = np.zeros(tbnrows)
+	OBSERVATION_ID = np.zeros(tbnrows)
+	CPARAM = np.empty((npol,nchan,tbnrows),dtype=complex)
+	PARAMERR = np.ones((npol,nchan,tbnrows))
+	FLAG = np.zeros((npol,nchan,tbnrows))
+	SNR =  np.ones((npol,nchan,tbnrows))
+	WEIGHT = np.empty(tbnrows)
+
+	runc=0
+	tb.open(msfile)
+	for h in range(len(calibrators)):
+		fig = plt.figure(1,figsize=(27,9))
+		subt=tb.query('ANTENNA1==ANTENNA2 and FIELD_ID==%s'%(calibrators[h]))
+		t_cal = np.average(subt.getcol('TIME'))
+		for j in range(nspw):
+			x = np.arange(j*nchan,(j+1)*nchan,1)
+			for i in range(nants):
+				ax = fig.add_subplot(gs[i])
+				autocorrs = np.empty((npol,nchan),dtype=complex)
+				for k in range(npol):
+					try:
+						subt = tb.query('ANTENNA1==%s and ANTENNA2==%s and FIELD_ID==%s and DATA_DESC_ID==%s'%(i,i,calibrators[h],j))
+						flag = subt.getcol('FLAG')
+						data = np.abs(subt.getcol('DATA'))
+						data[flag==True] = np.nan
+						#print(data)
+						if calc_auto == 'mean':
+							data_median = np.sqrt(np.nanmean(data,axis=2)[k])
+						elif calc_auto=='median':
+							data_median = np.sqrt(np.nanmedian(data,axis=2)[k])
+						else:
+							sys.exit()
+						polcol=['r','k']
+						polmar=['o','^']
+						if filter_RFI == True:
+							quant=np.nanquantile(data_median,[0.25,0.75])
+							IQR = np.abs(quant[1]-quant[0])
+							quant = quant[1]+0.8*IQR
+							x_filter = x[(data_median<quant)|(data_median==np.nan)]
+							data_median_filter = data_median[(data_median<quant)|(data_median==np.nan)]
+							data_median_i = np.interp(x=x,xp=x_filter,fp=data_median_filter,left=data_median_filter[0],right=data_median_filter[-1])
+							data_median_i = scipy_clipper(data_median_i)
+						if renormalise == 'max':
+							data_median_i = data_median_i/np.max(data_median_i)
+						if renormalise == 'median':
+							data_median_i = data_median_i/np.median(data_median_i[6:28])
+						ax.scatter(x,data_median_i,c=polcol[k],marker=polmar[k])
+						for p in range(len(data_median_i)):
+							autocorrs[k,p] = data_median_i[p]+0j	
+					except:
+						print('no data for antenna %s'%i)
+						autocorrs[k,:] = 1 + 0j
+						FLAG[k,:,runc] = 1
+
+						
+
+				TIME[runc] = t_cal
+				FIELD_ID[runc] = 0
+				SPECTRAL_WINDOW_ID[runc] = j
+				ANTENNA1[runc] = i
+				CPARAM[:,:,runc] = autocorrs
+				runc+=1
+				#ax2.scatter(x, scipy_clipper(data_median),c=polcol[k])
+				#ax3.scatter(x, scipy_clipper(data_median)-data_median,c=polcol[k])
+
+			
+			fig.savefig('%s_autocorr_bpass.png'%epoch,bbox_inches='tight')
+			#smart_autocorr_clip(np.mean(np.abs(data),axis=2)[0])
+	#tabdesc, dmi = get_tabledesc_and_dminfo('eg078e.bpass')
+	tb.close()
+	tb.open('%s.auto.bpass'%(epoch),nomodify=False)
+	#tb.addrows(tbnrows)
+	tb.putcol('TIME',TIME)
+	tb.putcol('CPARAM',CPARAM)
+	tb.putcol('PARAMERR',PARAMERR)
+	tb.putcol('FLAG',FLAG)
+	tb.putcol('SNR',SNR)
+	tb.putcol('ANTENNA1',ANTENNA1)
+	#tb.putcol('WEIGHT',ANTENNA1)
+	tb.putcol('SPECTRAL_WINDOW_ID',SPECTRAL_WINDOW_ID)
+	tb.putcol('FIELD_ID',FIELD_ID)
+	tb.close()
+
+
+
+
+
+
 
