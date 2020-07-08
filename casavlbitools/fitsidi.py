@@ -157,6 +157,18 @@ class TSysTable:
         self.tant = []
         return
 
+class GainCurveTable:
+    def __init__(self):
+        self.antenna_no = []
+        self.array = []
+        self.freqid = []
+        self.nterm = []
+        self.y_typ = []
+        self.gain = []
+        self.sens_1 = []
+        self.sens_2 = []
+        return
+
 
 def update_map(pols, spws, spwmap, index):
     idx = 0
@@ -276,6 +288,60 @@ def process_values(infp, keys, pols, idi, data):
         if line.strip().endswith('/'):
             break
         continue
+    return
+
+gain_keys = [ 'EQUAT', 'ALTAZ', 'ELEV', 'GCNRAO', 'TABLE', 'RCP', 'LCP' ]
+
+def process_gc_values(infp, keys, pols, idi, data):
+    antenna_name = find_antenna(keys[0], gain_keys)
+    if not antenna_name:
+        print('Antenna missing from GAIN group')
+        skip_values(infp)
+        return
+    try:
+        antenna = idi.antenna_map[antenna_name]
+    except:
+        print('Antenna %s not present in FITS-IDI file' % antenna_name)
+        skip_values(infp)
+        return
+    keys = dict(keys[0])
+
+    dpfu = {}
+    try:
+        dpfu['R'] = keys['DPFU'][0]
+        dpfu['L'] = keys['DPFU'][1]
+        pols.append('R')
+        pols.append('L')
+    except:
+        dpfu['R'] = dpfu['L'] = keys['DPFU']
+        pols.append('X')
+        pass
+    try:
+        value = keys['POLY'][0]
+    except:
+        keys['POLY'] = [keys['POLY']]
+        pass
+
+    y_typ = 0
+    if 'ELEV' in keys:
+        y_typ = 1
+    elif 'EQUAT' in keys:
+        y_typ = 1
+    elif 'ALTAZ' in keys:
+        y_typ = 2
+    else:
+        print('Unknown gain curve type for antenna %s' % antenna_name)
+        return
+
+    poly = keys['POLY']
+    data.antenna_no.append(antenna)
+    data.array.append(1)
+    data.freqid.append(1)
+    data.y_typ.append(y_typ)
+    data.nterm.append(len(poly))
+    data.gain.append(poly)
+    data.sens_1.append(dpfu['R'])
+    data.sens_2.append(dpfu['L'])
     return
 
 def append_tsys(antabfile, idifiles):
@@ -409,6 +475,169 @@ def append_tsys(antabfile, idifiles):
     hdulist.close()
     return
 
+def append_gc(antabfile, idifile):
+    # Check if we already have a GAIN_CURVE table
+    try:
+        hdulist = pyfits.open(idifile)
+        hdu = hdulist['GAIN_CURVE']
+        print('GAIN_CURVE table already present in FITS-IDI file')
+        sys.exit(1)
+    except KeyError:
+        pass
+
+    idi = IdiData([idifile])
+    data = GainCurveTable()
+
+    pols = []
+    keys = StringIO()
+    fp = open(antabfile, 'r')
+    for line in fp:
+        if line.startswith('!'):
+            continue
+        keys.write(line)
+        if line.strip().endswith('/'):
+            keys.seek(0)
+            gain = key.read_keyfile(keys)
+            # Standard ANTAB
+            if gain and gain[0] and gain[0][0][0] == 'GAIN':
+                process_gc_values(fp, gain, pols, idi, data)
+            elif gain and gain[0] and gain[0][0][0] == 'TSYS':
+                skip_values(fp)
+                pass
+            keys = StringIO()
+            continue
+        continue
+
+    n_tab = max(data.nterm)
+    nrows = len(data.nterm)
+
+    antenna_no = data.antenna_no
+    array = data.array
+    freqid = data.freqid
+    _type = nrows * [idi.n_band * [2]]
+    nterm = np.repeat(data.nterm, idi.n_band).reshape(nrows, idi.n_band)
+    x_typ = nrows * [idi.n_band * [0]]
+    y_typ = np.repeat(data.y_typ, idi.n_band).reshape(nrows, idi.n_band)
+    x_val = nrows * [idi.n_band * [float('nan')]]
+    y_val = nrows * [(n_tab * idi.n_band) * [float('nan')]]
+    sens_1 = np.repeat(data.sens_1, idi.n_band).reshape(nrows, idi.n_band)
+    if len(pols) > 1:
+        sens_2 = np.repeat(data.sens_2, idi.n_band).reshape(nrows, idi.n_band)
+        pass
+
+    gain = np.zeros((nrows, n_tab))
+    for row in range(nrows):
+        for elem in range(len(data.gain[row])):
+            gain[(row, elem)] = data.gain[row][elem]
+            continue
+        continue
+    gain = np.repeat(gain, idi.n_band, axis=0)
+    gain = gain.reshape(nrows, n_tab * idi.n_band)
+
+    cols = []
+    col = pyfits.Column(name='ANTENNA_NO', format='1J', array=antenna_no)
+    cols.append(col)
+    col = pyfits.Column(name='ARRAY', format='1J', array=array)
+    cols.append(col)
+    col = pyfits.Column(name='FREQID', format='1J', array=freqid)
+    cols.append(col)
+    format = '%dJ' % idi.n_band
+    col = pyfits.Column(name='TYPE_1', format=format, array=_type)
+    cols.append(col)
+    col = pyfits.Column(name='NTERM_1', format=format, array=nterm)
+    cols.append(col)
+    col = pyfits.Column(name='X_TYP_1', format=format, array=x_typ)
+    cols.append(col)
+    col = pyfits.Column(name='Y_TYP_1', format=format, array=y_typ)
+    cols.append(col)
+    format = '%dE' % idi.n_band
+    col = pyfits.Column(name='X_VAL_1', format=format, array=x_val)
+    cols.append(col)
+    format = '%dE' % (n_tab * idi.n_band)
+    col = pyfits.Column(name='Y_VAL_1', format=format, array=y_val)
+    cols.append(col)
+    col = pyfits.Column(name='GAIN_1', format=format, array=gain)
+    cols.append(col)
+    format = '%dE' % idi.n_band
+    col = pyfits.Column(name='SENS_1', format=format, unit='K/Jy',
+                        array=sens_1)
+    cols.append(col)
+    if len(pols) > 1:
+        format = '%dJ' % idi.n_band
+        col = pyfits.Column(name='TYPE_2', format=format, array=_type)
+        cols.append(col)
+        col = pyfits.Column(name='NTERM_2', format=format, array=nterm)
+        cols.append(col)
+        col = pyfits.Column(name='X_TYP_2', format=format, array=x_typ)
+        cols.append(col)
+        col = pyfits.Column(name='Y_TYP_2', format=format, array=y_typ)
+        cols.append(col)
+        format = '%dE' % idi.n_band
+        col = pyfits.Column(name='X_VAL_2', format=format, array=x_val)
+        cols.append(col)
+        format = '%dE' % (n_tab * idi.n_band)
+        col = pyfits.Column(name='Y_VAL_2', format=format, array=y_val)
+        cols.append(col)
+        col = pyfits.Column(name='GAIN_2', format=format, array=gain)
+        cols.append(col)
+        format = '%dE' % idi.n_band
+        col = pyfits.Column(name='SENS_2', format=format, unit='K/Jy',
+                            array=sens_2)
+        cols.append(col)
+        pass
+    coldefs = pyfits.ColDefs(cols)
+
+    header = pyfits.Header()
+    try:
+        # Attempt to use the new interfaces available in PyFITS 3.1.x
+        # and later.  The old interfaces are still available, but
+        # generate warnings that say they're deprecated.
+        header['EXTNAME'] = 'GAIN_CURVE'
+        header['EXTVER'] = 1
+        header['TABREV'] = 1
+        header['OBSCODE'] = idi.obscode
+        header['NO_STKD'] = idi.n_stokes
+        header['STK_1'] = idi.stk_1
+        header['NO_BAND'] = idi.n_band
+        header['NO_CHAN'] = idi.n_chan
+        header['REF_FREQ'] = idi.ref_freq
+        header['CHAN_BW'] = idi.chan_bw
+        header['REF_PIXL'] = idi.ref_pixl
+        # Repeat the reference data even though the FITS-IDI standard
+        # doesn't seem to require it.
+        header['RDATE'] = idi.rdate
+        header['NO_POL'] = len(pols)
+        header['NO_TABS'] = n_tab
+        tbhdu = pyfits.BinTableHDU.from_columns(coldefs, header)
+    except:
+        # Fall back on the old interfaces available in PyFits 3.0.x
+        # and earlier.
+        header.update('EXTNAME', 'GAIN_CURVE')
+        header.update('EXTVER', 1)
+        header.update('TABREV', 1)
+        header.update('OBSCODE', idi.obscode)
+        header.update('NO_STKD', idi.n_stokes)
+        header.update('STK_1', idi.stk_1)
+        header.update('NO_BAND', idi.n_band)
+        header.update('NO_CHAN', idi.n_chan)
+        header.update('REF_FREQ', idi.ref_freq)
+        header.update('CHAN_BW', idi.chan_bw)
+        header.update('REF_PIXL', idi.ref_pixl)
+        # Repeat the reference data even though the FITS-IDI standard doesn't
+        # seem to require it.
+        header.update('RDATE', idi.rdate)
+        header.update('NO_POL', len(pols))
+        header.update('NO_TABS', n_tab)
+        rows = len(nterm)
+        tbhdu = pyfits.core.new_table(coldefs, header, rows, False,
+                                      'BinTableHDU')
+        pass
+
+    hdulist = pyfits.open(idifile, mode='append')
+    hdulist.append(tbhdu)
+    hdulist.close()
+    return
+    
 def find_first_dobs(idifiles):
     first_dobs = datetime.datetime(datetime.MAXYEAR, 12, 31)
     for match in idifiles:

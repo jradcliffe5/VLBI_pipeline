@@ -34,16 +34,20 @@ refant = find_refants(params['global']['refant'],msinfo)
 if params['phase_referencing']['select_calibrators'] == 'default':
 		fields = params['global']['phase_calibrators']
 else:
-		fields = params['phase_referencing']['select_calibrators']
+		fields = list(params['phase_referencing']['select_calibrators'])
 
 
 cal_type = params['phase_referencing']["cal_type"]
 
+print(len(fields))
 for i in range(len(fields)):
 	for j in range(len(cal_type[i])):
-		if cal_type[i][j] == 'F':
+		caltable = '%s/%s-%s.%s%s'%(cwd,p_c,fields[i],cal_type[i][j],j)
+		
+		rmdirs([caltable])
+		if cal_type[i][j] == 'f':
 			fringefit(vis=msfile,
-					  caltable='%s/%s-%s.%s'%(cwd,p_c,fields[i],cal_type[i][j]),
+					  caltable=caltable,
 					  field=fields[i],
 					  solint=params['phase_referencing']['sol_interval'][i][j],
 					  zerorates=False,
@@ -57,14 +61,64 @@ for i in range(len(fields)):
 					  spwmap=gaintables['spwmap'],
 					  parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				fill_flagged_soln(caltable='%s/%s-%s.%s'%(cwd,p_c,fields[i],cal_type[i][j]),fringecal=True)
-		elif cal_type[i][j] == 'P' or cal_type[i][j] == 'AP' or cal_type[i][j] == 'K' or cal_type[i][j] == 'A':
-			gaincal()
+				fill_flagged_soln(caltable=caltable,fringecal=True)
+		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
+			if cal_type[i][j] == 'k':
+				gaintype='K'
+			else:
+				gaintype='G'
+			gaincal(vis=msfile,
+					caltable=caltable,
+					field=fields[i],
+					solint=params['phase_referencing']['sol_interval'][i][j],
+					calmode=cal_type[i][j],
+					solnorm=True,
+					refant=refant,
+					gaintype=gaintype,
+					combine=params['phase_referencing']['combine'][i][j],
+					minsnr=params['phase_referencing']['min_snr'],
+					gaintable=gaintables['gaintable'],
+					gainfield=gaintables['gainfield'],
+					interp=gaintables['interp'],
+					spwmap=gaintables['spwmap'],
+					parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				fill_flagged_soln(caltable='%s/%s-%s.%s'%(cwd,p_c,fields[i],cal_type[i][j]),fringecal=False)
+				fill_flagged_soln(caltable=caltable,fringecal=False)
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be F - fringefit, P - phase, AP - amp and phase, A - amp, or K - delay')
 			sys.exit()
+		if 'spw' in params['phase_referencing']['combine'][i][j]:
+			spwmap = msinfo['SPECTRAL_WINDOW']['nspws']*[0]
+		else:
+			spwmap=[]
+		gaintables = append_gaintable(gaintables,[caltable,'',spwmap,'linear'])
+		applycal(vis=msfile,
+			     field=fields[i],
+			     gaintable=gaintables['gaintable'],
+				 gainfield=gaintables['gainfield'],
+				 interp=gaintables['interp'],
+				 spwmap=gaintables['spwmap'],
+				 parang=gaintables['parang'])
+		if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+			applycal(vis=msfile,
+			     field=fields[i+1],
+			     gaintable=gaintables['gaintable'],
+				 gainfield=gaintables['gainfield'],
+				 interp=gaintables['interp'],
+				 spwmap=gaintables['spwmap'],
+				 parang=gaintables['parang'])
 		
+		if params['phase_referencing']["imager"] == 'wsclean':
+			os.system('rm %s-%s%s-*'%(fields[i],cal_type[i][j],j))
+			os.system('%s -name %s-%s%s -scale 0.001asec -size 512 512 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.5 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
+			clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i],cal_type[i][j],j), 
+				          im='%s-%s%s-image.fits'%(fields[i],cal_type[i][j],j),
+				          snr=5.0)
+			os.system('%s -name %s-%s%s -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
+			if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+				os.system('%s -name %s-initmodel -scale 0.001asec -size 512 512 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.5 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
 
-#fill_flagged_soln(caltable='%s/%s.mbd'%(cwd,p_c),fringecal=True)
+
+save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
+steps_run['phase_referencing'] = 1
+save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

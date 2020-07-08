@@ -13,10 +13,9 @@ make_mms = 0
 apriori_cal = 0
 init_flag = 0
 fit_autocorrs = 0
-sub_band_delay = 0
-bandpass_cal = 0
-multi_band_delay = 0
-self_cal_phasecal = 0
+sub_band_delay = 1
+bandpass_cal = 1
+phase_referencing = 0
 apply_target = 0
 primary_beam_correction = 0
 

@@ -88,7 +88,7 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.gcal'%(cwd,p_c),\
        infile='%s/%s.gc'%(cwd,p_c))
-gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],''])
+gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
 applycal(vis=msfile,
 	     gaintable=gaintables['gaintable'],

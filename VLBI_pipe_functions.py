@@ -51,7 +51,7 @@ def json_loads_byteified(json_text):
 	)
 
 def json_load_byteified_dict(file_handle,casa6):
-	print(casa6)
+	#print(casa6)
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
@@ -87,7 +87,7 @@ def convert_temp(data):
 	elif isinstance(data, collections.Mapping):
 		return OrderedDict(map(convert_temp, data.items()))
 	elif isinstance(data, collections.Iterable):
-		print(data)
+		#print(data)
 		return type(data)(map(convert_temp, data))
 	else:
 		return data
@@ -449,80 +449,80 @@ def get_ms_info(msfile):
 	return msinfo
 
 def fill_flagged_soln(caltable='', fringecal=False):
-		"""
-		This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
-		one.
-		If you do not do that and applycal blindly with the table your data gets 
-		flagged between  calibration runs that have a bad/flagged solution at one edge.
-		Can be pretty bad when you calibrate every hour or more 
-		(when you are betting on self-cal) of observation (e.g L-band of the EVLA)..one can 
-		lose the whole hour of good data without realizing !
-		"""
-		if fringecal==False:
-			gaincol='CPARAM'
-		else:
-			gaincol='FPARAM'
-		tb=casatools.table()
-		tb.open(caltable, nomodify=False)
-		flg=tb.getcol('FLAG')
-		#sol=tb.getcol('SOLUTION_OK')
-		ant=tb.getcol('ANTENNA1')
-		gain=tb.getcol(gaincol)
-		t=tb.getcol('TIME')
-		dd=tb.getcol('SPECTRAL_WINDOW_ID')
-		#dd=tb.getcol('CAL_DESC_ID')
-		maxant=np.max(ant)
-		maxdd=np.max(dd)
-		npol=len(gain[:,0,0])
-		nchan=len(gain[0,:,0])
-		
-		k=1
-		numflag=0.0
-		for k in range(maxant+1):
-				for j in range (maxdd+1):
-						subflg=flg[:,:,(ant==k) & (dd==j)]
-						subt=t[(ant==k) & (dd==j)]
-						#subsol=sol[:,:,(ant==k) & (dd==j)]
-						subgain=gain[:,:,(ant==k) & (dd==j)]
-						#print 'subgain', subgain.shape
-						for kk in range(1, len(subt)):
-								for chan in range(nchan):
-										for pol in range(npol):
-												if(subflg[pol,chan,kk] and not subflg[pol,chan,kk-1]):
-														numflag += 1.0
-														subflg[pol,chan,kk]=False
-														#subsol[pol, chan, kk]=True
-														subgain[pol,chan,kk]=subgain[pol,chan,kk-1]
-												if(subflg[pol,chan,kk-1] and not subflg[pol,chan,kk]):
-														numflag += 1.0
-														subflg[pol,chan,kk-1]=False
-														#subsol[pol, chan, kk-1]=True
-														subgain[pol,chan,kk-1]=subgain[pol,chan,kk]
-						for kk in range(len(subt)-2,-1, -1):
-								for chan in range(nchan):
-										for pol in range(npol):
-												if(subflg[pol,chan,kk] and not subflg[pol,chan,kk+1]):
-														numflag += 1.0
-														subflg[pol,chan,kk]=False
-														#subsol[pol, chan, kk]=True
-														subgain[pol,chan,kk]=subgain[pol,chan,kk+1]
-												if(subflg[pol,chan,kk] and not subflg[pol,chan,kk]):
-														numflag += 1.0
-														subflg[pol,chan,kk+1]=False
-														#subsol[pol, chan, kk-1]=True
-														subgain[pol,chan,kk+1]=subgain[pol,chan,kk]
-						flg[:,:,(ant==k) & (dd==j)]=subflg
-						#sol[:,:,(ant==k) & (dd==j)]=subsol
-						gain[:,:,(ant==k) & (dd==j)]=subgain
+	"""
+	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
+	one.
+	If you do not do that and applycal blindly with the table your data gets 
+	flagged between  calibration runs that have a bad/flagged solution at one edge.
+	Can be pretty bad when you calibrate every hour or more 
+	(when you are betting on self-cal) of observation (e.g L-band of the EVLA)..one can 
+	lose the whole hour of good data without realizing !
+	"""
+	if fringecal==False:
+		gaincol='CPARAM'
+	else:
+		gaincol='FPARAM'
+	tb=casatools.table()
+	tb.open(caltable, nomodify=False)
+	flg=tb.getcol('FLAG')
+	#sol=tb.getcol('SOLUTION_OK')
+	ant=tb.getcol('ANTENNA1')
+	gain=tb.getcol(gaincol)
+	t=tb.getcol('TIME')
+	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	#dd=tb.getcol('CAL_DESC_ID')
+	maxant=np.max(ant)
+	maxdd=np.max(dd)
+	npol=len(gain[:,0,0])
+	nchan=len(gain[0,:,0])
+	
+	k=1
+	numflag=0.0
+	for k in range(maxant+1):
+			for j in range (maxdd+1):
+					subflg=flg[:,:,(ant==k) & (dd==j)]
+					subt=t[(ant==k) & (dd==j)]
+					#subsol=sol[:,:,(ant==k) & (dd==j)]
+					subgain=gain[:,:,(ant==k) & (dd==j)]
+					#print 'subgain', subgain.shape
+					for kk in range(1, len(subt)):
+							for chan in range(nchan):
+									for pol in range(npol):
+											if(subflg[pol,chan,kk] and not subflg[pol,chan,kk-1]):
+													numflag += 1.0
+													subflg[pol,chan,kk]=False
+													#subsol[pol, chan, kk]=True
+													subgain[pol,chan,kk]=subgain[pol,chan,kk-1]
+											if(subflg[pol,chan,kk-1] and not subflg[pol,chan,kk]):
+													numflag += 1.0
+													subflg[pol,chan,kk-1]=False
+													#subsol[pol, chan, kk-1]=True
+													subgain[pol,chan,kk-1]=subgain[pol,chan,kk]
+					for kk in range(len(subt)-2,-1, -1):
+							for chan in range(nchan):
+									for pol in range(npol):
+											if(subflg[pol,chan,kk] and not subflg[pol,chan,kk+1]):
+													numflag += 1.0
+													subflg[pol,chan,kk]=False
+													#subsol[pol, chan, kk]=True
+													subgain[pol,chan,kk]=subgain[pol,chan,kk+1]
+											if(subflg[pol,chan,kk] and not subflg[pol,chan,kk]):
+													numflag += 1.0
+													subflg[pol,chan,kk+1]=False
+													#subsol[pol, chan, kk-1]=True
+													subgain[pol,chan,kk+1]=subgain[pol,chan,kk]
+					flg[:,:,(ant==k) & (dd==j)]=subflg
+					#sol[:,:,(ant==k) & (dd==j)]=subsol
+					gain[:,:,(ant==k) & (dd==j)]=subgain
 
 
-		print('numflag', numflag)
-		 
-		###
-		tb.putcol('FLAG', flg)
-		#tb.putcol('SOLUTION_OK', sol)
-		tb.putcol(gaincol, gain)
-		tb.done()
+	#print('numflag', numflag)
+	 
+	###
+	tb.putcol('FLAG', flg)
+	#tb.putcol('SOLUTION_OK', sol)
+	tb.putcol(gaincol, gain)
+	tb.done()
 
 def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	tb=casatools.table()
@@ -537,11 +537,11 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
 	npol=gain.shape[0]
 	for k in range(npol):
-		print('npol=%s'%k)
+		#print('npol=%s'%k)
 		for i in np.unique(ant):
-			print('nant=%s'%i)
+			#print('nant=%s'%i)
 			for j in np.unique(dd):
-				print('nspw=%s'%j)
+				#print('nspw=%s'%j)
 				flg_temp=flg[k,0,((ant==i)&(dd==j))]
 				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
 				gain_uflg = gain_uflg2[flg_temp==0]
@@ -852,7 +852,7 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 		solint=float(solint.split('s')[0])
 	elif solint[-1] == 'm' or solint[-3:]=="min":
 		solint=float(solint.split('m')[0])*60.
-	print(solint)
+	#print(solint)
 
 	os.system('cp -r %s %s_original'%(caltable,caltable))
 
@@ -993,7 +993,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
-						print('no data for antenna %s'%i)
+						#print('no data for antenna %s'%i)
 						autocorrs[k,:] = 1 + 0j
 						FLAG[k,:,runc] = 1
 
@@ -1027,8 +1027,20 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	tb.close()
 
 
+def clip_fitsfile(model,im,snr):
+	try:
+		import pyfits as fits
+	except:
+		from astropy.io import fits
 
-
-
-
-
+	model_hdu = fits.open(model,mode='update')
+	model_data = model_hdu['PRIMARY'].data
+	im_hdu = fits.open(im)
+	im_head = im_hdu['PRIMARY'].header
+	print(im_hdu['PRIMARY'].data.squeeze().shape)
+	rms = np.std(im_hdu['PRIMARY'].data.squeeze()[0:int(im_head['NAXIS1']/4.),0:int(im_head['NAXIS2']/4.)])
+	im_hdu.close()
+	model_data[model_data<float(snr)*rms] = 0
+	model_hdu.flush()
+	model_hdu.close()
+ 

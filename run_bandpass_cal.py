@@ -33,17 +33,19 @@ refant = find_refants(params['global']['refant'],msinfo)
 
 
 gaintab = []
-
+'''
 for i in gaintables['gaintable']:
 	print(i)
 	if i.endswith('.sbd'):
 		gaintab.append('%s.bpasscal'%i)
 	else:
 		gaintab.append(i)
+'''
+gaintab=gaintables['gaintable']
 
 flagmanager(vis=msfile,mode='save',versionname='temp_bpass')
 applycal(vis=msfile,
-		 field='',
+		 field=",".join(params['global']["fringe_finders"])+','+",".join(params['global']['phase_calibrators']),
 	     gaintable=gaintab,
 	     interp=gaintables['interp'],
 	     gainfield=gaintables['gainfield'],
@@ -66,13 +68,14 @@ for i in range(len(params[substep]['select_calibrators'])):
 		fields=",".join(params['global']['fringe_finders'])
 	else:
 		fields=",".join(params[substep]['select_calibrators'][i])
+		
 	bandpass(vis=msfile,
 			 caltable='%s/%s.bpass'%(cwd,p_c),
 			 field=fields,
 			 solint=params['bandpass_cal']['sol_interval'],
 			 antenna='',
 			 spw='',
-			 combine='',
+			 combine='scan',
 			 solnorm=True,
 			 timerange=params[substep]['time_range'][i],
 			 refant=refant,
@@ -116,7 +119,7 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 
 flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
 
-gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'nearest'])
+gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['bandpass_cal'] = 1

@@ -29,7 +29,7 @@ p_c=params['global']['project_code']
 
 msinfo = get_ms_info(msfile)
 
-refant = find_refants(params['global']['refant'],msinfo)
+refant = find_refants(params['global']['refant'], msinfo)
 
 
 if params['fit_autocorrs']['select_calibrators'] == ['default']:
@@ -45,7 +45,7 @@ fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo,calc_
 if params['fit_autocorrs']["interp_bad_solutions"] == True:
 	fill_flagged_soln(caltable='%s/%s.auto.bpass'%(cwd,p_c),fringecal=False)
 
-gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear'])
+gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
 
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)

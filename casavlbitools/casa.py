@@ -83,10 +83,17 @@ vlba_freqs = {
 
 keyin_keys = [ 'EQUAT', 'ALTAZ', 'ELEV', 'GCNRAO', 'TABLE', 'RCP', 'LCP' ]
 
-def transform_poly(coeff, min_elev=0, max_elev=90):
+def transform_elev_poly(coeff, min_elev=0, max_elev=90):
     f = np.poly1d(coeff[::-1])
     g = lambda x: np.sqrt(f(90 - x))
     x = np.linspace(min_elev, max_elev, 64, endpoint=True)
+    y = g(x)
+    return np.poly1d(np.polyfit(x, y, 3))
+
+def transform_altaz_poly(coeff, min_za=0, max_za=90):
+    f = np.poly1d(coeff[::-1])
+    g = lambda x: np.sqrt(f(x))
+    x = np.linspace(min_za, max_za, 64, endpoint=True)
     y = g(x)
     return np.poly1d(np.polyfit(x, y, 3))
 
@@ -115,9 +122,6 @@ def find_antenna(keys, ignore):
 
 def gain_common(gain, antenna, band, bfreq, efreq, btime, etime,
                 min_elevation, max_elevation, outfp):
-    print(band, bfreq, efreq, end=' ', file=outfp)
-    print(btime, etime, end=' ', file=outfp)
-    print(antenna, end=' ', file=outfp)
     dpfu = {}
     try:
         dpfu['R'] = gain['DPFU'][0]
@@ -130,7 +134,18 @@ def gain_common(gain, antenna, band, bfreq, efreq, btime, etime,
     except:
         gain['POLY'] = [gain['POLY']]
         pass
-    poly = transform_poly(gain['POLY'], min_elevation, max_elevation)
+    if 'ELEV' in gain:
+        poly = transform_elev_poly(gain['POLY'], min_elevation, max_elevation)
+    elif 'ALTAZ' in gain:
+        max_za = 90 - min_elevation
+        min_za = 90 - max_elevation
+        poly = transform_altaz_poly(gain['POLY'], min_za, max_za)
+    else:
+        print('Unsupported gain curve type for antenna %s' % antenna)
+        return
+    print(band, bfreq, efreq, end=' ', file=outfp)
+    print(btime, etime, end=' ', file=outfp)
+    print(antenna, end=' ', file=outfp)
     for pol in ['R', 'L']:
         for i in range(4):
             try:
