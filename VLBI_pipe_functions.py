@@ -25,6 +25,7 @@ except:
 	# CASA 5
 	from casac import casac as casatools
 	from taskinit import *
+	from bandpass_cli import bandpass_cli as bandpass
 	casa6=False
 
 class NpEncoder(json.JSONEncoder):
@@ -462,6 +463,70 @@ def fill_flagged_soln(caltable='', fringecal=False):
 		gaincol='CPARAM'
 	else:
 		gaincol='FPARAM'
+	tb = casatools.table()
+	tb.open(caltable, nomodify=False)
+	flg=tb.getcol('FLAG')
+	#sol=tb.getcol('SOLUTION_OK')
+	ant=tb.getcol('ANTENNA1')
+	gain=tb.getcol(gaincol)
+	t=tb.getcol('TIME')
+	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	#dd=tb.getcol('CAL_DESC_ID')
+	maxant=np.max(ant)
+	maxdd=np.max(dd)
+	npol=len(gain[:,0,0])
+	nchan=len(gain[0,:,0])
+	
+	k=1
+	print('maxant', maxant)
+	numflag=0.0
+	for k in range(maxant+1):
+			for j in range (maxdd+1):
+					subflg=flg[:,:,(ant==k) & (dd==j)]
+					subt=t[(ant==k) & (dd==j)]
+					#subsol=sol[:,:,(ant==k) & (dd==j)]
+					subgain=gain[:,:,(ant==k) & (dd==j)]
+					#print 'subgain', subgain.shape
+					for kk in range(1, len(subt)):
+							for chan in range(nchan):
+									for pol in range(npol):
+											if(subflg[pol,chan,kk] and not subflg[pol,chan,kk-1]):
+													numflag += 1.0
+													subflg[pol,chan,kk]=False
+													#subsol[pol, chan, kk]=True
+													subgain[pol,chan,kk]=subgain[pol,chan,kk-1]
+											if(subflg[pol,chan,kk-1] and not subflg[pol,chan,kk]):
+													numflag += 1.0
+													subflg[pol,chan,kk-1]=False
+													#subsol[pol, chan, kk-1]=True
+													subgain[pol,chan,kk-1]=subgain[pol,chan,kk]
+					flg[:,:,(ant==k) & (dd==j)]=subflg
+					#sol[:,:,(ant==k) & (dd==j)]=subsol
+					gain[:,:,(ant==k) & (dd==j)]=subgain
+
+
+	print('numflag', numflag)
+	 
+	###
+	tb.putcol('FLAG', flg)
+	#tb.putcol('SOLUTION_OK', sol)
+	tb.putcol(gaincol, gain)
+	tb.done()
+
+def fill_flagged_soln2(caltable='', fringecal=False):
+	"""
+	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
+	one.
+	If you do not do that and applycal blindly with the table your data gets 
+	flagged between  calibration runs that have a bad/flagged solution at one edge.
+	Can be pretty bad when you calibrate every hour or more 
+	(when you are betting on self-cal) of observation (e.g L-band of the EVLA)..one can 
+	lose the whole hour of good data without realizing !
+	"""
+	if fringecal==False:
+		gaincol='CPARAM'
+	else:
+		gaincol='FPARAM'
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -537,11 +602,11 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
 	npol=gain.shape[0]
 	for k in range(npol):
-		#print('npol=%s'%k)
+		print('npol=%s'%k)
 		for i in np.unique(ant):
-			#print('nant=%s'%i)
+			print('nant=%s'%i)
 			for j in np.unique(dd):
-				#print('nspw=%s'%j)
+				print('nspw=%s'%j)
 				flg_temp=flg[k,0,((ant==i)&(dd==j))]
 				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
 				gain_uflg = gain_uflg2[flg_temp==0]
@@ -553,10 +618,16 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 				if jump == False:
 					gain_uflg = smooth_series(gain_uflg, 21)
 				gain_uflg2[flg_temp==0] = gain_uflg
+				ind = np.where(np.isnan(gain_uflg2[flg_temp==0]))[0]
+				flg_temp2 = flg_temp[flg_temp==0]
+				flg_temp2[ind] = 1
+				flg_temp[flg_temp==0] = flg_temp2
+				flg[k,0,((ant==i)&(dd==j))] = flg_temp
+
 				gain_edit[k,0,((ant==i)&(dd==j))]= gain_uflg2
 
 	tb.putcol('FPARAM',gain_edit)
-	tb.flush()
+	tb.putcol('FLAG',flg)
 	tb.close()
 
 def smooth_series(y, box_pts):
@@ -914,7 +985,6 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 
 	msfile = '%s.ms'%epoch
 
-
 	rmdirs(['%s.auto.bpass'%(epoch)])
 	bandpass(vis=msfile,
 		     caltable='%s.auto.bpass'%(epoch),
@@ -978,7 +1048,10 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						polcol=['r','k']
 						polmar=['o','^']
 						if filter_RFI == True:
-							quant=np.nanquantile(data_median,[0.25,0.75])
+							try:
+								quant=np.nanquantile(data_median,[0.25,0.75])
+							except:
+								quant=np.nanpercentile(data_median,[25.,75.])
 							IQR = np.abs(quant[1]-quant[0])
 							quant = quant[1]+0.8*IQR
 							x_filter = x[(data_median<quant)|(data_median==np.nan)]
@@ -993,7 +1066,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
-						#print('no data for antenna %s'%i)
+						print('no data for antenna %s'%i)
 						autocorrs[k,:] = 1 + 0j
 						FLAG[k,:,runc] = 1
 

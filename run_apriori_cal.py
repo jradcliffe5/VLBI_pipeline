@@ -56,6 +56,8 @@ if doaccor==True:
 
 ### Run prior-cals
 
+
+
 if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
 	if steps_run['apriori_cal'] == 1:
 		flagmanager(vis=msfile,mode='restore',versionname='original_flags')
@@ -79,6 +81,7 @@ if params['apriori_cal']['tsys_options']['smooth'] == True:
 	rmdirs(['%s/%s.tsys_original'%(cwd,p_c)])
 	os.system('cp -r %s/%s.tsys %s/%s.tsys_original'%(cwd,p_c,cwd,p_c))
 	filter_tsys_auto(caltable='%s/%s.tsys'%(cwd,p_c),nsig=params['apriori_cal']['tsys_options']['outlier_SN'],jump_pc=params['apriori_cal']['tsys_options']['jump_ident_pc'])
+	fill_flagged_soln(caltable='%s/%s.tsys'%(cwd,p_c),fringecal=True)
 
 
 rmdirs(['%s/%s.gcal'%(cwd,p_c)])
@@ -91,6 +94,7 @@ gencal(vis=msfile,\
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
 applycal(vis=msfile,
+	     field='',
 	     gaintable=gaintables['gaintable'],
 	     interp=gaintables['interp'],
 	     gainfield=gaintables['gainfield'],

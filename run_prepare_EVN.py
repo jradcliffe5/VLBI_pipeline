@@ -3,7 +3,7 @@ import inspect, os, sys, json
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
-from casavlbitools.fitsidi import append_tsys, convert_flags
+from casavlbitools.fitsidi import append_tsys, convert_flags, append_gc
 from casavlbitools.casa import convert_gaincurve
 from VLBI_pipe_functions import *
 
@@ -80,12 +80,15 @@ else:
 ## Append tsys
 casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
 for i in idifiles:
+	casalog.post(origin=filename,message='Appending to %s'%i)
 	append_tsys(antabfile=antabfile, idifiles=i)
 
 ### Convert gaincurve
 rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
 convert_gaincurve(antab=antabfile, gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_EVN']['gaincurve']['min_elevation'], max_elevation=params['prepare_EVN']['gaincurve']['max_elevation'])
+#for i in idifiles:
+#	append_gc(antabfile=antabfile, idifile=i)
 
 if params["prepare_EVN"]["flag_file"] != "none":
 	casalog.post(origin=filename,message='Generating CASA-compatable observatory flags',priority='INFO')

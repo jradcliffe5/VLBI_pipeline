@@ -61,7 +61,8 @@ for i in range(len(fields)):
 					  spwmap=gaintables['spwmap'],
 					  parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				fill_flagged_soln(caltable=caltable,fringecal=True)
+				print('hi')
+				fill_flagged_soln2(caltable=caltable,fringecal=True)
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
 				gaintype='K'
@@ -83,6 +84,7 @@ for i in range(len(fields)):
 					spwmap=gaintables['spwmap'],
 					parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
+				print('hi')
 				fill_flagged_soln(caltable=caltable,fringecal=False)
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be F - fringefit, P - phase, AP - amp and phase, A - amp, or K - delay')
@@ -110,13 +112,13 @@ for i in range(len(fields)):
 		
 		if params['phase_referencing']["imager"] == 'wsclean':
 			os.system('rm %s-%s%s-*'%(fields[i],cal_type[i][j],j))
-			os.system('%s -name %s-%s%s -scale 0.001asec -size 512 512 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.5 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
+			os.system('%s -name %s-%s%s -scale 0.0007asec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
 			clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i],cal_type[i][j],j), 
 				          im='%s-%s%s-image.fits'%(fields[i],cal_type[i][j],j),
 				          snr=5.0)
 			os.system('%s -name %s-%s%s -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
 			if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
-				os.system('%s -name %s-initmodel -scale 0.001asec -size 512 512 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.5 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
+				os.system('%s -name %s-initmodel -scale 0.0007asec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
 
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
