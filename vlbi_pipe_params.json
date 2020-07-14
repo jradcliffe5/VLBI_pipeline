@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078d",
-        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
+        "project_code"      :  "eg078b",
+        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078B/CASA_calibration",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",

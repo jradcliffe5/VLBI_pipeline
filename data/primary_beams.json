@@ -1,0 +1,47 @@
+{
+	"EF":{
+	   "diameter":   76.0,
+	   "pb_model":   "G",
+	   "pb_params": [76.0]
+	},
+	"JB":{
+	   "diameter":   67.0,
+	   "pb_model":   "G",
+	   "pb_params": [67.0]
+	},
+	"O8":{
+	   "diameter":   25.0,
+	   "pb_model":   "G",
+	   "pb_params": [25.0]
+	},
+	"T6":{
+	   "diameter":   65.0,
+	   "pb_model":   "G",
+	   "pb_params": [65.0]
+	},
+	"ZC":{
+	   "diameter":   32.0,
+	   "pb_model":   "G",
+	   "pb_params": [32.0]
+	},
+	"TR":{
+	   "diameter":   32.0,
+	   "pb_model":   "G",
+	   "pb_params": [32.0]
+	},
+	"BD":{
+	   "diameter":   32.0,
+	   "pb_model":   "G",
+	   "pb_params": [32.0]
+	},
+	"SH":{
+	   "diameter":   25.0,
+	   "pb_model":   "G",
+	   "pb_params": [25.0]
+	},
+	"EF":{
+	   "diameter":   76.0,
+	   "pb_model":   "G",
+	   "pb_params": [1.0,1.0]
+	},
+
