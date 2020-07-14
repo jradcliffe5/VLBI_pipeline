@@ -1117,3 +1117,62 @@ def clip_fitsfile(model,im,snr):
 	model_hdu.flush()
 	model_hdu.close()
  
+def append_pbcor_info(vis, params):
+	pb_data = load_json('%s/data/primary_beams.json'%params['global']['vlbipipe_path'])
+	tb = casatools.table()
+	tb.open('%s/ANTENNA'%vis,nomodify=False)
+	name = tb.getcol('NAME')
+	station = tb.getcol('STATION')
+
+	dish_diam = []
+	pb_params = []
+	pb_model = []
+	pb_source = []
+	for i in range(len(name)):
+		if (name[i] in pb_data.keys()):
+			dish_diam.append(pb_data[name[i]]['L']['diameter'])
+			pb_params.append(",".join(np.array(pb_data[station[i]]['L']['pb_params']).astype(str).tolist()))
+			pb_model.append(pb_data[name[i]]['L']['pb_model'])
+			pb_source.append(pb_data[name[i]]['L']['pb_source'])
+		elif (station[i] in pb_data.keys()):
+			dish_diam.append(pb_data[station[i]]['L']['diameter'])
+			pb_params.append(",".join(np.array(pb_data[station[i]]['L']['pb_params']).astype(str).tolist()))
+			pb_model.append(pb_data[station[i]]['L']['pb_model'])
+			pb_source.append(pb_data[station[i]]['L']['pb_source'])
+		else:
+			dish_diam.append(0.0)
+			pb_params.append('')
+			pb_model.append('NO_INFO')
+			pb_source.append("NO_INFO")
+	add_cols = {'PB_MODEL':{'comment'         : 'pbmodel description',
+                            'dataManagerGroup': 'StandardStMan',
+                            'dataManagerType' : 'StandardStMan',
+                            'keywords'        : {'ARRAY_NAME': 'EVN'},
+                            'maxlen'          : 0,
+                            'option'          : 0,
+                            'valueType'       : 'string'},
+                'PB_PARAM':{'comment'        : 'pb parameters',
+                            'dataManagerGroup': 'StandardStMan',
+                            'dataManagerType' : 'StandardStMan',
+                            'keywords'        : {},
+                            'maxlen'          : 0,
+                            'option'          : 0,
+                            'valueType'       : 'string'},
+                'PB_SOURCE':{'comment'        : 'pb references',
+                            'dataManagerGroup': 'StandardStMan',
+                            'dataManagerType' : 'StandardStMan',
+                            'keywords'        : {},
+                            'maxlen'          : 0,
+                            'option'          : 0,
+                            'valueType'       : 'string'}
+
+                }
+	try:
+		tb.addcols(add_cols)
+	except:
+		pass
+	tb.putcol('DISH_DIAMETER',dish_diam)
+	tb.putcol('PB_MODEL',pb_model)
+	tb.putcol('PB_PARAM',pb_params)
+	tb.putcol('PB_SOURCE',pb_source)
+	tb.close()

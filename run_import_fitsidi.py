@@ -72,5 +72,8 @@ importfitsidi(fitsidifile=idifiles,\
 	          constobsid=params['import_fitsidi']["const_obs_id"],\
 	          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 
+append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
+	              params=params)
+
 steps_run['import_fitsidi'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

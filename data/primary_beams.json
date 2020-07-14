@@ -1,47 +1,290 @@
 {
 	"EF":{
-	   "diameter":   76.0,
-	   "pb_model":   "G",
-	   "pb_params": [76.0]
+		"L":{
+		   "diameter":   76.0,
+		   "pb_model":   "G",
+		   "pb_params": [76.0],
+		   "pb_source":"JFR"
+		}
 	},
 	"JB":{
-	   "diameter":   67.0,
-	   "pb_model":   "G",
-	   "pb_params": [67.0]
+		"L":{
+		   "diameter":   67.0,
+		   "pb_model":   "G",
+		   "pb_params": [67.0],
+		   "pb_source":""
+		}
+	},
+	"WB":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
 	},
 	"O8":{
-	   "diameter":   25.0,
-	   "pb_model":   "G",
-	   "pb_params": [25.0]
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"ON":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
 	},
 	"T6":{
-	   "diameter":   65.0,
-	   "pb_model":   "G",
-	   "pb_params": [65.0]
+		"L":{
+		   "diameter":   65.0,
+		   "pb_model":   "G",
+		   "pb_params": [65.0],
+		   "pb_source":""
+		}
 	},
 	"ZC":{
-	   "diameter":   32.0,
-	   "pb_model":   "G",
-	   "pb_params": [32.0]
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
+	},
+	"SV":{
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
 	},
 	"TR":{
-	   "diameter":   32.0,
-	   "pb_model":   "G",
-	   "pb_params": [32.0]
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
 	},
 	"BD":{
-	   "diameter":   32.0,
-	   "pb_model":   "G",
-	   "pb_params": [32.0]
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
 	},
 	"SH":{
-	   "diameter":   25.0,
-	   "pb_model":   "G",
-	   "pb_params": [25.0]
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
 	},
-	"EF":{
-	   "diameter":   76.0,
-	   "pb_model":   "G",
-	   "pb_params": [1.0,1.0]
+	"HH":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
 	},
-
+	"NT":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"UR":{
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
+	},
+	"MC":{
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
+	},
+	"IR":{
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
+	},
+	"RO":{
+		"L":{
+		   "diameter":   70.0,
+		   "pb_model":   "G",
+		   "pb_params": [70.0],
+		   "pb_source":""
+		}
+	},
+	"CM":{
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
+	},
+	"JB2":{
+		"L":{
+		   "diameter":   32.0,
+		   "pb_model":   "G",
+		   "pb_params": [32.0],
+		   "pb_source":""
+		}
+	},
+	"DA":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"PI":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"KN":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"JM":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"DE":{
+		"L":{
+		   "diameter":   25.0,
+		   "pb_model":   "G",
+		   "pb_params": [25.0],
+		   "pb_source":""
+		}
+	},
+	"AR":{
+		"L":{
+		   "diameter":   315.0,
+		   "pb_model":   "G",
+		   "pb_params": [315.0],
+		   "pb_source":""
+		}
+	},
+	"BR":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"FD":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"HN":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"KP":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"MK":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"NL":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"OV":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"PT":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"SC":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"LA":{
+		"L":{
+		   "diameter":   25.47,
+		   "pb_model":   "B",
+		   "pb_params": [25.47],
+		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		}
+	},
+	"GB":{
+		"L":{
+		   "diameter":   70.2,
+		   "pb_model":   "B",
+		   "pb_params": [70.2],
+		   "pb_source": "Herrera Ruiz, N., et al. 2018, A&A, 616, A128"
+		}
+	}
+}
