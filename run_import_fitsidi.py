@@ -75,5 +75,8 @@ importfitsidi(fitsidifile=idifiles,\
 append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 	              params=params)
 
+
+save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+
 steps_run['import_fitsidi'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

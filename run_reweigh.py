@@ -33,25 +33,7 @@ if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global'][
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 
-refant = find_refants(params['global']['refant'], msinfo)
-
-
-if params['fit_autocorrs']['select_calibrators'] == ['default']:
-	fields=params['global']['fringe_finders']
-else:
-	fields=params['fit_autocorrs']['select_calibrators']
-
-for i,j in enumerate(fields):
-	fields[i] = str(msinfo['FIELD']['fieldtoID'][j])
-
-fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo,calc_auto='median', calibrators=fields, renormalise='median', filter_RFI=True)
-
-if params['fit_autocorrs']["interp_bad_solutions"] == True:
-	fill_flagged_soln(caltable='%s/%s.auto.bpass'%(cwd,p_c),fringecal=False)
-
-gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
-
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
-steps_run['fit_autocorrs'] = 1
+steps_run['reweigh'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

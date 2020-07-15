@@ -14,6 +14,7 @@ import matplotlib.patches as patches
 from matplotlib import gridspec
 from scipy.optimize import least_squares
 from scipy import signal
+from scipy.constants import c as speed_light
 
 try:
 	# CASA 6
@@ -400,6 +401,7 @@ def write_job_script(steps,job_manager):
 
 def get_ms_info(msfile):
 	tb = casatools.table()
+	ms = casatools.ms() 
 	msinfo={}
 	## antenna information
 	tb.open('%s/ANTENNA'%msfile)
@@ -446,7 +448,19 @@ def get_ms_info(msfile):
 	tb.open('%s/OBSERVATION'%msfile)
 	msinfo['TELE_NAME'] = tb.getcol('TELESCOPE_NAME')[0]
 	tb.close()
-
+	image_params = {}
+	high_freq = spw['freq_range'][1]
+	ms.open(msfile)
+	for i in field['fieldtoID'].keys():
+		ms.selecttaql('FIELD_ID==%s'%field['fieldtoID'][i])
+		try:
+			max_uv = ms.getdata('uvdist')['uvdist'].max()
+			image_params[i] = ((speed_light/high_freq)/max_uv)*(180./np.pi)*(3.6e6/3.)
+		except:
+			pass
+		ms.reset()
+	ms.close()
+	msinfo["IMAGE_PARAMS"] = image_params
 	return msinfo
 
 def fill_flagged_soln(caltable='', fringecal=False):
@@ -1068,12 +1082,9 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 					except:
 						print('no data for antenna %s'%i)
 						autocorrs[k,:] = 1 + 0j
-						FLAG[k,:,runc] = 1
-
-						
-
+						FLAG[k,:,runc] = 1	
 				TIME[runc] = t_cal
-				FIELD_ID[runc] = 0
+				FIELD_ID[runc] = calibrators[h]
 				SPECTRAL_WINDOW_ID[runc] = j
 				ANTENNA1[runc] = i
 				CPARAM[:,:,runc] = autocorrs
@@ -1084,27 +1095,27 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 			
 			fig.savefig('%s_autocorr_bpass.png'%epoch,bbox_inches='tight')
 			#smart_autocorr_clip(np.mean(np.abs(data),axis=2)[0])
-	#tabdesc, dmi = get_tabledesc_and_dminfo('eg078e.bpass')
+
 	tb.close()
 	tb.open('%s.auto.bpass'%(epoch),nomodify=False)
-	#tb.addrows(tbnrows)
+	tb.removerows(np.arange(0,tb.nrows(),1))
+	tb.addrows(tbnrows)
 	tb.putcol('TIME',TIME)
 	tb.putcol('CPARAM',CPARAM)
 	tb.putcol('PARAMERR',PARAMERR)
 	tb.putcol('FLAG',FLAG)
 	tb.putcol('SNR',SNR)
 	tb.putcol('ANTENNA1',ANTENNA1)
-	#tb.putcol('WEIGHT',ANTENNA1)
 	tb.putcol('SPECTRAL_WINDOW_ID',SPECTRAL_WINDOW_ID)
 	tb.putcol('FIELD_ID',FIELD_ID)
 	tb.close()
 
-
 def clip_fitsfile(model,im,snr):
 	try:
-		import pyfits as fits
-	except:
 		from astropy.io import fits
+	except:
+		import pyfits as fits
+		
 
 	model_hdu = fits.open(model,mode='update')
 	model_data = model_hdu['PRIMARY'].data
@@ -1175,4 +1186,26 @@ def append_pbcor_info(vis, params):
 	tb.putcol('PB_MODEL',pb_model)
 	tb.putcol('PB_PARAM',pb_params)
 	tb.putcol('PB_SOURCE',pb_source)
+	tb.close()
+
+def pad_antennas(caltable='',ants=[],gain=False):
+	tb = casatools.table()
+	tb.open('%s'%caltable,nomodify=False)
+	flg=tb.getcol('FLAG')
+	ant=tb.getcol('ANTENNA1')
+	if gain == True:
+		g_col = 'CPARAM'
+		gain=tb.getcol(g_col)
+		repl_val = 1+0j
+	else:
+		g_col = 'FPARAM'
+		gain=tb.getcol(g_col)
+		repl_val = 0
+	for i in ants:
+		flg[:,:,(ant==i)] = 0
+		gain[:,:,(ant==i)] = repl_val
+
+	tb.putcol('FLAG', flg)
+	tb.putcol(g_col, gain)
+
 	tb.close()

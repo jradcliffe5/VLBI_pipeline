@@ -90,7 +90,7 @@
         }
     },
     "init_flag":{
-        "AO_flag_strategy"  :  "J1234.rfis",
+        "AO_flag_strategy"  :  "J1234_619.rfis",
         "AO_flag_fields"    : ["J1241+602","J1234+619","HDFC0155"],
         "flag_edge_chans":{
             "run"           :  true,
@@ -99,7 +99,7 @@
         "autocorrelations"  :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"3C345":150.0,"DA193":90.0,"*":10.0},
+            "quack_time"    :  {"3C345":200.0,"DA193":190.0,"*":10.0},
             "quack_mode"    :  "beg"
         },
         "hpc_options":{
@@ -112,8 +112,8 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["J1241+602"],
-        "interp_bad_solutions": false, 
+        "select_calibrators": ["J1241+602","3C345","DA193"],
+        "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -125,8 +125,8 @@
     },
     "sub_band_delay":{
         "select_calibrators": [["default"], ["J1241+602"]], 
-        "time_range"        : ["",""],
-        "sol_interval"      : ["90s", "120s"],
+        "time_range"        : ["","2014/06/05/08:00:00.0~2014/06/05/08:05:00.0"],
+        "sol_interval"      : ["60s", "120s"],
         "min_snr"           : [50.0,7.0],
         "fringe_niter"      :  300,
         "modify_sbd":{
@@ -161,14 +161,46 @@
     "phase_referencing":{        
         "select_calibrators": "default",
         "cal_type"          : [[  "f",   "f",   "p",  "ap",   "p"], ["f" , "f"]],   
-        "sol_interval"      : [["inf", "inf","1min", "inf", "inf"], ["inf", "inf"]],
+        "sol_interval"      : [["inf", "inf","1min", "inf", "1min"], ["inf", "inf"]],
         "combine"           : [[   "",    "", "spw", "spw",    ""], ["spw", "spw"]],
         "interp_flagged"    : [[ true,  true,  true,  true,  true], [  true,  true]],
-        "pad_ant"           : [""],
+        "pass_ants"         : [["JB"],[]],
         "imager"            : "wsclean",
         "fringe_niter"      : 300,
         "min_snr"           : 5.0,
         "imaging_params"    : "auto",
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "apply_target":{        
+        "multi_phase_centre": true,
+        "fits_files_path"   : "raw_UV",
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "reweigh":{        
+        "statistical_reweigh":{
+            "run": true,
+            "timebin": "10s",
+            "chanbin": "spw",
+            "statalg": "classic",
+            "fitspw" : ""
+        },
+        "weigh_by_ants":{
+            "run": true
+        },
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",

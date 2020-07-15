@@ -60,7 +60,6 @@ def pad_antennas(caltable='',ants=[],gain=False):
 
 	for i in ants:
 		flg[:,:,(ant==i)] = 0
-		print(gain[:,:,(ant==i)])
 		gain[:,:,(ant==i)] = repl_val
 
 	tb.putcol('FLAG', flg)

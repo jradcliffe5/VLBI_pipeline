@@ -27,7 +27,12 @@ cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
-msinfo = get_ms_info(msfile)
+if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+	msinfo = get_ms_info(msfile)
+	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+else:
+	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+
 
 refant = find_refants(params['global']['refant'],msinfo)
 
@@ -61,8 +66,12 @@ for i in range(len(fields)):
 					  spwmap=gaintables['spwmap'],
 					  parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				print('hi')
-				fill_flagged_soln2(caltable=caltable,fringecal=True)
+				fill_flagged_soln(caltable=caltable,fringecal=True)
+			if params['phase_referencing']['pass_ants'][i] != []:
+				pass_ants = []
+				for l in range(len(params['phase_referencing']['pass_ants'][i])):
+					pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
+				pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
 				gaintype='K'
@@ -84,8 +93,12 @@ for i in range(len(fields)):
 					spwmap=gaintables['spwmap'],
 					parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				print('hi')
 				fill_flagged_soln(caltable=caltable,fringecal=False)
+			if params['phase_referencing']['pass_ants'][i] != []:
+				pass_ants = []
+				for l in range(len(params['phase_referencing']['pass_ants'][i])):
+					pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
+				pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be F - fringefit, P - phase, AP - amp and phase, A - amp, or K - delay')
 			sys.exit()
