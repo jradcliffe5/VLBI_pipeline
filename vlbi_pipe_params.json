@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078b",
-        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078B/CASA_calibration",
+        "project_code"      :  "eg078d",
+        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",
@@ -13,13 +13,13 @@
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
         "mpicasapath"       :  "",
-        "casapath"          :  "python",
+        "casapath"          :  "casa",
         "singularity"       :  false,
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["EF","T6","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
         "fringe_finders"    : ["3C345","DA193"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
         "targets"           : ["HDFC0155"],
@@ -99,7 +99,7 @@
         "autocorrelations"  :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"3C345":200.0,"DA193":190.0,"*":10.0},
+            "quack_time"    :  {"3C345":200.0,"DA193":200.0,"*":10.0},
             "quack_mode"    :  "beg"
         },
         "hpc_options":{
@@ -125,7 +125,7 @@
     },
     "sub_band_delay":{
         "select_calibrators": [["default"], ["J1241+602"]], 
-        "time_range"        : ["","2014/06/05/08:00:00.0~2014/06/05/08:05:00.0"],
+        "time_range"        : ["","2016/03/06/11:02:30.0~2016/03/06/11:05:00.0"],
         "sol_interval"      : ["60s", "120s"],
         "min_snr"           : [50.0,7.0],
         "fringe_niter"      :  300,
@@ -160,10 +160,10 @@
     },
     "phase_referencing":{        
         "select_calibrators": "default",
-        "cal_type"          : [[  "f",   "f",   "p",  "ap",   "p"], ["f" , "f"]],   
-        "sol_interval"      : [["inf", "inf","1min", "inf", "1min"], ["inf", "inf"]],
-        "combine"           : [[   "",    "", "spw", "spw",    ""], ["spw", "spw"]],
-        "interp_flagged"    : [[ true,  true,  true,  true,  true], [  true,  true]],
+        "cal_type"          : [[  "f",   "f",   "p",  "ap",   "p"], []],   
+        "sol_interval"      : [["inf", "inf","1min", "inf", "1min"], []],
+        "combine"           : [[   "",    "", "spw", "spw",    ""], []],
+        "interp_flagged"    : [[ true,  true,  true,  true,  true], []],
         "pass_ants"         : [["JB"],[]],
         "imager"            : "wsclean",
         "fringe_niter"      : 300,

@@ -325,7 +325,11 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append(i)
 		msfile='%s.ms'%params['global']['project_code']
 		fields=params[step]['AO_flag_fields']
-		msinfo = get_ms_info(msfile)
+		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+			msinfo = get_ms_info(msfile)
+			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+		else:
+			msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 		ids = []
 		for i in fields:
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
@@ -359,7 +363,11 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append(i)
 		msfile='%s.ms'%params['global']['project_code']
 		fields=params[step]['flag_fields']
-		msinfo = get_ms_info(msfile)
+		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+			msinfo = get_ms_info(msfile)
+			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+		else:
+			msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 		ids = []
 		for i in fields:
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))

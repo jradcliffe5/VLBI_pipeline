@@ -68,7 +68,7 @@ if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
 	else:
 		flagmanager(vis=msfile,mode='save',versionname='original_flags')
 	flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
-
+'''
 rmdirs(['%s/%s.tsys'%(cwd,p_c)])
 gencal(vis=msfile,\
        caltype='tsys',\
@@ -76,7 +76,7 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
-
+'''
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
 
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
