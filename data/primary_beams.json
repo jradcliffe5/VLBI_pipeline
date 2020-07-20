@@ -1,290 +1,386 @@
 {
 	"EF":{
 		"L":{
+
 		   "diameter":   76.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [76.0],
-		   "pb_source":"JFR"
+		   "pb_squint": [0,0],
+		   "pb_source":""
 		}
 	},
 	"JB":{
 		"L":{
+
 		   "diameter":   67.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [67.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"WB":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"O8":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"ON":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"T6":{
 		"L":{
+
 		   "diameter":   65.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [65.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"ZC":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"SV":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"TR":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"BD":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"SH":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"HH":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
-		   "pb_params": [25.0],
-		   "pb_source":""
+		   "pb_freq" : 1.668e9,
+		   "pb_params": [22.89],
+		   "pb_squint": [2.0645,-0.0955],
+		   "pb_source":"J. Quick priv. communication (Jul 2020)"
 		}
 	},
 	"NT":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"UR":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"MC":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"IR":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"RO":{
 		"L":{
+
 		   "diameter":   70.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [70.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"CM":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"JB2":{
 		"L":{
+
 		   "diameter":   32.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [32.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"DA":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"PI":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"KN":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"JM":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"DE":{
 		"L":{
+
 		   "diameter":   25.0,
 		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
 		   "pb_params": [25.0],
+		   "pb_squint": [0,0],
 		   "pb_source":""
 		}
 	},
 	"AR":{
 		"L":{
 		   "diameter":   315.0,
-		   "pb_model":   "G",
-		   "pb_params": [315.0],
-		   "pb_source":""
+		   "pb_model":   "2EG",
+		   "pb_freq" :  1.175e9,
+		   "pb_params": [4.00, 0.36, 91.1, 0.048, 41.4],
+		   "pb_squint": [0,0],
+		   "pb_source": "Heiles C., et al., 2001, PASP, 113, 1247"
 		}
 	},
 	"BR":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.44,-0.5],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"FD":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.56, -0.58],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"HN":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.35, -0.67],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"KP":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.61, -0.59],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"MK":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.56, -0.60],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"NL":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.56, -0.62],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"OV":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.76, -0.95],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"PT":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.59, -0.63],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"SC":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.53, -0.56],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"LA":{
 		"L":{
 		   "diameter":   25.47,
 		   "pb_model":   "B",
+		   "pb_freq" : 1382487701,
 		   "pb_params": [25.47],
-		   "pb_source": "Middelberg, E., et al. 2013, A&A, 551, A97"
+		   "pb_squint": [-1.62, -0.67],
+		   "pb_source": "Middelberg E., et al. 2013, A&A, 551, A97"
 		}
 	},
 	"GB":{
 		"L":{
 		   "diameter":   70.2,
 		   "pb_model":   "B",
+		   "pb_freq" : 1.54e9,
 		   "pb_params": [70.2],
-		   "pb_source": "Herrera Ruiz, N., et al. 2018, A&A, 616, A128"
+		   "pb_squint": [0,0],
+		   "pb_source": "Herrera Ruiz N., et al. 2018, A&A, 616, A128"
 		}
 	}
 }

@@ -91,8 +91,8 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 interp=gaintables['interp'],
 			 spwmap=gaintables['spwmap'],
 			 parang=gaintables['parang'])
-
-fill_flagged_soln(caltable='%s/%s.bpass'%(cwd,p_c),fringecal=False)
+for i in range(40):
+	fill_flagged_soln(caltable='%s/%s.bpass'%(cwd,p_c),fringecal=False)
 
 
 if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
