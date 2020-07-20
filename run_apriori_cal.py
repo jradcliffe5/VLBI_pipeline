@@ -52,23 +52,20 @@ if doaccor==True:
 	      caltable='%s/%s.accor'%(cwd,p_c),
 	      solint=params['apriori_cal']['accor_options']['solint'])
 	append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
-	if params['accor_options']['smooth'] == True:
+	if params['apriori_cal']['accor_options']['smooth'] == True:
 		smoothcal(vis=msfile,
 		          tablein='%s/%s.accor'%(cwd,p_c),
 		          caltable='%s/%s.accor'%(cwd,p_c),
 			      smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
 
 ### Run prior-cals
-
-
-
 if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
 	if steps_run['apriori_cal'] == 1:
 		flagmanager(vis=msfile,mode='restore',versionname='original_flags')
 	else:
 		flagmanager(vis=msfile,mode='save',versionname='original_flags')
 	flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
-'''
+
 rmdirs(['%s/%s.tsys'%(cwd,p_c)])
 gencal(vis=msfile,\
        caltype='tsys',\
@@ -76,7 +73,7 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
-'''
+
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
 
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:

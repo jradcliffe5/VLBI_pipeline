@@ -203,12 +203,12 @@ def find_fitsidi(idifilepath="",cwd="",project_code=""):
 	### Try first with project code and end
 	fitsidifiles=[]
 	for i in os.listdir(idifilepath):
-		if (i.startswith(project_code.lower())|i.startswith(project_code.upper()))&(('IDI' in i)|(i.endswith("idifile"))):
+		if (i.startswith(project_code.lower())|i.startswith(project_code.upper()))&(('IDI' in i)|(i.endswith("idifits"))):
 			fitsidifiles.append('%s/%s'%(idifilepath,i))
 			casalog.post(priority="INFO",origin=func_name,message='FOUND - %s'% i)
 	if fitsidifiles == []:
 		for i in os.listdir(idifilepath):
-			if ('IDI' in i)|i.endswith('idifiles'):
+			if ('IDI' in i)|i.endswith('idifits'):
 				fitsidifiles.append('%s/%s'%(idifilepath,i))
 				casalog.post(priority="INFO",origin=func_name,message='FOUND - %s'% i)
 	if fitsidifiles == []:
@@ -1148,20 +1148,28 @@ def append_pbcor_info(vis, params):
 	pb_params = []
 	pb_model = []
 	pb_source = []
+	pb_squint = []
+	pb_freq = []
 	for i in range(len(name)):
 		if (name[i] in pb_data.keys()):
 			dish_diam.append(pb_data[name[i]]['L']['diameter'])
 			pb_params.append(",".join(np.array(pb_data[station[i]]['L']['pb_params']).astype(str).tolist()))
+			pb_squint.append(",".join(np.array(pb_data[station[i]]['L']['pb_squint']).astype(str).tolist()))
+			pb_freq.append(pb_data[name[i]]['L']['pb_freq'])
 			pb_model.append(pb_data[name[i]]['L']['pb_model'])
 			pb_source.append(pb_data[name[i]]['L']['pb_source'])
 		elif (station[i] in pb_data.keys()):
 			dish_diam.append(pb_data[station[i]]['L']['diameter'])
 			pb_params.append(",".join(np.array(pb_data[station[i]]['L']['pb_params']).astype(str).tolist()))
+			pb_squint.append(",".join(np.array(pb_data[station[i]]['L']['pb_squint']).astype(str).tolist()))
+			pb_freq.append(pb_data[name[i]]['L']['pb_freq'])
 			pb_model.append(pb_data[station[i]]['L']['pb_model'])
 			pb_source.append(pb_data[station[i]]['L']['pb_source'])
 		else:
 			dish_diam.append(0.0)
 			pb_params.append('')
+			pb_squint.append('')
+			pb_freq.append(0.0)
 			pb_model.append('NO_INFO')
 			pb_source.append("NO_INFO")
 	add_cols = {'PB_MODEL':{'comment'         : 'pbmodel description',
@@ -1178,6 +1186,20 @@ def append_pbcor_info(vis, params):
                             'maxlen'          : 0,
                             'option'          : 0,
                             'valueType'       : 'string'},
+                'PB_SQUINT':{'comment'        : 'pb squint',
+                            'dataManagerGroup': 'StandardStMan',
+                            'dataManagerType' : 'StandardStMan',
+                            'keywords'        : {},
+                            'maxlen'          : 0,
+                            'option'          : 0,
+                            'valueType'       : 'string'},
+                'PB_FREQ':  {'comment': 'Physical diameter of dish',
+ 						    'dataManagerGroup': 'StandardStMan',
+                            'dataManagerType': 'StandardStMan',
+                            'keywords': {},
+                            'maxlen': 0,
+                            'option': 0,
+                            'valueType': 'double'},
                 'PB_SOURCE':{'comment'        : 'pb references',
                             'dataManagerGroup': 'StandardStMan',
                             'dataManagerType' : 'StandardStMan',
@@ -1195,6 +1217,8 @@ def append_pbcor_info(vis, params):
 	tb.putcol('PB_MODEL',pb_model)
 	tb.putcol('PB_PARAM',pb_params)
 	tb.putcol('PB_SOURCE',pb_source)
+	tb.putcol('PB_FREQ',pb_freq)
+	tb.putcol('PB_SQUINT',pb_squint)
 	tb.close()
 
 def pad_antennas(caltable='',ants=[],gain=False):

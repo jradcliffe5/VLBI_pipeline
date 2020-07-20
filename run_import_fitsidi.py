@@ -50,7 +50,7 @@ else:
 
 
 ## Copy idifiles to cwd if not originally there
-if steps_run['prepare_EVN'] == 0:
+if steps_run['prepare_data'] == 0:
 	if params['global']['fitsidi_path'] != params['global']['cwd']:
 		casalog.post(origin=filename,message='Fitsidifiles in different directory. Moving to cwd.',priority='INFO')
 		for j,i in enumerate(idifiles):

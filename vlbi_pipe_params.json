@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078e",
-        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078E/calibration/CASA",
+        "project_code"      :  "bs231q2",
+        "cwd"               :  "/Users/jackradcliffe/Astro/B-SMBH/VLBA/calibration",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",
@@ -25,7 +25,7 @@
         "targets"           : ["HDFC0155"],
         "do_parang"         :  true
     },
-    "prepare_EVN":{
+    "prepare_data":{
         "antab_file"        :  "auto",
         "flag_file"         :  "auto",
         "gaincurve":{
@@ -99,7 +99,7 @@
         "autocorrelations"  :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"3C345":200.0,"DA193":200.0,"*":10.0},
+            "quack_time"    :  {"3C273":90.0,"*":10.0},
             "quack_mode"    :  "beg"
         },
         "hpc_options":{
