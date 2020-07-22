@@ -100,7 +100,7 @@ for i in range(len(fields)):
 					pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
 				pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
 		else:
-			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be F - fringefit, P - phase, AP - amp and phase, A - amp, or K - delay')
+			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be f - fringe fit, p - phase, ap - amp and phase, a - amp, or k - delay')
 			sys.exit()
 		if 'spw' in params['phase_referencing']['combine'][i][j]:
 			spwmap = msinfo['SPECTRAL_WINDOW']['nspws']*[0]
@@ -124,14 +124,17 @@ for i in range(len(fields)):
 				 parang=gaintables['parang'])
 		
 		if params['phase_referencing']["imager"] == 'wsclean':
-			os.system('rm %s-%s%s-*'%(fields[i],cal_type[i][j],j))
-			os.system('%s -name %s-%s%s -scale 0.0007asec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
+			rmfiles(['%s-%s%s-*'%(fields[i],cal_type[i][j],j)])
+			os.system('%s -name %s-%s%s -scale %sasec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo["IMAGE_PARAMS"][fields[i]],msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
 			clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i],cal_type[i][j],j), 
 				          im='%s-%s%s-image.fits'%(fields[i],cal_type[i][j],j),
-				          snr=5.0)
+				          snr=10.0)
 			os.system('%s -name %s-%s%s -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
 			if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
-				os.system('%s -name %s-initmodel -scale 0.0007asec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
+				os.system('%s -name %s-initmodel -scale %sasec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo["IMAGE_PARAMS"][fields[i+1]],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
+		if params['phase_referencing']['imager'] == 'tclean':
+			print('ppo')
+
 
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)

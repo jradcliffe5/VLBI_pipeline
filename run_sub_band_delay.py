@@ -76,7 +76,7 @@ if params['sub_band_delay']['modify_sbd']['run'] == True:
 		               bad_soln_clip=params['sub_band_delay']['modify_sbd']['clip_badtimes'],
 		               plot=False)
 
-gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'nearest'])
+gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['sub_band_delay'] = 1

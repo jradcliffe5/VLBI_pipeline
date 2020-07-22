@@ -15,6 +15,7 @@ from matplotlib import gridspec
 from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
+import glob
 
 try:
 	# CASA 6
@@ -174,17 +175,30 @@ def headless(inputfile):
 def rmfiles(files):
 	func_name = inspect.stack()[0][3]
 	for i in files:
-		if os.path.exists(i) == True:
+		if "*" in i:
+			files_to_die = glob.glob(i)
+			casalog.post(priority="INFO",origin=func_name,message='Directories starting with %s - deleting'% i)
+			os.system('rm %s'% " ".join(files_to_die))
+		elif os.path.exists(i) == True:
 			casalog.post(priority="INFO",origin=func_name,message='File %s found - deleting'% i)
 			os.system('rm %s'%i)
+		else:
+			casalog.post(priority="INFO",origin=func_name,message='No file entered'% i)
 	return
+
 
 def rmdirs(dirs):
 	func_name = inspect.stack()[0][3]
 	for i in dirs:
-		if os.path.exists(i) == True:
+		if "*" in i:
+			files_to_die = glob.glob(i)
+			casalog.post(priority="INFO",origin=func_name,message='Directories starting with %s - deleting'% i)
+			os.system('rm -r %s'%" ".join(files_to_die))
+		elif os.path.exists(i) == True:
 			casalog.post(priority="INFO",origin=func_name,message='Directory/table %s found - deleting'% i)
 			os.system('rm -r %s'%i)
+		else:
+			casalog.post(priority="INFO",origin=func_name,message='No file entered'% i)
 	return
 
 def init_pipe_run(inputs):
@@ -1024,6 +1038,8 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	tb = casatools.table()
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
+	if npol > 2:
+		npol = 2
 	nants = len(msinfo['ANTENNAS']['anttoID'])
 	nchan = msinfo['SPECTRAL_WINDOW']['nchan']
 
@@ -1084,7 +1100,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						if renormalise == 'max':
 							data_median_i = data_median_i/np.max(data_median_i)
 						if renormalise == 'median':
-							data_median_i = data_median_i/np.median(data_median_i[6:28])
+							data_median_i = data_median_i/np.median(data_median_i[80:180])
 						ax.scatter(x,data_median_i,c=polcol[k],marker=polmar[k])
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	

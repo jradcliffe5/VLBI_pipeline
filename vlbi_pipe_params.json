@@ -19,10 +19,10 @@
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
-        "fringe_finders"    : ["3C345","DA193"],
-        "phase_calibrators" : ["J1241+602","J1234+619"],
-        "targets"           : ["HDFC0155"],
+        "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA","FD","KP","PT","LA","OV","NL","HN","BR","MK","SC"],
+        "fringe_finders"    : ["3C273"],
+        "phase_calibrators" : ["J1504+1029"],
+        "targets"           : ["151132+10095"],
         "do_parang"         :  true
     },
     "prepare_data":{
@@ -112,7 +112,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["J1241+602","3C345","DA193"],
+        "select_calibrators": ["3C273","J1504+1029"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -124,10 +124,10 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"], ["J1241+602"]], 
-        "time_range"        : ["","2016/03/06/11:02:30.0~2016/03/06/11:05:00.0"],
-        "sol_interval"      : ["60s", "120s"],
-        "min_snr"           : [50.0,7.0],
+        "select_calibrators": [["default"],["J1504+1029"]], 
+        "time_range"        : ["",""],
+        "sol_interval"      : ["120s","inf"],
+        "min_snr"           : [10.0,10.0],
         "fringe_niter"      :  300,
         "modify_sbd":{
             "run"           :  true,
@@ -145,8 +145,8 @@
     },
     "bandpass_cal":{
         "same_as_sbd_cal"   :  false,
-        "select_calibrators": [["default"]], 
-        "time_range"        : [""],
+        "select_calibrators": [["default"],["J1504+1029"]], 
+        "time_range"        : ["",""],
         "sol_interval"      :  "inf",
         "min_snr"           :  3.0,
         "hpc_options":{
@@ -160,11 +160,11 @@
     },
     "phase_referencing":{        
         "select_calibrators": "default",
-        "cal_type"          : [[  "f",   "f",   "p",  "ap",   "p"], []],   
-        "sol_interval"      : [["inf", "inf","1min", "inf", "1min"], []],
-        "combine"           : [[   "",    "", "spw", "spw",    ""], []],
-        "interp_flagged"    : [[ true,  true,  true,  true,  true], []],
-        "pass_ants"         : [["JB"],[]],
+        "cal_type"          : [[  "f",   "f",   "f",  "p",   "ap", "ap", "p"]],   
+        "sol_interval"      : [["inf", "inf","30s", "inf", "inf" , "inf", "20s"]],
+        "combine"           : [[   "spw",   "", "", "",    "spw", "", ""]],
+        "interp_flagged"    : [[ false,  false,  false,  false,  false, false,false]],
+        "pass_ants"         : [[]],
         "imager"            : "wsclean",
         "fringe_niter"      : 300,
         "min_snr"           : 5.0,

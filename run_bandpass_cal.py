@@ -102,12 +102,15 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	spw = tb.getcol('SPECTRAL_WINDOW_ID')
 	ant = tb.getcol('ANTENNA1')
 	data = tb.getcol('CPARAM')
+	npol = msinfo['SPECTRAL_WINDOW']['npol']
+	if npol>2:
+		npol=2
 	tb.close()
 	tb.open('%s/%s.auto.bpass'%(cwd,p_c))
 	for i in range(len(msinfo['ANTENNAS']['anttoID'])):
 		for j in range(msinfo['SPECTRAL_WINDOW']['nspws']):
 			subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(i,j))
-			for k in range(msinfo['SPECTRAL_WINDOW']['npol']):
+			for k in range(npol):
 				if np.all(subt.getcol('FLAG')[k,:,:]==False):
 					subflg = flags[k,:,(spw==j)&(ant==i)]
 					subdata = data[k,:,(spw==j)&(ant==i)]
