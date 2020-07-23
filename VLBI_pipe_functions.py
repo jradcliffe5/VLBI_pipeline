@@ -1,21 +1,22 @@
-import re, os
-import numpy as np
-import json
-import inspect
-import sys
+import re, os, json, inspect, sys, copy
 import collections
-import copy
-from scipy.interpolate import interp1d
-import numpy
 from collections import OrderedDict
+## Numerical routines
+import numpy as np
+## Plotting routines
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib import gridspec
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.lines as mlines
+## Sci-py dependencies
+from scipy.interpolate import interp1d
 from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 import glob
+
 
 try:
 	# CASA 6
@@ -455,6 +456,44 @@ def get_ms_info(msfile):
 	tb.close()
 	tb.open('%s/POLARIZATION'%msfile)
 	spw['npol'] = tb.getcol('NUM_CORR')[0]
+	polariz = tb.getcol('CORR_TYPE').flatten()
+	ID_to_pol={'0': 'Undefined',
+			 '1': 'I',
+			 '2': 'Q',
+			 '3': 'U',
+			 '4': 'V',
+			 '5': 'RR',
+			 '6': 'RL',
+			 '7': 'LR',
+			 '8': 'LL',
+			 '9': 'XX',
+			 '10': 'XY',
+			 '11': 'YX',
+			 '12': 'YY',
+			 '13': 'RX',
+			 '14': 'RY',
+			 '15': 'LX',
+			 '16': 'LY',
+			 '17': 'XR',
+			 '18': 'XL',
+			 '19': 'YR',
+			 '20': 'YL',
+			 '21': 'PP',
+			 '22': 'PQ',
+			 '23': 'QP',
+			 '24': 'QQ',
+			 '25': 'RCircular',
+			 '26': 'LCircular',
+			 '27': 'Linear',
+			 '28': 'Ptotal',
+			 '29': 'Plinear',
+			 '30': 'PFtotal',
+			 '31': 'PFlinear',
+			 '32': 'Pangle'}
+	pol2=[]
+	for i,j in enumerate(polariz):
+		pol2.append(ID_to_pol[str(j)])
+	spw['spw_pols'] = pol2
 	tb.close()
 	msinfo['SPECTRAL_WINDOW'] = spw
 	## Get field information
@@ -464,7 +503,7 @@ def get_ms_info(msfile):
 	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
 	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1).astype(str),fields))
 	msinfo['FIELD'] = field
-	save_json('vp_fields_to_id.json',field)
+	#save_json('vp_fields_to_id.json',field)
 	tb.close()
 	## Get telescope_name
 	tb.open('%s/OBSERVATION'%msfile)
@@ -472,6 +511,7 @@ def get_ms_info(msfile):
 	tb.close()
 	image_params = {}
 	high_freq = spw['freq_range'][1]
+	
 	ms.open(msfile)
 	for i in field['fieldtoID'].keys():
 		ms.selecttaql('FIELD_ID==%s'%field['fieldtoID'][i])
@@ -483,6 +523,7 @@ def get_ms_info(msfile):
 		ms.reset()
 	ms.close()
 	msinfo["IMAGE_PARAMS"] = image_params
+	
 	return msinfo
 
 def fill_flagged_soln(caltable='', fringecal=False):
@@ -1258,3 +1299,218 @@ def pad_antennas(caltable='',ants=[],gain=False):
 	tb.putcol(g_col, gain)
 
 	tb.close()
+
+def empty_f(x):
+	return x
+
+def correct_phases(x,units):
+	x = (x+ np.pi) % (2 * np.pi) - np.pi
+	if units =='deg':
+		return x*(180./np.pi)
+	elif units =='rad':
+		return x
+	else:
+		sys.exit()
+
+def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile='temp.pdf'):
+	func_name = inspect.stack()[0][3]
+	tb=casatools.table()
+	tb.open(caltable)
+	if 'CPARAM' in tb.colnames():
+		if yaxis in ['amp','phase']:
+			gaincol = 'CPARAM'
+		else:
+			casalog.post(priority='SEVERE',origin=func_name,message='Wrong thing to plot for table')
+			sys.exit()
+	elif 'FPARAM' in tb.colnames():
+		if yaxis in ['delay','phase','tsys','rate']:
+			gaincol='FPARAM'
+		else:
+			casalog.post(priority='SEVERE',origin=func_name,message='Wrong thing to plot for table')
+			sys.exit()
+	else:
+		casalog.post(priority='SEVERE',origin=func_name,message='Table cannot be plotted by this function')
+		sys.exit()
+
+	col_params = {
+				'FPARAM':{
+					'tsys':[0,empty_f,'Tsys (K)'],
+					'delay':[1,empty_f,'Delay (nsec)'],
+					'phase':[0,empty_f, 'Phase (deg)'],
+					'rate':[2,empty_f, 'Rate (psec/sec)']
+					},
+				'CPARAM':{
+					'amp':[0,np.real, 'Amplitude'],
+					'phase':[1,np.angle, 'Phase (deg)']
+					}
+				}
+	row_params = {'freq':['Frequency (GHz)'],
+	              'time':['Time (hr since ']}
+
+	ant = np.unique(tb.getcol('ANTENNA1'))
+	spw = np.unique(tb.getcol('SPECTRAL_WINDOW_ID'))
+	pol_cols = ['r','k','b','g']
+	pol_symbols = ['o','^','*','+']
+
+	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
+
+	with PdfPages('%s'%figfile) as pdf:
+
+		if xaxis == 'time':
+			time=tb.getcol('TIME')
+			min_time = time.min()
+			time = (time - min_time)/3600.
+			t_range = [np.min(time),np.max(time)]
+			for a in range(len(ant)):
+				fig = plt.figure(figsize=(9,9))
+				gs00 = gridspec.GridSpec(nrows=len(spw), ncols=1,hspace=0,figure=fig)
+				ax1 = fig.add_subplot(gs00[:])
+				ax1.set_ylabel('%s'%(col_params[gaincol][yaxis][2]),labelpad=35)
+				ax1.set_xlabel('%s%s )'%(row_params[xaxis][0],time_convert(min_time)[0]),labelpad=25)
+				ax1.set_title('%s against %s for antenna %s (%d)'%(yaxis, xaxis, msinfo['ANTENNAS']['IDtoant'][str(ant[a])],ant[a]))
+				if len(spw) >1:
+					ax1.set_xticks([],minor=True)
+					ax1.set_xticks([])
+					ax1.set_xticklabels([])
+					ax1.set_yticks([],minor=True)
+					ax1.set_yticks([])
+					ax1.set_yticklabels([])
+				for s in range(len(spw)):
+					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
+					gain = subt.getcol(gaincol)
+					flag = subt.getcol('FLAG')
+					time = subt.getcol('TIME')
+					min_time = time.min()
+					time = (time - min_time)/3600.
+					ax = fig.add_subplot(gs00[s])
+					for pol in range(2):
+						if gaincol == 'FPARAM':
+							if yaxis == 'tsys':
+								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
+								flag_t = flag[pol,col_params[gaincol][yaxis][0],:]
+								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+							else:
+								gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(4*pol),0,:])
+								flag_t = flag[col_params[gaincol][yaxis][0]+int(4*pol),0,:]
+								if yaxis == 'phase':
+									gain_t = correct_phases(gain_t,units='deg')
+									#ax.set_ylim([-180,180])
+								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+						elif gaincol == 'CPARAM':
+							if gain.shape[1] == msinfo['SPECTRAL_WINDOW']['nchan']:
+								gain_t = col_params[gaincol][yaxis][1](gain[pol,:,:]).flatten()
+								flag_t = flag[pol,:,:].flatten()
+								time_t = np.repeat(time,gain.shape[1])
+								if yaxis == 'phase':
+									gain_t = correct_phases(gain_t,units='deg')
+									ax.set_ylim([-180,180])
+								ax.plot(time_t[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(time_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+							else:
+								gain_t = col_params[gaincol][yaxis][1](gain[pol,0,:])
+								if yaxis == 'phase':
+									gain_t = correct_phases(gain_t,units='deg')
+									#ax.set_ylim([-180,180])
+								flag_t = flag[pol,0,:]
+								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+					ax.set_xlim(t_range)
+					if s != len(spw)-1:
+						ax.xaxis.set_ticklabels([])
+					if s == 0:
+						handles=[]
+						for i in range(2):
+							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%msinfo['SPECTRAL_WINDOW']['spw_pols'][i]))
+						ax.legend(handles=handles)
+					else:
+						pass
+				pdf.savefig(bbox_inches='tight')
+				plt.close()
+		elif xaxis == 'freq':
+			for a in range(len(ant)):
+				fig = plt.figure(figsize=(9,9))
+				gs00 = gridspec.GridSpec(nrows=1, ncols=1,hspace=0,figure=fig)
+				ax = fig.add_subplot(gs00[:])
+				ax.set_ylabel('%s'%(col_params[gaincol][yaxis][2]),labelpad=35)
+				ax.set_xlabel('%s'%(row_params[xaxis][0]),labelpad=25)
+				ax.set_title('%s against %s for antenna %s (%d)'%(yaxis, xaxis, msinfo['ANTENNAS']['IDtoant'][str(ant[a])],ant[a]))
+				for s in range(len(spw)):
+					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
+					gain = subt.getcol(gaincol)
+					flag = subt.getcol('FLAG')
+					if gain.shape[1] == 1:
+						ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
+						spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
+						spw_average = (ch0+(spwbw/2.))+(s*spwbw)
+						if len(spw) == 1:
+							spw_average = (msinfo['SPECTRAL_WINDOW']['freq_range'][0]+msinfo['SPECTRAL_WINDOW']['freq_range'][1])/2.
+						freqs = (np.ones(gain.shape[2])*(spw_average))/1.0e9
+						for pol in range(2):
+							if gaincol == 'FPARAM':
+								if yaxis == 'tsys':
+									gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
+									flag_t = flag[pol,col_params[gaincol][yaxis][0],:]
+									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
+										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+								else:
+									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(4*pol),0,:])
+									flag_t = flag[col_params[gaincol][yaxis][0]+int(4*pol),0,:]
+									if yaxis == 'phase':
+										gain_t = correct_phases(gain_t,units='deg')
+										#ax.set_ylim([-180,180])
+									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
+										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+							elif gaincol == 'CPARAM':
+								gain_t = col_params[gaincol][yaxis][1](gain[pol,0,:])
+								flag_t = flag[pol,0,:]
+								if yaxis == 'phase':
+									gain_t = correct_phases(gain_t,units='deg')
+									#ax.set_ylim([-180,180])
+								ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+					elif gain.shape[1] == msinfo['SPECTRAL_WINDOW']['nchan']:
+						ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
+						spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
+						chan_width = msinfo['SPECTRAL_WINDOW']['chan_width']
+						freqs = np.arange(ch0+(s*spwbw),ch0+((s+1)*spwbw),chan_width)/1.0e9
+						for pol in range(2):
+							if gaincol == 'FPARAM':
+								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:]).flatten()
+								flag_t = flag[pol,col_params[gaincol][yaxis][0],:].flatten()
+								freqs = np.repeat(freqs,gain_t.shape[2])
+								ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+							elif gaincol == 'CPARAM':
+								gain_t = col_params[gaincol][yaxis][1](gain[pol,:,:])
+								flag_t = flag[pol,:,:].flatten()
+								freqs_t = np.repeat(freqs,gain_t.shape[1])
+								gain_t = gain_t.flatten()
+								if yaxis == 'phase':
+									gain_t = correct_phases(gain_t,units='deg')
+									#ax.set_ylim([-180,180])
+								ax.plot(freqs_t[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								if plotflag == True:
+									ax.plot(freqs_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+					if s == 0:
+						handles=[]
+						for i in range(2):
+							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%msinfo['SPECTRAL_WINDOW']['spw_pols'][i]))
+						ax.legend(handles=handles)
+				ax.set_xlim(np.array(msinfo['SPECTRAL_WINDOW']['freq_range'])/1e9)
+				pdf.savefig(bbox_inches='tight')
+				plt.close()
+		else:
+			casalog.post(priority='SEVERE',origin=func_name,message='Table cannot be plotted by this function')
+			sys.exit()
+
+		tb.close()
