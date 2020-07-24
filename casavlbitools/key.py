@@ -20,6 +20,10 @@
 
 from __future__ import print_function
 import math, re, sys, logging
+try:
+    from functools import reduce
+except:
+    print('no functools')
 
 def s_err(scanner, error):
     raise RuntimeError("line: %d" % scanner.line_no)

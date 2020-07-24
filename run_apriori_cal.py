@@ -59,12 +59,13 @@ if doaccor==True:
 			      smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
 
 ### Run prior-cals
-if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
-	if steps_run['apriori_cal'] == 1:
-		flagmanager(vis=msfile,mode='restore',versionname='original_flags')
-	else:
-		flagmanager(vis=msfile,mode='save',versionname='original_flags')
-	flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
+if params['apriori_cal']["do_observatory_flg"] == True:
+	if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
+		if steps_run['apriori_cal'] == 1:
+			flagmanager(vis=msfile,mode='restore',versionname='original_flags')
+		else:
+			flagmanager(vis=msfile,mode='save',versionname='original_flags')
+		flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,p_c))
 
 rmdirs(['%s/%s.tsys'%(cwd,p_c)])
 gencal(vis=msfile,\
@@ -73,9 +74,12 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
+if casa6 == True:
+	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_time.pdf'%p_c)
+	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_freq.pdf'%p_c)
 
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
-
+'''
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	fill_flagged_soln(caltable='%s/%s.tsys'%(cwd,p_c),fringecal=True)
 if params['apriori_cal']['tsys_options']['smooth'] == True:
@@ -84,6 +88,9 @@ if params['apriori_cal']['tsys_options']['smooth'] == True:
 	filter_tsys_auto(caltable='%s/%s.tsys'%(cwd,p_c),nsig=params['apriori_cal']['tsys_options']['outlier_SN'],jump_pc=params['apriori_cal']['tsys_options']['jump_ident_pc'])
 	fill_flagged_soln(caltable='%s/%s.tsys'%(cwd,p_c),fringecal=True)
 
+if casa6 == True:
+	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsysfiltered_vs_time.pdf'%p_c)
+	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsysfiltered_vs_freq.pdf'%p_c)
 
 rmdirs(['%s/%s.gcal'%(cwd,p_c)])
 gencal(vis=msfile,\
@@ -108,3 +115,4 @@ listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apriori_cal'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+'''

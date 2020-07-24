@@ -184,7 +184,7 @@ def rmfiles(files):
 			casalog.post(priority="INFO",origin=func_name,message='File %s found - deleting'% i)
 			os.system('rm %s'%i)
 		else:
-			casalog.post(priority="INFO",origin=func_name,message='No file entered'% i)
+			casalog.post(priority="INFO",origin=func_name,message='No file found - %s'% i)
 	return
 
 
@@ -199,7 +199,7 @@ def rmdirs(dirs):
 			casalog.post(priority="INFO",origin=func_name,message='Directory/table %s found - deleting'% i)
 			os.system('rm -r %s'%i)
 		else:
-			casalog.post(priority="INFO",origin=func_name,message='No file entered'% i)
+			casalog.post(priority="INFO",origin=func_name,message='No file found - %s'% i)
 	return
 
 def init_pipe_run(inputs):
@@ -687,21 +687,22 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 				flg_temp=flg[k,0,((ant==i)&(dd==j))]
 				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
 				gain_uflg = gain_uflg2[flg_temp==0]
-				t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
-				gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
-				gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
-				#gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 5 ,n_sigmas=2.5)
-				gain_uflg,jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
-				if jump == False:
-					gain_uflg = smooth_series(gain_uflg, 21)
-				gain_uflg2[flg_temp==0] = gain_uflg
-				ind = np.where(np.isnan(gain_uflg2[flg_temp==0]))[0]
-				flg_temp2 = flg_temp[flg_temp==0]
-				flg_temp2[ind] = 1
-				flg_temp[flg_temp==0] = flg_temp2
-				flg[k,0,((ant==i)&(dd==j))] = flg_temp
+				if gain_uflg != []:
+					t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
+					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
+					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
+					#gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 5 ,n_sigmas=2.5)
+					gain_uflg, jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
+					if jump == False:
+						gain_uflg = smooth_series(gain_uflg, 21)
+					gain_uflg2[flg_temp==0] = gain_uflg
+					ind = np.where(np.isnan(gain_uflg2[flg_temp==0]))[0]
+					flg_temp2 = flg_temp[flg_temp==0]
+					flg_temp2[ind] = 1
+					flg_temp[flg_temp==0] = flg_temp2
+					flg[k,0,((ant==i)&(dd==j))] = flg_temp
 
-				gain_edit[k,0,((ant==i)&(dd==j))]= gain_uflg2
+					gain_edit[k,0,((ant==i)&(dd==j))]= gain_uflg2
 
 	tb.putcol('FPARAM',gain_edit)
 	tb.putcol('FLAG',flg)
@@ -758,30 +759,36 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 
 def detect_jump_and_smooth(array,jump_pc):
 	jump_pc=jump_pc/100.
-	for i,j in enumerate(array):
-		if i<array.shape[0]-2:
-			if (array[i+1] > 1.1*array[i])|(array[i+1]<0.9*array[i]):
-				jump=True
-				low=i
-				if i < len(array)-1:
-					#print(i+1)
-					i+=1
-					#print(i)
-					while ((array[i+1] > (1+jump_pc)*array[i])==False)&((array[i+1]<(1-jump_pc)*array[i])==False):
-						if i > (len(array)-3):
-							#print(i)
-							break
-						else:
-							#print(i)
-							i+=1
-				high=i+1
-				diff=int((high-low)/2.)
-				if diff%2 == 0:
-					diff=diff+1
-				array[low:high] = smooth_series(array[low:high],diff)
+	try:
+		for i,j in enumerate(array):
+			if i<array.shape[0]-2:
+				if (array[i+1] > 1.1*array[i])|(array[i+1]<0.9*array[i]):
+					jump=True
+					low=i
+					if i < len(array)-1:
+						#print(i+1)
+						i+=1
+						#print(i)
+						while ((array[i+1] > (1+jump_pc)*array[i])==False)&((array[i+1]<(1-jump_pc)*array[i])==False):
+							if i > (len(array)-3):
+								#print(i)
+								break
+							else:
+								#print(i)
+								i+=1
+					high=i+1
+					diff=int((high-low)/2.)
+					if diff%2 == 0:
+						diff=diff+1
+					array[low:high] = smooth_series(array[low:high],diff)
+				else:
+					jump=False
 			else:
 				jump=False
-	return array, jump
+		return array, jump
+	except:
+		jump=False
+		return array, jump
 
 def append_gaintable(gaintables,caltable_params):
 	for i,j in enumerate(gaintables.keys()):

@@ -18,19 +18,11 @@
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
-<<<<<<< HEAD
         "fitsidi_path"      :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078F/raw_UV",
         "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
         "fringe_finders"    : ["3C345","DA193"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
         "targets"           : ["HDFC0155"],
-=======
-        "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA","FD","KP","PT","LA","OV","NL","HN","BR","MK","SC"],
-        "fringe_finders"    : ["3C273"],
-        "phase_calibrators" : ["J1504+1029"],
-        "targets"           : ["151132+10095"],
->>>>>>> f9eaf078880b5a5224b87aeaeb8d98e304232c70
         "do_parang"         :  true
     },
     "prepare_data":{
@@ -82,6 +74,7 @@
             "smoothtime"    : 180.0,
             "interp"        : "linear"
         },
+        "do_observatory_flg": false,
         "tsys_options":{
             "interp_flags"  :  true,
             "smooth"        :  true,

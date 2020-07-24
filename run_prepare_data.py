@@ -82,11 +82,15 @@ else:
 ## Find antab file (typical EVN antab files are <project_code>.antab)
 if telescop == 'EVN':
 	if params['prepare_data']['antab_file'] == 'auto':
-		if os.path.exists('%s.antab'%params['global']['project_code']) == False:
+		if os.path.exists('%s.antab'%params['global']['project_code']) == True:
+			antabfile='%s.antab'%params['global']['project_code']
+			casalog.post(origin=filename,message='Antab file found - %s.antab'%params['global']['project_code'],priority='INFO')
+		elif os.path.exists('%s_1.antab'%params['global']['project_code']) == True:
+			antabfile='%s_1.antab'%params['global']['project_code']
+			casalog.post(origin=filename,message='Antab file found - %s_1.antab'%params['global']['project_code'],priority='INFO')
+		else:
 			casalog.post(origin=filename,message='Auto set antab file %s.antab does not exist ... exiting'%params['global']['project_code'],priority='SEVERE')
 			sys.exit()
-		else:
-			antabfile='%s.antab'%params['global']['project_code']
 	else:
 		if os.path.exists('%s'%params['prepare_data']['antab']) == False:
 			casalog.post(origin=filename,message='Antab file %s does not exist, please correct ... exiting'%params['prepare_data']['antab'],priority='SEVERE')
