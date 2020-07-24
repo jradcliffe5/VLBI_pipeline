@@ -75,6 +75,9 @@ importfitsidi(fitsidifile=idifiles,\
 append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 	              params=params)
 
+if params['import_fitsidi']['remove_idi'] == True:
+	rmfiles(idifiles)
+
 
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 

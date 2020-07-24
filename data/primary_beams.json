@@ -65,6 +65,17 @@
 		   "pb_source":""
 		}
 	},
+	"SR":{
+		"L":{
+
+		   "diameter":   65.0,
+		   "pb_model":   "G",
+		   "pb_freq" : 1.6e9,
+		   "pb_params": [65.0],
+		   "pb_squint": [0,0],
+		   "pb_source":""
+		}
+	},
 	"ZC":{
 		"L":{
 
