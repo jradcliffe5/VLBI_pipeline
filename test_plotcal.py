@@ -34,8 +34,4 @@ else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 
 
-
-
-save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
-steps_run['apply_target'] = 1
-save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+plotcaltable(caltable='delay_test.K',yaxis='delay',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='test.pdf')

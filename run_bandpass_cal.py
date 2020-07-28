@@ -95,6 +95,7 @@ for i in range(40):
 	fill_flagged_soln(caltable='%s/%s.bpass'%(cwd,p_c),fringecal=False)
 
 
+
 if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	tb = casatools.table()
 	tb.open('%s/%s.bpass'%(cwd,p_c))
@@ -123,6 +124,11 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	tb.putcol('CPARAM',data)
 	tb.putcol('FLAG',flags)
 	tb.close()
+
+if casa6 == True:
+	for i in ['amp','phase']:
+		for j in ['freq','time']:
+		plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
 
 flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
 

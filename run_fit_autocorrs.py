@@ -44,10 +44,14 @@ else:
 for i,j in enumerate(fields):
 	fields[i] = str(msinfo['FIELD']['fieldtoID'][j])
 
-fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo,calc_auto='median', calibrators=fields, renormalise='median', filter_RFI=True)
+fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo, calc_auto='median', calibrators=fields, renormalise='median', filter_RFI=True)
 
 if params['fit_autocorrs']["interp_bad_solutions"] == True:
 	fill_flagged_soln(caltable='%s/%s.auto.bpass'%(cwd,p_c),fringecal=False)
+
+if casa6 == True:
+	plotcaltable(caltable='%s/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-autobpass_amp_vs_freq.pdf'%p_c)
+	plotcaltable(caltable='%s/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-autobpass_amp_vs_time.pdf'%p_c)
 
 gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
 

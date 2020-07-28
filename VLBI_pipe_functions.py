@@ -1148,7 +1148,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						if renormalise == 'max':
 							data_median_i = data_median_i/np.max(data_median_i)
 						if renormalise == 'median':
-							data_median_i = data_median_i/np.median(data_median_i[80:180])
+							data_median_i = data_median_i/np.median(data_median_i[10:25])
 						ax.scatter(x,data_median_i,c=polcol[k],marker=polmar[k])
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
@@ -1399,8 +1399,13 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 								if plotflag == True:
 									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 							else:
-								gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(4*pol),0,:])
-								flag_t = flag[col_params[gaincol][yaxis][0]+int(4*pol),0,:]
+								if gain.shape[0] == 2:
+									increm = 1
+									col_params[gaincol][yaxis][0] = 0
+								else:
+									increm = 4
+								gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
+								flag_t = flag[col_params[gaincol][yaxis][0]+int(increm*pol),0,:]
 								if yaxis == 'phase':
 									gain_t = correct_phases(gain_t,units='deg')
 									#ax.set_ylim([-180,180])
@@ -1450,6 +1455,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				for s in range(len(spw)):
 					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
 					gain = subt.getcol(gaincol)
+					print(gain.shape)
 					flag = subt.getcol('FLAG')
 					if gain.shape[1] == 1:
 						ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
@@ -1467,8 +1473,13 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 									if plotflag == True:
 										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 								else:
-									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(4*pol),0,:])
-									flag_t = flag[col_params[gaincol][yaxis][0]+int(4*pol),0,:]
+									if gain.shape[0] == 2:
+										increm = 1
+										col_params[gaincol][yaxis][0] = 0
+									else:
+										increm = 4
+									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
+									flag_t = flag[col_params[gaincol][yaxis][0]+int(increm*pol),0,:]
 									if yaxis == 'phase':
 										gain_t = correct_phases(gain_t,units='deg')
 										#ax.set_ylim([-180,180])

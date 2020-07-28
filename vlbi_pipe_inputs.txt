@@ -7,13 +7,13 @@ make_scripts = True
 run_jobs = True
 
 ## Steps to run ##
-prepare_data = 1
-import_fitsidi = 1
+prepare_data = 0
+import_fitsidi = 0
 make_mms = 0
 apriori_cal = 0
 init_flag = 0
-fit_autocorrs =0
-sub_band_delay = 0
+fit_autocorrs = 0
+sub_band_delay = 1
 bandpass_cal = 0
 phase_referencing = 0
 apply_target = 0

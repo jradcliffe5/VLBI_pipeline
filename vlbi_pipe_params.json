@@ -19,8 +19,8 @@
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078F/raw_UV",
-        "refant"            : ["T6","EF","O8","MC","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
-        "fringe_finders"    : ["3C345","DA193"],
+        "refant"            : ["EF","T6","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "fringe_finders"    : ["3C345","2007+777"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
         "targets"           : ["HDFC0155"],
         "do_parang"         :  true
@@ -101,7 +101,7 @@
         "autocorrelations"  :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"3C273":90.0,"*":10.0},
+            "quack_time"    :  {"3C345":30.0,"2007+777":30.0,"*":10.0},
             "quack_mode"    :  "beg"
         },
         "hpc_options":{
@@ -114,7 +114,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["3C273","J1504+1029"],
+        "select_calibrators": ["J1241+602","3C345"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -126,13 +126,13 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"],["J1504+1029"]], 
+        "select_calibrators": [["default"],["J1241+602"]], 
         "time_range"        : ["",""],
-        "sol_interval"      : ["120s","inf"],
-        "min_snr"           : [10.0,10.0],
+        "sol_interval"      : ["60s","inf"],
+        "min_snr"           : [5.0,5.0],
         "fringe_niter"      :  300,
         "modify_sbd":{
-            "run"           :  true,
+            "run"           :  false,
             "spw_passmark"  :  0.5,
             "clip_badtimes" :  0.66
         },       

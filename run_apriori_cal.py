@@ -79,7 +79,7 @@ if casa6 == True:
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_freq.pdf'%p_c)
 
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
-'''
+
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	fill_flagged_soln(caltable='%s/%s.tsys'%(cwd,p_c),fringecal=True)
 if params['apriori_cal']['tsys_options']['smooth'] == True:
@@ -115,4 +115,3 @@ listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apriori_cal'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
-'''

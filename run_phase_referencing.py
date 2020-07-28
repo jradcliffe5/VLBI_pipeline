@@ -72,16 +72,27 @@ for i in range(len(fields)):
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
 					pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
 				pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
+			if casa6 == True:
+				if 'spw' not in params['phase_referencing']['combine'][i][j]:
+					xax = ['freq','time']
+				else:
+					xax = ['time']
+				for i in ['delay','phase','rate']:
+					for j in xax:
+					plotcaltable(caltable=caltable,yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,i,j))
+
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
 				gaintype='K'
+				calmode = 'ap'
 			else:
 				gaintype='G'
+				calmode = caltype[i][j]
 			gaincal(vis=msfile,
 					caltable=caltable,
 					field=fields[i],
 					solint=params['phase_referencing']['sol_interval'][i][j],
-					calmode=cal_type[i][j],
+					calmode=calmode,
 					solnorm=True,
 					refant=refant,
 					gaintype=gaintype,
@@ -99,6 +110,20 @@ for i in range(len(fields)):
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
 					pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
 				pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
+			if casa6 == True:
+				if 'spw' not in params['phase_referencing']['combine'][i][j]:
+					xax = ['freq','time']
+				else:
+					xax = ['time']
+				if cal_type[i][j] == 'ap':
+					yax = ['amp','phase']
+				elif cal_type[i][j] == 'k':
+					yax = ['delay']
+				else:
+					yax = ['phase']
+				for i in yax:
+					for j in xax:
+					plotcaltable(caltable=caltable,yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,i,j))
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be f - fringe fit, p - phase, ap - amp and phase, a - amp, or k - delay')
 			sys.exit()
