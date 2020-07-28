@@ -194,7 +194,7 @@ for i in range(len(fields)):
 			delims = []
 			for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 				delims.append('%s-%s%s%s*'%(fields[i], cal_type[i][j], j,z))
-			rmdirs([delims])
+			rmdirs(delims)
 			tclean(vis=msfile,
 				   imagename='%s-%s%s'%(fields[i], cal_type[i][j], j),
 				   field='%s'%fields[i],
@@ -221,10 +221,10 @@ for i in range(len(fields)):
 			   model=model,
 			   usescratch=True)
 			if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
-				elims = []
+				delims = []
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 					delims.append('%s-initmodel%s*'%(fields[i+1],z))
-				rmdirs([delims])
+				rmdirs(delims)
 				tclean(vis=msfile,
 					   imagename='%s-initmodel'%(fields[i+1]),
 					   field='%s'%fields[i+1],
