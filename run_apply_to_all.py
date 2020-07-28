@@ -1,5 +1,6 @@
 import inspect, os, sys, json, re
 from collections import OrderedDict
+import tarfile
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
@@ -32,8 +33,3 @@ if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global'][
 	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-
-
-save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
-steps_run['reweigh'] = 1
-save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

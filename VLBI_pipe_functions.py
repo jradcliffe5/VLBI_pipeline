@@ -16,6 +16,7 @@ from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 import glob
+import tarfile
 
 
 try:
@@ -1072,7 +1073,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 
 	rmdirs(['%s.auto.bpass'%(epoch)])
 	bandpass(vis=msfile,
-		     caltable='%s.auto.bpass'%(epoch),
+			 caltable='%s.auto.bpass'%(epoch),
 			 field=','.join(calibrators),
 			 solint='inf',
 			 antenna='',
@@ -1237,42 +1238,42 @@ def append_pbcor_info(vis, params):
 			pb_model.append('NO_INFO')
 			pb_source.append("NO_INFO")
 	add_cols = {'PB_MODEL':{'comment'         : 'pbmodel description',
-                            'dataManagerGroup': 'StandardStMan',
-                            'dataManagerType' : 'StandardStMan',
-                            'keywords'        : {'ARRAY_NAME': 'EVN'},
-                            'maxlen'          : 0,
-                            'option'          : 0,
-                            'valueType'       : 'string'},
-                'PB_PARAM':{'comment'        : 'pb parameters',
-                            'dataManagerGroup': 'StandardStMan',
-                            'dataManagerType' : 'StandardStMan',
-                            'keywords'        : {},
-                            'maxlen'          : 0,
-                            'option'          : 0,
-                            'valueType'       : 'string'},
-                'PB_SQUINT':{'comment'        : 'pb squint',
-                            'dataManagerGroup': 'StandardStMan',
-                            'dataManagerType' : 'StandardStMan',
-                            'keywords'        : {},
-                            'maxlen'          : 0,
-                            'option'          : 0,
-                            'valueType'       : 'string'},
-                'PB_FREQ':  {'comment': 'Physical diameter of dish',
- 						    'dataManagerGroup': 'StandardStMan',
-                            'dataManagerType': 'StandardStMan',
-                            'keywords': {},
-                            'maxlen': 0,
-                            'option': 0,
-                            'valueType': 'double'},
-                'PB_SOURCE':{'comment'        : 'pb references',
-                            'dataManagerGroup': 'StandardStMan',
-                            'dataManagerType' : 'StandardStMan',
-                            'keywords'        : {},
-                            'maxlen'          : 0,
-                            'option'          : 0,
-                            'valueType'       : 'string'}
+							'dataManagerGroup': 'StandardStMan',
+							'dataManagerType' : 'StandardStMan',
+							'keywords'        : {'ARRAY_NAME': 'EVN'},
+							'maxlen'          : 0,
+							'option'          : 0,
+							'valueType'       : 'string'},
+				'PB_PARAM':{'comment'        : 'pb parameters',
+							'dataManagerGroup': 'StandardStMan',
+							'dataManagerType' : 'StandardStMan',
+							'keywords'        : {},
+							'maxlen'          : 0,
+							'option'          : 0,
+							'valueType'       : 'string'},
+				'PB_SQUINT':{'comment'        : 'pb squint',
+							'dataManagerGroup': 'StandardStMan',
+							'dataManagerType' : 'StandardStMan',
+							'keywords'        : {},
+							'maxlen'          : 0,
+							'option'          : 0,
+							'valueType'       : 'string'},
+				'PB_FREQ':  {'comment': 'Physical diameter of dish',
+							'dataManagerGroup': 'StandardStMan',
+							'dataManagerType': 'StandardStMan',
+							'keywords': {},
+							'maxlen': 0,
+							'option': 0,
+							'valueType': 'double'},
+				'PB_SOURCE':{'comment'        : 'pb references',
+							'dataManagerGroup': 'StandardStMan',
+							'dataManagerType' : 'StandardStMan',
+							'keywords'        : {},
+							'maxlen'          : 0,
+							'option'          : 0,
+							'valueType'       : 'string'}
 
-                }
+				}
 	try:
 		tb.addcols(add_cols)
 	except:
@@ -1352,7 +1353,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					}
 				}
 	row_params = {'freq':['Frequency (GHz)'],
-	              'time':['Time (hr since ']}
+				  'time':['Time (hr since ']}
 
 	ant = np.unique(tb.getcol('ANTENNA1'))
 	spw = np.unique(tb.getcol('SPECTRAL_WINDOW_ID'))
@@ -1532,3 +1533,14 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 			sys.exit()
 
 		tb.close()
+
+
+def make_tarfile(output_filename, source_dir):
+	with tarfile.open(output_filename, "w:gz") as tar:
+		tar.add(source_dir, arcname=os.path.basename(source_dir))
+  
+def extract_tarfile(tar_file,cwd):
+	tar = tarfile.open("%s"%tar_file)
+	for member in tar.getmembers():
+		print("Extracting %s" % member.name)
+		tar.extract(member, path=cwd)

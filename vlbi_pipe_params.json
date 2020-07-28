@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078f",
-        "cwd"               :  "/Volumes/HD-LXU3/EG078F",
+        "project_code"      :  "eg078b",
+        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078B/CASA_calibration",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",
@@ -20,7 +20,7 @@
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078F/raw_UV",
         "refant"            : ["EF","T6","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
-        "fringe_finders"    : ["3C345","2007+777"],
+        "fringe_finders"    : ["3C345","DA193"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
         "targets"           : ["HDFC0155"],
         "do_parang"         :  true
@@ -74,7 +74,7 @@
             "smoothtime"    : 180.0,
             "interp"        : "linear"
         },
-        "do_observatory_flg": false,
+        "do_observatory_flg": true,
         "tsys_options":{
             "interp_flags"  :  true,
             "smooth"        :  true,
@@ -114,7 +114,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["J1241+602","3C345"],
+        "select_calibrators": ["J1241+602","3C345","DA193"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -147,30 +147,30 @@
     },
     "bandpass_cal":{
         "same_as_sbd_cal"   :  false,
-        "select_calibrators": [["default"],["J1504+1029"]], 
+        "select_calibrators": [["default"],["J1241+602"]], 
         "time_range"        : ["",""],
         "sol_interval"      :  "inf",
         "min_snr"           :  3.0,
         "hpc_options":{
-            "partition"     : "default",
-            "walltime"      : "default",
+            "partition"     :  "default",
+            "walltime"      :  "default",
             "nodes"         :  -1,
             "cpus"          :  -1,
             "mpiprocs"      :  -1,
-            "nodetype"      : "default"
+            "nodetype"      :  "default"
         }
     },
     "phase_referencing":{        
-        "select_calibrators": "default",
-        "cal_type"          : [[  "f",   "f",   "f",  "p",   "ap", "ap", "p"]],   
-        "sol_interval"      : [["inf", "inf","30s", "inf", "inf" , "inf", "20s"]],
-        "combine"           : [[   "spw",   "", "", "",    "spw", "", ""]],
-        "interp_flagged"    : [[ false,  false,  false,  false,  false, false,false]],
-        "pass_ants"         : [[]],
-        "imager"            : "wsclean",
-        "fringe_niter"      : 300,
-        "min_snr"           : 5.0,
-        "imaging_params"    : "auto",
+        "select_calibrators":  "default",
+        "cal_type"          : [[  "f",  "f",  "f",  "k",   "p", "ap", "ap",  "ap",   "p"],["f" ,"f",   "p"]],   
+        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","1min","1min"],["inf","inf","inf"]],
+        "combine"           : [["spw","spw",   "",   "",    "","spw",   "", "spw",    ""],["spw","spw", ""]],
+        "interp_flagged"    : [[ true, true, true, true,  true, true, true,  true,  true],[ true, true, true]],
+        "pass_ants"         : [["JB"],[]],
+        "imager"            :  "tclean",
+        "fringe_niter"      :  300,
+        "min_snr"           :  5.0,
+        "imaging_params"    :  "auto",
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -180,28 +180,37 @@
             "nodetype"      :  "default"
         }
     },
-    "apply_target":{        
-        "multi_phase_centre": true,
-        "fits_files_path"   : "raw_UV",
-        "hpc_options":{
-            "partition"     :  "default",
-            "walltime"      :  "default",
-            "nodes"         :    -1,
-            "cpus"          :    -1,
-            "mpiprocs"      :    -1,
-            "nodetype"      :  "default"
-        }
-    },
-    "reweigh":{        
+    "apply_target":{
         "statistical_reweigh":{
-            "run": true,
-            "timebin": "10s",
-            "chanbin": "spw",
-            "statalg": "classic",
-            "fitspw" : ""
+                "run": true,
+                "timebin"   :  "10s",
+                "chanbin"   :  "spw",
+                "statalg"   :  "classic",
+                "fitspw"    :  ""
         },
         "weigh_by_ants":{
-            "run": true
+                "run": true
+        },
+        "image_target": true,
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "apply_to_all":{  
+        "target_path"       : "",      
+        "pbcor":{
+            "implementation": "IDG",
+            "vix_file": "",
+            "diff_corr"     : true
+        },
+        "image":{
+            "run"           : true,
+            "imsize"        : [1024,1024]
         },
         "hpc_options":{
             "partition"     :  "default",

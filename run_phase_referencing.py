@@ -77,9 +77,9 @@ for i in range(len(fields)):
 					xax = ['freq','time']
 				else:
 					xax = ['time']
-				for i in ['delay','phase','rate']:
-					for j in xax:
-					plotcaltable(caltable=caltable,yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,i,j))
+				for k in ['delay','phase','rate']:
+					for l in xax:
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
 
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
@@ -121,9 +121,9 @@ for i in range(len(fields)):
 					yax = ['delay']
 				else:
 					yax = ['phase']
-				for i in yax:
-					for j in xax:
-					plotcaltable(caltable=caltable,yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,i,j))
+				for k in yax:
+					for l in xax:
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be f - fringe fit, p - phase, ap - amp and phase, a - amp, or k - delay')
 			sys.exit()
@@ -148,17 +148,108 @@ for i in range(len(fields)):
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
 		
+		## Establish image parameters
+		imsize = [1024,1024]
+		weight = 'natural'
+		if msinfo['SPECTRAL_WINDOW']['bwidth']/msinfo['SPECTRAL_WINDOW']['cfreq'] > 0.1:
+			deconvolver_tclean = ['mtmfs',2]
+			mtmfs_wsclean = '-join-channels -channels-out %d -fit-spectral-pol 2 -deconvolution-channels %d'%(params['SPECTRAL_WINDOW']['nchan']/4,params['SPECTRAL_WINDOW']['nchan']/8)
+		else:
+			deconvolver_tclean = ['clarkstokes',1]
+			mtmfs_wsclean = ''
 		if params['phase_referencing']["imager"] == 'wsclean':
 			rmfiles(['%s-%s%s-*'%(fields[i],cal_type[i][j],j)])
-			os.system('%s -name %s-%s%s -scale %sasec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo["IMAGE_PARAMS"][fields[i]],msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
+			os.system('%s -name %s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+				(";".join(params['global']["wsclean_command"]),
+					fields[i],
+					cal_type[i][j],
+					j,
+					msinfo["IMAGE_PARAMS"][fields[i]],
+					imsize[0],
+					imsize[1],
+					weight,
+					mtmfs_wsclean,
+					msinfo['FIELD']['fieldtoID'][fields[i]],
+					msfile))
 			clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i],cal_type[i][j],j), 
 				          im='%s-%s%s-image.fits'%(fields[i],cal_type[i][j],j),
 				          snr=10.0)
 			os.system('%s -name %s-%s%s -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i]],msfile))
 			if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
-				os.system('%s -name %s-initmodel -scale %sasec -size 1024 1024 -weight natural -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo["IMAGE_PARAMS"][fields[i+1]],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
+				os.system('%s -name %s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+				(";".join(params['global']["wsclean_command"]),
+					fields[i+1],
+					msinfo["IMAGE_PARAMS"][fields[i+1]],
+					imsize[0],
+					imsize[1],
+					weight,
+					mtmfs_wsclean,
+					msinfo['FIELD']['fieldtoID'][fields[i+1]],
+					msfile))
+				clip_fitsfile(model='%s-initmodel.fits'%(fields[i+1]), 
+				          im='%s-initmodel.fits'%(fields[i+1]),
+				          snr=10.0)
+				os.system('%s -name %s-initmodel -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1],msinfo['FIELD']['fieldtoID'][fields[i+1]],msfile))
 		if params['phase_referencing']['imager'] == 'tclean':
-			print('ppo')
+			delims = []
+			for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
+				delims.append('%s-%s%s%s*'%(fields[i], cal_type[i][j], j,z))
+			rmdirs([delims])
+			tclean(vis=msfile,
+				   imagename='%s-%s%s'%(fields[i], cal_type[i][j], j),
+				   field='%s'%fields[i],
+				   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i]]/1000.),
+				   imsize=imsize,
+				   deconvolver='%s'%deconvolver_tclean[0],
+				   nterms=deconvolver_tclean[1],
+				   niter = int(1e5),
+				   weighting=weight,
+				   nsigma=1.2,
+				   usemask='auto-multithresh',
+				   noisethreshold=4.0,
+				   sidelobethreshold=1.0
+				   )
+			if deconvolver_tclean[1]>1:
+				model = []
+				for k in range(deconvolver_tclean[1]):
+					model.append('%s-%s%s.model.tt%s'%(fields[i], cal_type[i][j], j,k))
+			else:
+				model = '%s-%s%s.model'%(fields[i], cal_type[i][j], j)
+			ft(vis=msfile,
+			   field='%s'%fields[i],
+			   nterms=deconvolver_tclean[1],
+			   model=model,
+			   usescratch=True)
+			if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+				elims = []
+				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
+					delims.append('%s-initmodel%s*'%(fields[i+1],z))
+				rmdirs([delims])
+				tclean(vis=msfile,
+					   imagename='%s-initmodel'%(fields[i+1]),
+					   field='%s'%fields[i+1],
+					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i]]/1000.),
+					   imsize=imsize,
+					   deconvolver='%s'%deconvolver_tclean[0],
+					   nterms=deconvolver_tclean[1],
+					   niter = int(1e5),
+					   weighting=weight,
+					   nsigma=1.2,
+					   usemask='auto-multithresh',
+					   noisethreshold=4.0,
+					   sidelobethreshold=1.0
+					   )
+				if deconvolver_tclean[1]>1:
+					model = []
+					for k in range(deconvolver_tclean[1]):
+						model.append('%s-initmodel.model.tt%s'%(fields[i+1],k))
+				else:
+					model = '%s-initmodel.model'%(fields[i+1])
+				ft(vis=msfile,
+				   field='%s'%fields[i+1],
+				   nterms=deconvolver_tclean[1],
+				   model=model,
+				   usescratch=True)
 
 
 
