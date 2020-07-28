@@ -195,6 +195,10 @@ for i in range(len(fields)):
 			for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 				delims.append('%s-%s%s%s*'%(fields[i], cal_type[i][j], j,z))
 			rmdirs(delims)
+			if steps_run['make_mms'] == 1:
+				parallel=True
+			else:
+				parallel = False
 			tclean(vis=msfile,
 				   imagename='%s-%s%s'%(fields[i], cal_type[i][j], j),
 				   field='%s'%fields[i],
@@ -207,7 +211,8 @@ for i in range(len(fields)):
 				   nsigma=1.2,
 				   usemask='auto-multithresh',
 				   noisethreshold=4.0,
-				   sidelobethreshold=1.0
+				   sidelobethreshold=1.0,
+				   parallel=parallel
 				   )
 			if deconvolver_tclean[1]>1:
 				model = []
@@ -237,7 +242,8 @@ for i in range(len(fields)):
 					   nsigma=1.2,
 					   usemask='auto-multithresh',
 					   noisethreshold=4.0,
-					   sidelobethreshold=1.0
+					   sidelobethreshold=1.0,
+					   parallel=parallel
 					   )
 				if deconvolver_tclean[1]>1:
 					model = []
