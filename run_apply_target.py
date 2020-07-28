@@ -61,7 +61,7 @@ for i in params['global']['targets']:
 		pass
 	for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 		delims.append('%s-initimage*'%(i,z))
-	rmdirs([delims])
+	rmdirs(delims)
 	tclean(vis='%s/%s_calibrated.ms'%(cwd,i),
 		   imagename='%s-initimage'%i,
 		   field='%s'%i,
