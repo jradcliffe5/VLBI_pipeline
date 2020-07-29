@@ -224,8 +224,13 @@ for i in range(len(fields)):
 				model = []
 				for k in range(deconvolver_tclean[1]):
 					model.append('%s-%s%s.model.tt%s'%(fields[i], cal_type[i][j], j,k))
+					image = '%s-%s%s.model.tt0'%(fields[i], cal_type[i][j], j)
 			else:
 				model = '%s-%s%s.model'%(fields[i], cal_type[i][j], j)
+				image = '%s-%s%s.image'%(fields[i], cal_type[i][j], j)
+			clip_model(model=model, 
+				          im=image,
+				          snr=10.0)
 			ft(vis=msfile,
 			   field='%s'%fields[i],
 			   nterms=deconvolver_tclean[1],
@@ -255,8 +260,13 @@ for i in range(len(fields)):
 					model = []
 					for k in range(deconvolver_tclean[1]):
 						model.append('%s-initmodel.model.tt%s'%(fields[i+1],k))
+						image = '%s-initmodel.image.tt0'%(fields[i+1])
 				else:
 					model = '%s-initmodel.model'%(fields[i+1])
+					image = '%s-initmodel.image'%(fields[i+1])
+				clip_model(model=model, 
+				          im=image,
+				          snr=10.0)
 				ft(vis=msfile,
 				   field='%s'%fields[i+1],
 				   nterms=deconvolver_tclean[1],

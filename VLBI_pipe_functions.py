@@ -1534,6 +1534,28 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 
 		tb.close()
 
+def clip_model(model, im, snr):
+	ia = casatools.image()
+	ia.open(im)
+	image_data = ia.getchunk().squeeze()
+	max_pix = [np.where(image_data == image_data.max())[0][0],np.where(image_data == image_data.max())[1][0]]
+	rest_beam = np.array([ia.restoringbeam()['major']['value'],ia.restoringbeam()['minor']['value']])
+	incr = np.abs(ia.summary()['incr'][0:2])*60.*60.*(180./np.pi)
+	pix_scale = np.floor((rest_beam/incr)/2.).astype(int)
+	ia.close()
+	if model != list:
+		model = [model]
+	for i in model:
+		ia.open(i)
+		model_data = ia.getchunk()
+		if i.endswith('tt0'):
+			model_data[model_data<0] = 0
+		model_data[:max_pix[1]-pix_scale[1],:,:,:] = 0
+		model_data[max_pix[1]+pix_scale[1]:,:,:,:] = 0
+		model_data[:,:max_pix[0]-pix_scale[0],:,:] = 0
+		model_data[:,max_pix[0]+pix_scale[0]:,:,:] = 0
+		ia.putchunk(model_data)
+		ia.close()
 
 def make_tarfile(output_filename, source_dir):
 	with tarfile.open(output_filename, "w:gz") as tar:
