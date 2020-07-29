@@ -87,7 +87,7 @@ for i in range(len(fields)):
 				calmode = 'ap'
 			else:
 				gaintype='G'
-				calmode = caltype[i][j]
+				calmode = cal_type[i][j]
 			gaincal(vis=msfile,
 					caltable=caltable,
 					field=fields[i],
