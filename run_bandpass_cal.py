@@ -128,7 +128,7 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 if casa6 == True:
 	for i in ['amp','phase']:
 		for j in ['freq','time']:
-		plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
+			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
 
 flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
 

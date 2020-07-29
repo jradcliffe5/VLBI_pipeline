@@ -79,7 +79,7 @@ if params['sub_band_delay']['modify_sbd']['run'] == True:
 if casa6 == True:
 	for i in ['delay','phase']:
 		for j in ['freq','time']:
-		plotcaltable(caltable='%s/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-sbd_%s_vs_%s.pdf'%(p_c,i,j))
+			plotcaltable(caltable='%s/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-sbd_%s_vs_%s.pdf'%(p_c,i,j))
 
 gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
 
