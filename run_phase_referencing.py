@@ -104,12 +104,18 @@ for i in range(len(fields)):
 					spwmap=gaintables['spwmap'],
 					parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				fill_flagged_soln(caltable=caltable,fringecal=False)
+				if cal_type[i][j] == 'k':
+					fill_flagged_soln(caltable=caltable,fringecal=True)
+				else:
+					fill_flagged_soln(caltable=caltable,fringecal=False)
 			if params['phase_referencing']['pass_ants'][i] != []:
 				pass_ants = []
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
 					pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
-				pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
+				if cal_type[i][j] == 'k':
+					pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
+				else: 
+					pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
 			if casa6 == True:
 				if 'spw' not in params['phase_referencing']['combine'][i][j]:
 					xax = ['freq','time']
