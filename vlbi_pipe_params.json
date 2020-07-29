@@ -132,7 +132,7 @@
         "min_snr"           : [5.0,5.0],
         "fringe_niter"      :  300,
         "modify_sbd":{
-            "run"           :  false,
+            "run"           :  true,
             "spw_passmark"  :  0.5,
             "clip_badtimes" :  0.66
         },       

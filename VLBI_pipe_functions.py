@@ -1550,10 +1550,10 @@ def clip_model(model, im, snr):
 		model_data = ia.getchunk()
 		if i.endswith('tt0'):
 			model_data[model_data<0] = 0
-		model_data[:max_pix[1]-pix_scale[1],:,:,:] = 0
-		model_data[max_pix[1]+pix_scale[1]:,:,:,:] = 0
-		model_data[:,:max_pix[0]-pix_scale[0],:,:] = 0
-		model_data[:,max_pix[0]+pix_scale[0]:,:,:] = 0
+		model_data[:max_pix[0]-pix_scale[1],:,:,:] = 0
+		model_data[max_pix[0]+pix_scale[1]:,:,:,:] = 0
+		model_data[:,:max_pix[1]-pix_scale[0],:,:] = 0
+		model_data[:,max_pix[1]+pix_scale[0]:,:,:] = 0
 		ia.putchunk(model_data)
 		ia.close()
 
