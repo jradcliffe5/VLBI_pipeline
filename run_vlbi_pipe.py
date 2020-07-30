@@ -57,9 +57,11 @@ if inputs['make_scripts'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
 			write_hpc_headers(step=i,params=params)
-			if i in ['prepare_EVN','import_fitsidi']:
+			if i in ['import_fitsidi']:
 				parallel=False
 			elif ((steps['make_mms'] == 1)|(steps_run['make_mms']==1)):
+				parallel=True
+			elif i in ['prepare_EVN']
 				parallel=True
 			else:
 				parallel=False
