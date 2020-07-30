@@ -19,6 +19,16 @@ except:
 	from taskinit import casalog
 	casa6=False
 
+parallel=True
+if parallel == True:
+	if casa6 == True:
+		import mpicasa as mpi4casa	
+	from mpi4casa.MPICommandClient import MPICommandClient
+	client = MPICommandClient()
+	client.set_log_mode('redirect')
+	client.start_services()
+	cmd = []
+
 try: 
 	from astropy.io import fits
 except:
@@ -102,10 +112,18 @@ if telescop == 'EVN':
 	## Append tsys
 	casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
 	for i in idifiles:
-		casalog.post(origin=filename,message='Appending to %s'%i)
-		append_tsys(antabfile=antabfile, idifiles=i)
+		if parallel == True:
+			cmd1 = "append_tsys(antabfile=%s, idifiles=%s)"%(antabfile,i)
+			cmdId = client.push_command_request(cmd1,block=False)
+			cmd.append(cmdId)
+		else:
+			casalog.post(origin=filename,message='Appending to %s'%i)
+			append_tsys(antabfile=antabfile, idifiles=i)
+	if parallel == True:
+		resultList = client.get_command_response(cmd,block=True)
 
 
+'''
 ### Convert gaincurve
 rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
@@ -145,3 +163,4 @@ if params["prepare_data"]["flag_file"] != "none":
 
 steps_run['prepare_data'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+'''

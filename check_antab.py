@@ -52,6 +52,7 @@ data = []
 data_head = {}
 tsys = []
 errorm=[]
+ants = []
 ncount = 0
 for line in file:
 	line = line.rstrip().lstrip()
@@ -65,6 +66,7 @@ for line in file:
 			temp = list(filter(None, temp))
 			if i.startswith('GAIN'):
 				data_head['TELESCOPE'] = temp[1]
+				ants.append([temp[1],ncount])
 				for j in temp:
 					if j.startswith('DPFU'):
 						data_head['DPFU'] = np.array(j.split("DPFU=")[1].split(",")).astype(float)
@@ -95,6 +97,16 @@ for line in file:
 		data.append(line)
 	else:
 		ncount+=1
+
+## Check for duplicate ants
+ants = np.array(ants).T
+unq, unq_idx, unq_cnt = np.unique(ants[0], return_inverse=True, return_counts=True)
+cnt_mask = unq_cnt > 1
+dup_ids = unq[cnt_mask]
+
+if dup_ids.tolist() != []:
+	for i in dup_ids:
+		errorm.append('Duplicate antenna entry, please check carefully and adjust - %s on lines %s'%(i,", ".join(ants[1][ants[0]==i].tolist())))
 
 if errorm == []:
 	casalog.post(origin=filename,priority='INFO',message='No errors found in the antab file - please proceed with your calibration')
