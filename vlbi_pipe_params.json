@@ -18,7 +18,7 @@
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
-        "fitsidi_path"      :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078F/raw_UV",
+        "fitsidi_path"      :  "raw_UV",
         "refant"            : ["EF","T6","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
         "fringe_finders"    : ["3C345","DA193"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
@@ -205,7 +205,7 @@
         "target_path"       : "",      
         "pbcor":{
             "implementation": "IDG",
-            "vix_file": "",
+            "vix_file"      : "",
             "diff_corr"     : true
         },
         "image":{
