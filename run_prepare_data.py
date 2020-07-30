@@ -21,9 +21,10 @@ except:
 
 parallel=True
 if parallel == True:
-	if casa6 == True:
-		import mpicasa as mpi4casa	
-	from mpi4casa.MPICommandClient import MPICommandClient
+	if casa6 == True:	
+		from casampi.MPICommandClient import MPICommandClient
+	else:
+		from mpi4casa.MPICommandClient import MPICommandClient
 	client = MPICommandClient()
 	client.set_log_mode('redirect')
 	client.start_services()
