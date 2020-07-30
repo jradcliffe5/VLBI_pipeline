@@ -202,7 +202,7 @@
         }
     },
     "apply_to_all":{  
-        "target_path"       : "",      
+        "target_path"       : "target_folder",      
         "pbcor":{
             "implementation": "IDG",
             "vix_file"      : "",

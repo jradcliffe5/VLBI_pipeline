@@ -1,4 +1,4 @@
-import re, os, json, inspect, sys, copy
+import re, os, json, inspect, sys, copy, glob, tarfile
 import collections
 from collections import OrderedDict
 ## Numerical routines
@@ -15,8 +15,6 @@ from scipy.interpolate import interp1d
 from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
-import glob
-import tarfile
 
 
 try:
@@ -1566,3 +1564,35 @@ def extract_tarfile(tar_file,cwd):
 	for member in tar.getmembers():
 		print("Extracting %s" % member.name)
 		tar.extract(member, path=cwd)
+
+def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
+	if idifiles == []:
+		idifiles={}
+		if telescope == 'EVN':
+			check_arr = []
+			files = []
+			for i in os.listdir('%s'%target_dir):
+				files.append(i)
+				check_arr.append(i.startswith(project_code)&('IDI'in i))
+			if np.all(check_arr) == True:
+				tar=False
+				unique_files = np.unique([i.split('.IDI')[0] for i in files])
+				for k in unique_files:
+					idifiles[k] = glob.glob('%s/%s*'%(target_dir,k))
+			elif np.all(check_arr) == False:
+				check_arr = []
+				files = []
+				for i in os.listdir('%s'%target_dir):
+					files.append(i)
+					check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
+				if np.all(check_arr) == True:
+					tar=True
+				else:
+					sys.exit()
+			else:
+				sys.exit()
+		idifiles['tar'] = tar
+		return idifiles
+	else:
+		return idifiles
+
