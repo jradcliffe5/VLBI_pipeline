@@ -41,6 +41,9 @@ try:
 except:
 	import pyfits as fits
 
+casalog.origin('prepare_data')
+casalog.post("")
+
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)

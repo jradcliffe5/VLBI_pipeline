@@ -1112,13 +1112,13 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	runc=0
 	tb.open(msfile)
 	for h in range(len(calibrators)):
-		fig = plt.figure(1,figsize=(27,9))
+		#fig = plt.figure(1,figsize=(27,9))
 		subt=tb.query('ANTENNA1==ANTENNA2 and FIELD_ID==%s'%(calibrators[h]))
 		t_cal = np.average(subt.getcol('TIME'))
 		for j in range(nspw):
 			x = np.arange(j*nchan,(j+1)*nchan,1)
 			for i in range(nants):
-				ax = fig.add_subplot(gs[i])
+				#ax = fig.add_subplot(gs[i])
 				autocorrs = np.empty((npol,nchan),dtype=complex)
 				for k in range(npol):
 					try:
@@ -1150,7 +1150,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 							data_median_i = data_median_i/np.max(data_median_i)
 						if renormalise == 'median':
 							data_median_i = data_median_i/np.median(data_median_i[10:25])
-						ax.scatter(x,data_median_i,c=polcol[k],marker=polmar[k])
+						#ax.scatter(x,data_median_i,c=polcol[k],marker=polmar[k])
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
@@ -1167,7 +1167,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 				#ax3.scatter(x, scipy_clipper(data_median)-data_median,c=polcol[k])
 
 			
-			fig.savefig('%s_autocorr_bpass.png'%epoch,bbox_inches='tight')
+			#fig.savefig('%s_autocorr_bpass.png'%epoch,bbox_inches='tight')
 			#smart_autocorr_clip(np.mean(np.abs(data),axis=2)[0])
 
 	tb.close()

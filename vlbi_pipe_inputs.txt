@@ -10,11 +10,11 @@ run_jobs = True
 prepare_data = 0
 import_fitsidi = 0
 make_mms = 0
-apriori_cal = 1
+apriori_cal = 0
 init_flag = 0
-fit_autocorrs = 1
-sub_band_delay = 1
-bandpass_cal = 1
+fit_autocorrs = 0
+sub_band_delay = 0
+bandpass_cal = 0
 phase_referencing = 1
 apply_target = 1
 ## Wide-field steps ##

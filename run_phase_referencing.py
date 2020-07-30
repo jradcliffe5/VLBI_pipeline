@@ -18,6 +18,8 @@ except:
 	from taskinit import casalog
 	casa6=False
 
+casalog.origin('vp_phase_referencing')
+
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
