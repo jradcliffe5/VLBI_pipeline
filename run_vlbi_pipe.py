@@ -61,7 +61,7 @@ if inputs['make_scripts'] == 'True':
 				parallel=False
 			elif ((steps['make_mms'] == 1)|(steps_run['make_mms']==1)):
 				parallel=True
-			elif i in ['prepare_EVN']
+			elif i in ['prepare_EVN']:
 				parallel=True
 			else:
 				parallel=False
