@@ -69,6 +69,7 @@ if inputs['make_scripts'] == 'True':
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
 			else:
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
+			print(i,parallel)
 
 
 if inputs['run_jobs'] == 'True':

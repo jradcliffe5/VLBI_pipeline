@@ -12,7 +12,7 @@
         "default_mpiprocs"  :    24,
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "",
+        "mpicasapath"       :  "mpirun",
         "casapath"          :  "python",
         "singularity"       :  false,
         "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],

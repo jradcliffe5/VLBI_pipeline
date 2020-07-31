@@ -130,8 +130,6 @@ for i in idifiles:
 if parallel == True:
 	resultList = client.get_command_response(cmd,block=True)
 
-
-
 ### Convert gaincurve
 rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')

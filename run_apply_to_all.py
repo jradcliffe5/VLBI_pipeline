@@ -50,8 +50,9 @@ target_path = params['apply_to_all']['target_path']
 
 target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NAME'],project_code=params['global']['project_code'],idifiles=[])
 
+print(target_files)
 params['import_fitsidi']["const_obs_id"] = False
-
+'''
 if parallel == True:
 	cmd = []
 	for i in target_files.keys():
@@ -62,15 +63,15 @@ if parallel == True:
 			cmd.append(cmdId[0])
 if parallel == True:
 	resultList = client.get_command_response(cmd,block=True)
+'''
 #importfitsidi(fitsidifile=idifiles,\
 #	          vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
 #	          constobsid=params['import_fitsidi']["const_obs_id"],\
 #	          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 #		cmd.append(cmdId[0])
-'''
+
 if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 	msinfo = get_ms_info(msfile)
 	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-'''

@@ -177,8 +177,13 @@ def rmfiles(files):
 	for i in files:
 		if "*" in i:
 			files_to_die = glob.glob(i)
-			casalog.post(priority="INFO",origin=func_name,message='Directories starting with %s - deleting'% i)
-			os.system('rm %s'% " ".join(files_to_die))
+			casalog.post(priority="INFO",origin=func_name,message='Files matching with %s - deleting'% i)
+			for j in files_to_die:
+				if os.path.exists(j) == True:
+					casalog.post(priority="INFO",origin=func_name,message='File %s found - deleting'% j)
+					os.system('rm %s'%j)
+				else:
+					pass
 		elif os.path.exists(i) == True:
 			casalog.post(priority="INFO",origin=func_name,message='File %s found - deleting'% i)
 			os.system('rm %s'%i)
@@ -192,8 +197,13 @@ def rmdirs(dirs):
 	for i in dirs:
 		if "*" in i:
 			files_to_die = glob.glob(i)
-			casalog.post(priority="INFO",origin=func_name,message='Directories starting with %s - deleting'% i)
-			os.system('rm -r %s'%" ".join(files_to_die))
+			casalog.post(priority="INFO",origin=func_name,message='Directories matching with %s - deleting'% i)
+			for j in files_to_die:
+				if os.path.exists(j) == True:
+					casalog.post(priority="INFO",origin=func_name,message='Directory/table %s found - deleting'% j)
+					os.system('rm -r %s'%j)
+				else:
+					pass
 		elif os.path.exists(i) == True:
 			casalog.post(priority="INFO",origin=func_name,message='Directory/table %s found - deleting'% i)
 			os.system('rm -r %s'%i)
@@ -525,7 +535,7 @@ def get_ms_info(msfile):
 	
 	return msinfo
 
-def fill_flagged_soln(caltable='', fringecal=False):
+def fill_flagged_soln2(caltable='', fringecal=False):
 	"""
 	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
 	one.
@@ -589,7 +599,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 	tb.putcol(gaincol, gain)
 	tb.done()
 
-def fill_flagged_soln2(caltable='', fringecal=False):
+def fill_flagged_soln(caltable='', fringecal=False):
 	"""
 	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
 	one.
@@ -1025,8 +1035,7 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 	'''
 
 	os.system('cp -r %s %s.bpasscal'%(caltable,caltable))
-	for i in range(50):
-		fill_flagged_soln(caltable=caltable,fringecal=True)
+	fill_flagged_soln(caltable=caltable,fringecal=True)
 	'''
 	flag_stats, fid = get_caltable_flag_stats(caltable=caltable,
 											  msinfo=msinfo,
@@ -1587,6 +1596,10 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 					check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
+					for k in files:
+						tarf = tarfile.open("%s/%s"%(target_dir,k), "r:gz")
+						idifiles[k.split('.tar.gz')[0]] = tarf.getnames()
+						tarf.close()
 				else:
 					sys.exit()
 			else:
