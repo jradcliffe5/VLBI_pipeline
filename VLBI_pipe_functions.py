@@ -1610,3 +1610,18 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 	else:
 		return idifiles
 
+def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, append, minsnr, msinfo, gaintable_dict, casa6):
+	try:
+		if casa6 == True:	
+			from casampi.MPICommandClient import MPICommandClient
+		else:
+			from mpi4casa.MPICommandClient import MPICommandClient
+		client = MPICommandClient()
+		client.set_log_mode('redirect')
+		client.start_services()
+		parallel=True
+		cmd = []
+	except:
+		parallel=False
+
+	

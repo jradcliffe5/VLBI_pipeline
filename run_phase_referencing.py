@@ -39,9 +39,9 @@ else:
 refant = find_refants(params['global']['refant'],msinfo)
 
 if params['phase_referencing']['select_calibrators'] == 'default':
-		fields = params['global']['phase_calibrators']
+	fields = params['global']['phase_calibrators']
 else:
-		fields = list(params['phase_referencing']['select_calibrators'])
+	fields = list(params['phase_referencing']['select_calibrators'])
 
 
 cal_type = params['phase_referencing']["cal_type"]
@@ -247,6 +247,8 @@ for i in range(len(fields)):
 					antennas = ''
 					for k in params['phase_referencing']['pass_ants'][i]:
 						antennas = antennas+'!%s;'%k
+					if antennas.endswith(';'):
+						antennas = antennas[:-1]
 				tclean(vis=msfile,
 					   imagename='%s-initmodel'%(fields[i+1]),
 					   field='%s'%fields[i+1],

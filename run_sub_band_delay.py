@@ -48,23 +48,41 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 	else:
 		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
 
-	fringefit(vis=msfile,
-			  caltable='%s/%s.sbd'%(cwd,p_c),
-			  field=fields,
-			  solint=params['sub_band_delay']['sol_interval'][i],
-			  antenna='',
-			  spw='',
-			  timerange=params['sub_band_delay']['time_range'][i],
-			  zerorates=True,
-			  niter=params['sub_band_delay']['fringe_niter'],
-			  refant=refant,
-			  append=append,
-			  minsnr=params['sub_band_delay']['min_snr'][i],
-			  gaintable=gaintables['gaintable'],
-			  gainfield=gaintables['gainfield'],
-			  interp=gaintables['interp'],
-			  spwmap=gaintables['spwmap'],
-			  parang=gaintables['parang'])
+	params['sub_band_delay']['extensive_search'] = False
+	if params['sub_band_delay']['extensive_search'] == False:
+		fringefit(vis=msfile,
+				  caltable='%s/%s.sbd'%(cwd,p_c),
+				  field=fields,
+				  solint=params['sub_band_delay']['sol_interval'][i],
+				  antenna='',
+				  spw='',
+				  timerange=params['sub_band_delay']['time_range'][i],
+				  zerorates=True,
+				  niter=params['sub_band_delay']['fringe_niter'],
+				  refant=refant,
+				  append=append,
+				  minsnr=params['sub_band_delay']['min_snr'][i],
+				  gaintable=gaintables['gaintable'],
+				  gainfield=gaintables['gainfield'],
+				  interp=gaintables['interp'],
+				  spwmap=gaintables['spwmap'],
+				  parang=gaintables['parang'])
+
+	elif params['sub_band_delay']['extensive_search'] == True:
+		do_eb_fringefit(vis=msfile,
+                        caltable='%s/%s.sbd'%(cwd,p_c),
+                        field=fields,
+                        solint=params['sub_band_delay']['sol_interval'][i],
+                        timerange=params['sub_band_delay']['time_range'][i],
+                        zerorates=True,
+                        niter=params['sub_band_delay']['fringe_niter'],
+                        append=append,
+  						minsnr=params['sub_band_delay']['min_snr'][i],
+                        msinfo=msinfo,
+                        gaintable_dict=gaintables)
+	else:
+		casalog.post(origin=filename,message='Wrong parameter for extensive baseline (true/false)',priority='SEVERE')
+		sys.exit()
 
 
 if params['sub_band_delay']['modify_sbd']['run'] == True:
