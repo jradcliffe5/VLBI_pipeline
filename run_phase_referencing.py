@@ -243,9 +243,14 @@ for i in range(len(fields)):
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 					delims.append('%s-initmodel%s*'%(fields[i+1],z))
 				rmdirs(delims)
+				if params['phase_referencing']['pass_ants'][i] != []:
+					antennas = ''
+					for k in params['phase_referencing']['pass_ants'][i]:
+						antennas = antennas+'!%s;'%k
 				tclean(vis=msfile,
 					   imagename='%s-initmodel'%(fields[i+1]),
 					   field='%s'%fields[i+1],
+					   antenna=antennas,
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i]]/1000.),
 					   imsize=imsize,
 					   deconvolver='%s'%deconvolver_tclean[0],

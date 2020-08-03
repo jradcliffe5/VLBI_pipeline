@@ -535,7 +535,7 @@ def get_ms_info(msfile):
 	
 	return msinfo
 
-def fill_flagged_soln2(caltable='', fringecal=False):
+def fill_flagged_soln(caltable='', fringecal=False):
 	"""
 	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
 	one.
@@ -599,7 +599,7 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 	tb.putcol(gaincol, gain)
 	tb.done()
 
-def fill_flagged_soln(caltable='', fringecal=False):
+def fill_flagged_soln2(caltable='', fringecal=False):
 	"""
 	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
 	one.
@@ -1035,7 +1035,8 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 	'''
 
 	os.system('cp -r %s %s.bpasscal'%(caltable,caltable))
-	fill_flagged_soln(caltable=caltable,fringecal=True)
+	for i in range(20):
+		fill_flagged_soln(caltable=caltable,fringecal=True)
 	'''
 	flag_stats, fid = get_caltable_flag_stats(caltable=caltable,
 											  msinfo=msinfo,
