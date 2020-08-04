@@ -1645,7 +1645,7 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		for i in range(len(refants)):
 			#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
 			cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s);"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, ','.join(refants[i]), zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'])
-			cmd2 = "import os; os.system('rm %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
+			cmd2 = "import os; os.system('touch %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
 			try:
 				cmdId = client.push_command_request(command=cmd1+cmd2,block=False)
 				#cmdId = client.push_command_request(command=cmd1,parameters=params,block=False)
