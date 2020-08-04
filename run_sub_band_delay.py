@@ -48,7 +48,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 	else:
 		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
 
-	params['sub_band_delay']['extensive_search'] = False
+	params['sub_band_delay']['extensive_search'] = True
 	if params['sub_band_delay']['extensive_search'] == False:
 		fringefit(vis=msfile,
 				  caltable='%s/%s.sbd'%(cwd,p_c),
@@ -70,7 +70,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 
 	elif params['sub_band_delay']['extensive_search'] == True:
 		do_eb_fringefit(vis=msfile,
-                        caltable='%s/%s.sbd'%(cwd,p_c),
+                        caltable='%s.sbd'%(p_c),
                         field=fields,
                         solint=params['sub_band_delay']['sol_interval'][i],
                         timerange=params['sub_band_delay']['time_range'][i],
@@ -79,12 +79,13 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
                         append=append,
   						minsnr=params['sub_band_delay']['min_snr'][i],
                         msinfo=msinfo,
-                        gaintable_dict=gaintables)
+                        gaintable_dict=gaintables,
+                        casa6=casa6)
 	else:
 		casalog.post(origin=filename,message='Wrong parameter for extensive baseline (true/false)',priority='SEVERE')
 		sys.exit()
 
-
+'''
 if params['sub_band_delay']['modify_sbd']['run'] == True:
 	rmdirs(['%s/%s.sbd.bpass'%(cwd,p_c)])
 	auto_modify_sbdcal(msfile=msfile,
@@ -104,3 +105,4 @@ gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['sub_band_delay'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+'''

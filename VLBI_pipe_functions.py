@@ -1,4 +1,4 @@
-import re, os, json, inspect, sys, copy, glob, tarfile
+import re, os, json, inspect, sys, copy, glob, tarfile, random
 import collections
 from collections import OrderedDict
 ## Numerical routines
@@ -15,7 +15,6 @@ from scipy.interpolate import interp1d
 from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
-
 
 try:
 	# CASA 6
@@ -1080,6 +1079,11 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	msfile = '%s.ms'%epoch
 
 	rmdirs(['%s.auto.bpass'%(epoch)])
+	cb = casatools.calibrater()
+	cb.open(msfile,False,False,False)
+	cb.createcaltable('%s.auto.bpass'%(epoch), 'Complex', 'B Jones', False)
+	cb.close()
+	'''
 	bandpass(vis=msfile,
 			 caltable='%s.auto.bpass'%(epoch),
 			 field=','.join(calibrators),
@@ -1091,7 +1095,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 			 refant='0,1,2,3,4,5,6,7,8,9,10',
 			 fillgaps=0,
 			 minsnr=10.)
-
+	'''
 	tb = casatools.table()
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
@@ -1180,7 +1184,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 
 	tb.close()
 	tb.open('%s.auto.bpass'%(epoch),nomodify=False)
-	tb.removerows(np.arange(0,tb.nrows(),1))
+	#tb.removerows(np.arange(0,tb.nrows(),1))
 	tb.addrows(tbnrows)
 	tb.putcol('TIME',TIME)
 	tb.putcol('CPARAM',CPARAM)
@@ -1623,5 +1627,34 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		cmd = []
 	except:
 		parallel=False
+	if os.path.exists('%s_eb'%caltable):
+		rmdirs(['%s_eb'%caltable])
+	os.system('mkdir %s_eb'%caltable)
 
-	
+	refants = []
+	err_array = []
+	for i in msinfo['ANTENNAS']['anttoID'].keys():
+		if i not in err_array:
+			ant_temp = copy.deepcopy(list(msinfo['ANTENNAS']['IDtoant'].values()))
+			ant_temp.remove(i)
+			random.shuffle(ant_temp)
+			ant_temp.insert(0,i)
+			refants.append(ant_temp)
+	if parallel==True:
+		cmd=[]
+		for i in range(len(refants)):
+			#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
+			cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s);"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, ','.join(refants[i]), zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'])
+			cmd2 = "import os; os.system('rm %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
+			try:
+				cmdId = client.push_command_request(command=cmd1+cmd2,block=False)
+				#cmdId = client.push_command_request(command=cmd1,parameters=params,block=False)
+				#cmdId = client.push_command_request(command=cmd2,target_server=cmdId,block=False)
+				cmd.append(cmdId[0])
+			except:
+				print('fringefit failed for refant - %s'%(refants[i][0]))
+				pass
+		resultList = client.get_command_response(cmd,block=True)
+
+
+
