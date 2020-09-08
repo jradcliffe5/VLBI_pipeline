@@ -75,7 +75,7 @@ def copy_pols(msfile,antenna,pol,newpol):
 	ram_restrict = 100000
 	ranger = list(range(0,tb.nrows(),ram_restrict))
 	
-	for j in ranger:
+	for j in progressbar(ranger,'',50):
 		if j == ranger[-1]:
 			ram_restrict = tb.nrows()%ram_restrict
 		gain = tb.getcol('DATA',startrow=j, nrow=ram_restrict, rowincr=1)

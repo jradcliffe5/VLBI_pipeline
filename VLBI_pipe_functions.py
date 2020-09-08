@@ -1656,5 +1656,302 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 				pass
 		resultList = client.get_command_response(cmd,block=True)
 
+def progressbar(it, prefix="", size=60, file=sys.stdout):
+	count = len(it)
+	def show(j):
+		x = int(size*j/count)
+		file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), j, count))
+		file.flush()        
+	show(0)
+	for i, item in enumerate(it):
+		yield item
+		show(i+1)
+	file.write("\n")
+	file.flush()
 
+def linterpgain(caltable,obsid,field,extrapolate,fringecal=False):
 
+	#
+	# Task linterpgain
+	# previously interpgain
+	#
+	#    Linearly interpolate missing gain solutions,
+	#    overwriting the input caltable.  Optionally
+	#    perform extrapolation.
+	#    Christopher A. Hales (and heavily modified by J. Radcliffe)
+	#
+	#    Version 1.2 (tested with CASA Version 5.7.0)
+	#    08-09-2020
+	
+	casalog.origin('linterpgain')
+
+	if field == '*':
+		selection0='OBSERVATION_ID=='+obsid
+	else:
+		selection0='OBSERVATION_ID=='+obsid+'&&FIELD_ID=='+field
+
+	tb = casatools.table()
+	tb.open(caltable,nomodify=False)
+	
+	subt=tb.query(selection0)
+	spw=subt.getcol('SPECTRAL_WINDOW_ID')
+	ant=subt.getcol('ANTENNA1')
+	subt.done()
+	
+	if fringecal == False:
+		gaincol = 'CPARAM'
+	else:
+		gaincol = 'FPARAM'
+	for a in np.unique(ant):
+		for s in np.unique(spw):
+			selection=selection0+'&&ANTENNA1=='+str(a)+'&&SPECTRAL_WINDOW_ID=='+str(s)
+			subt=tb.query(selection)
+			timecol=subt.getcol('TIME')
+			cparam=subt.getcol(gaincol)
+			gainshape = cparam.shape
+			flag=subt.getcol('FLAG')
+			if fringecal == False:
+				for p in range(2):
+					if (np.sum(flag[p,0])>0) & (np.sum(flag[p,0])<=len(timecol)-2):
+						# interpolate amp and phase separately
+						amp   = np.abs(cparam[p,0])
+						phase = np.angle(cparam[p,0])
+						amp[flag[p,0]==True]   =  np.interp(timecol[flag[p,0]==True],  \
+															timecol[flag[p,0]==False],amp[flag[p,0]==False])
+						phase[flag[p,0]==True] = (np.interp(timecol[flag[p,0]==True],  \
+															timecol[flag[p,0]==False], \
+															np.unwrap(phase[flag[p,0]==False])) + np.pi) % \
+												 (2 * np.pi ) - np.pi
+						if extrapolate:
+							cparam[p,0] = amp * np.exp(phase*1j)
+							flag[p,0]   = False
+						else:
+							indxMIN = np.where(flag[p,0]==False)[0][0]
+							indxMAX = np.where(flag[p,0]==False)[0][-1]
+							cparam[p,0,indxMIN+1:indxMAX] = amp[indxMIN+1:indxMAX] * \
+															np.exp(phase[indxMIN+1:indxMAX]*1j)
+							flag[p,0,indxMIN+1:indxMAX]   = False
+			if fringecal == True:
+				for p in range(gainshape[0]):
+					if (np.sum(flag[p,0])>0) & (np.sum(flag[p,0])<=len(timecol)-2):
+						gain   = cparam[p,0]
+						gain[flag[p,0]==True]   =  np.interp(timecol[flag[p,0]==True],  \
+															timecol[flag[p,0]==False],gain[flag[p,0]==False])
+						if extrapolate:
+							cparam[p,0] = gain
+							flag[p,0]   = False
+						else:
+							indxMIN = np.where(flag[p,0]==False)[0][0]
+							indxMAX = np.where(flag[p,0]==False)[0][-1]
+							cparam[p,0,indxMIN+1:indxMAX] = gain[indxMIN+1:indxMAX]
+							flag[p,0,indxMIN+1:indxMAX]   = False
+			
+			subt.putcol(gaincol,cparam)
+			subt.putcol('FLAG',flag)
+			subt.done()
+	
+	tb.done()
+
+def ninterpgain(caltable,obsid,field,extrapolate,fringecal=False):
+	"""
+	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
+	one.
+	If you do not do that and applycal blindly with the table your data gets 
+	flagged between  calibration runs that have a bad/flagged solution at one edge.
+	Can be pretty bad when you calibrate every hour or more 
+	(when you are betting on self-cal) of observation (e.g L-band of the EVLA)..one can 
+	lose the whole hour of good data without realizing !
+	"""
+	casalog.origin('ninterpgain')
+	
+	if field == '*':
+		selection0='OBSERVATION_ID=='+obsid
+	else:
+		selection0='OBSERVATION_ID=='+obsid+'&&FIELD_ID=='+field
+
+	tb = casatools.table()
+	tb.open(caltable,nomodify=False)
+	
+	subt=tb.query(selection0)
+	spw=subt.getcol('SPECTRAL_WINDOW_ID')
+	ant=subt.getcol('ANTENNA1')
+	subt.done()
+
+	if fringecal == False:
+		gaincol = 'CPARAM'
+	else:
+		gaincol = 'FPARAM'
+
+	for a in np.unique(ant):
+		for s in np.unique(spw):
+			selection=selection0+'&&ANTENNA1=='+str(a)+'&&SPECTRAL_WINDOW_ID=='+str(s)
+			subt=tb.query(selection)
+			timecol=subt.getcol('TIME')
+			cparam=subt.getcol(gaincol)
+			gainshape = cparam.shape
+			flag=subt.getcol('FLAG')
+			for kk in range(1, gainshape[2]):
+				for chan in range(gainshape[1]):
+					for pol in range(gainshape[0]):
+						if(flag[pol,chan,kk] and not flag[pol,chan,kk-1]):
+							cparam[pol,chan,kk]=False
+							cparam[pol,chan,kk]=cparam[pol,chan,kk-1]
+						if(flag[pol,chan,kk-1] and not flag[pol,chan,kk]):
+							flag[pol,chan,kk-1]=False
+							cparam[pol,chan,kk-1]=cparam[pol,chan,kk]
+			subt.putcol(gaincol,cparam)
+			subt.putcol('FLAG',flag)
+			subt.done()
+	
+	tb.done()
+
+	#if extrapolate:
+	#	cparam[p,0] = cparam
+	#	flag[p,0]   = False
+	#else:
+	#	indxMIN = np.where(flag[p,0]==False)[0][0]
+	#	indxMAX = np.where(flag[p,0]==False)[0][-1]
+	#	cparam[p,0,indxMIN+1:indxMAX] = amp[indxMIN+1:indxMAX] * \
+	#											np.exp(phase[indxMIN+1:indxMAX]*1j)
+	#	flag[p,0,indxMIN+1:indxMAX]   = False
+	'''
+	if fringecal==False:
+		gaincol='CPARAM'
+	else:
+		gaincol='FPARAM'
+	tb = casatools.table()
+	tb.open(caltable, nomodify=False)
+	flg=tb.getcol('FLAG')
+	#sol=tb.getcol('SOLUTION_OK')
+	ant=tb.getcol('ANTENNA1')
+	gain=tb.getcol(gaincol)
+	t=tb.getcol('TIME')
+	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	#dd=tb.getcol('CAL_DESC_ID')
+	maxant=np.max(ant)
+	maxdd=np.max(dd)
+	npol=len(gain[:,0,0])
+	nchan=len(gain[0,:,0])
+	
+	k=1
+	numflag=0.0
+	for k in range(maxant+1):
+		for j in range(maxdd+1):
+			subflg=flg[:,:,(ant==k) & (dd==j)]
+			subt=t[(ant==k) & (dd==j)]
+			#subsol=sol[:,:,(ant==k) & (dd==j)]
+			subgain=gain[:,:,(ant==k) & (dd==j)]
+			#print 'subgain', subgain.shape
+			for kk in range(1, len(subt)):
+				for chan in range(nchan):
+						for pol in range(npol):
+								if(subflg[pol,chan,kk] and not subflg[pol,chan,kk-1]):
+										numflag += 1.0
+										subflg[pol,chan,kk]=False
+										#subsol[pol, chan, kk]=True
+										subgain[pol,chan,kk]=subgain[pol,chan,kk-1]
+								if(subflg[pol,chan,kk-1] and not subflg[pol,chan,kk]):
+										numflag += 1.0
+										subflg[pol,chan,kk-1]=False
+										#subsol[pol, chan, kk-1]=True
+										subgain[pol,chan,kk-1]=subgain[pol,chan,kk]
+		flg[:,:,(ant==k) & (dd==j)]=subflg
+		#sol[:,:,(ant==k) & (dd==j)]=subsol
+		gain[:,:,(ant==k) & (dd==j)]=subgain
+	tb.putcol('FLAG', flg)
+	#tb.putcol('SOLUTION_OK', sol)
+	tb.putcol(gaincol, gain)
+	tb.done()
+	'''
+
+def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
+
+	#
+	# Task interpgain
+	# previously interpgain
+	#
+	#    Linearly interpolate missing gain solutions,
+	#    overwriting the input caltable.  Optionally
+	#    perform extrapolation.
+	#    Christopher A. Hales (and heavily modified by J. Radcliffe)
+	#
+	#    Version 1.2 (tested with CASA Version 5.7.0)
+	#    08-09-2020
+	
+	casalog.origin('interpgain')
+
+	kind = interp
+	if field == '*':
+		selection0='OBSERVATION_ID=='+obsid
+	else:
+		selection0='OBSERVATION_ID=='+obsid+'&&FIELD_ID=='+field
+
+	tb = casatools.table()
+	tb.open(caltable,nomodify=False)
+	
+	subt=tb.query(selection0)
+	spw=subt.getcol('SPECTRAL_WINDOW_ID')
+	ant=subt.getcol('ANTENNA1')
+	subt.done()
+	
+	if fringecal == False:
+		gaincol = 'CPARAM'
+	else:
+		gaincol = 'FPARAM'
+	for a in np.unique(ant):
+		for s in np.unique(spw):
+			selection=selection0+'&&ANTENNA1=='+str(a)+'&&SPECTRAL_WINDOW_ID=='+str(s)
+			subt=tb.query(selection)
+			timecol=subt.getcol('TIME')
+			cparam=subt.getcol(gaincol)
+			gainshape = cparam.shape
+			flag=subt.getcol('FLAG')
+			if fringecal == False:
+				for p in range(2):
+					if (np.sum(flag[p,0])>0) & (np.sum(flag[p,0])<=len(timecol)-2):
+						# interpolate amp and phase separately
+						amp   = np.abs(cparam[p,0])
+						phase = np.angle(cparam[p,0])
+						f = interp1d(timecol[flag[p,0]==False], amp[flag[p,0]==False],kind=kind)
+						amp[flag[p,0]==True]   =  f(timecol[flag[p,0]==True])
+						f = interp1d(timecol[flag[p,0]==False], np.unwrap(phase[flag[p,0]==False]),kind=kind)
+						phase[flag[p,0]==True] = (f(timecol[flag[p,0]==True]) + np.pi) % \
+												 (2 * np.pi ) - np.pi
+						if extrapolate:
+							cparam[p,0] = amp * np.exp(phase*1j)
+							flag[p,0]   = False
+						else:
+							indxMIN = np.where(flag[p,0]==False)[0][0]
+							indxMAX = np.where(flag[p,0]==False)[0][-1]
+							cparam[p,0,indxMIN+1:indxMAX] = amp[indxMIN+1:indxMAX] * \
+															np.exp(phase[indxMIN+1:indxMAX]*1j)
+							flag[p,0,indxMIN+1:indxMAX]   = False
+			if fringecal == True:
+				for p in range(gainshape[0]):
+					if (np.sum(flag[p,0])>0) & (np.sum(flag[p,0])<=len(timecol)-2):
+						gain   = cparam[p,0]
+						if extrapolate:
+							bounds_error=False
+							fill_value='extrapolate'
+						else:
+							bounds_error=False
+							fill_value=np.nan
+						f = interp1d(timecol[flag[p,0]==False],gain[flag[p,0]==False],kind=kind,bounds_error=bounds_error,fill_value=fill_value)
+						gain[flag[p,0]==True]   =  f(timecol[flag[p,0]==True])
+
+						if extrapolate:
+							cparam[p,0] = gain
+							flag[p,0]   = False
+							flag[cparam==np.nan]=True
+						else:
+							indxMIN = np.where(flag[p,0]==False)[0][0]
+							indxMAX = np.where(flag[p,0]==False)[0][-1]
+							cparam[p,0,indxMIN+1:indxMAX] = gain[indxMIN+1:indxMAX]
+							flag[p,0,indxMIN+1:indxMAX]   = False
+							flag[cparam==np.nan]=True
+			
+			subt.putcol(gaincol,cparam)
+			subt.putcol('FLAG',flag)
+			subt.done()
+	
+	tb.done()
