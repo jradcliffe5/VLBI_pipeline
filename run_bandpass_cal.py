@@ -91,8 +91,8 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 interp=gaintables['interp'],
 			 spwmap=gaintables['spwmap'],
 			 parang=gaintables['parang'])
-for i in range(40):
-	fill_flagged_soln(caltable='%s/%s.bpass'%(cwd,p_c),fringecal=False)
+
+interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 
 
 

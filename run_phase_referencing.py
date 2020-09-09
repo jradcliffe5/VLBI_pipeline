@@ -53,6 +53,10 @@ for i in range(len(fields)):
 		
 		rmdirs([caltable])
 		if cal_type[i][j] == 'f':
+			if params['phase_referencing']['do_disp_delays'] == True:
+				paramactive = [True,True,True]
+			else:
+				paramactive = [True,True,False]
 			fringefit(vis=msfile,
 					  caltable=caltable,
 					  field=fields[i],
@@ -62,13 +66,15 @@ for i in range(len(fields)):
 					  refant=refant,
 					  combine=params['phase_referencing']['combine'][i][j],
 					  minsnr=params['phase_referencing']['min_snr'],
+					  paramactive=paramactive,
 					  gaintable=gaintables['gaintable'],
 					  gainfield=gaintables['gainfield'],
 					  interp=gaintables['interp'],
 					  spwmap=gaintables['spwmap'],
 					  parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
-				fill_flagged_soln(caltable=caltable,fringecal=True)
+				interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+				interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 			if params['phase_referencing']['pass_ants'][i] != []:
 				pass_ants = []
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
@@ -107,9 +113,11 @@ for i in range(len(fields)):
 					parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
 				if cal_type[i][j] == 'k':
-					fill_flagged_soln(caltable=caltable,fringecal=True)
+					interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+					interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 				else:
-					fill_flagged_soln(caltable=caltable,fringecal=False)
+					interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=False)
+					interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 			if params['phase_referencing']['pass_ants'][i] != []:
 				pass_ants = []
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
