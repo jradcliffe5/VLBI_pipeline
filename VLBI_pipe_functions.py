@@ -420,7 +420,7 @@ def write_job_script(steps,job_manager):
 		if job_manager=='pbs':
 			commands.append("%s=$(qsub %s job_%s.pbs)"%(j,depend,j))
 		if job_manager=='slurm':
-			commands.append('%s=$(sbatch %s job_%s.slurm)'%(j,depend,j))
+			commands.append('%s=$(sbatch --parsable %s job_%s.slurm)'%(j,depend,j))
 		if job_manager=='bash':
 			commands.append('bash job_%s.bash'%(j))
 	
