@@ -14,7 +14,7 @@ try:
 	casalog.origin('plotcaltable')
 	casa6=True
 except:
-	casalog.post(priority='SEVERE',origin='ERROR',message='Can only work for CASA v6!')
+	casalog.post(priority='SEVERE',origin='ERROR',message='Can only work for CASA v6...')
 	sys.exit()
 
 def time_convert(mytime, myunit='s'):
@@ -158,7 +158,7 @@ def correct_phases(x,units):
 	else:
 		sys.exit()
 
-def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=''):
+def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile='temp.pdf'):
 	func_name = inspect.stack()[0][3]
 	tb=casatools.table()
 	tb.open(caltable)
@@ -169,7 +169,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 			casalog.post(priority='SEVERE',origin=func_name,message='Wrong thing to plot for table')
 			sys.exit()
 	elif 'FPARAM' in tb.colnames():
-		if yaxis in ['delay','phase','tsys','rate']:
+		if yaxis in ['delay','phase','tsys','rate','disp']:
 			gaincol='FPARAM'
 		else:
 			casalog.post(priority='SEVERE',origin=func_name,message='Wrong thing to plot for table')
@@ -183,7 +183,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					'tsys':[0,empty_f,'Tsys (K)'],
 					'delay':[1,empty_f,'Delay (nsec)'],
 					'phase':[0,empty_f, 'Phase (deg)'],
-					'rate':[2,empty_f, 'Rate (psec/sec)']
+					'rate':[2,empty_f, 'Rate (psec/sec)'],
+					'disp':[3,empty_f, 'Disp. Delay (milliTEC)']
 					},
 				'CPARAM':{
 					'amp':[0,np.real, 'Amplitude'],
@@ -294,7 +295,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				for s in range(len(spw)):
 					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
 					gain = subt.getcol(gaincol)
-					print(gain.shape)
+					#print(gain.shape)
 					flag = subt.getcol('FLAG')
 					if gain.shape[1] == 1:
 						ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
@@ -374,7 +375,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 
 parser = optparse.OptionParser()
 parser.add_option("-x","--xaxis", dest="xaxis", help="what to plot for xaxis (can be time/freq)")
-parser.add_option("-y","--yaxis", dest="yaxis", help="what to plot for xaxis (can be amp/phase/delay/rate)")
+parser.add_option("-y","--yaxis", dest="yaxis", help="what to plot for xaxis (can be amp/phase/delay/rate/disp)")
 parser.add_option("-m","--msinfo", dest="msinfo", help="msinfo file from vlbi pipeline")
 parser.add_option("-o","--outfile", dest="outfile", default=False)
 parser.add_option("-c","--caltab", dest="caltable", help="caltable")
