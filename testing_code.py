@@ -41,7 +41,5 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 
-os.system('rm -r eg078d.tsys_original')
-os.system('tar -xvf eg078d.tsys_original.tar.gz')
-interpgain(caltable='eg078d.tsys_original',obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-interpgain(caltable='eg078d.tsys_original',obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+import tec_maps
+tec_image, tec_rms_image, plotname = tec_maps.create(vis='eg078e.ms', doplot=True)
