@@ -29,9 +29,10 @@
 ##                                              using a non-integer 
 ##                                              number instead of an integer will 
 ##                                              result in an error in the future
+##    Modified by J. Radcliffe 2020/09/10  v2.8 Adjusted code to run on CASA 6
 ##
 ##
-##    Tested in CASA 4.3.0 and 4.2.1 on RHEL release 6.4 (Santiago)
+##    Tested in CASA 6.1 on MacOSX 10.15
 ##    Tested in CASA 4.3.0, 4.2.2, and 4.2.1 on Mac OS 10.8.5
 ##
 ##

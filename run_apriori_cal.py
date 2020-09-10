@@ -5,6 +5,7 @@ filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
+import tec_maps
 
 try:
 	# CASA 6
@@ -17,7 +18,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-
+import tec_maps
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
@@ -103,6 +104,13 @@ gencal(vis=msfile,\
        caltable='%s/%s.gcal'%(cwd,p_c),\
        infile='%s/%s.gc'%(cwd,p_c))
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
+
+tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile, doplot=True)
+gencal(vis=msfile, 
+	   caltable='%s/%s.tecim'%(cwd,p_c),
+       caltype='tecim', 
+       infile=tec_image)
+gaintables = append_gaintable(gaintables,['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
 applycal(vis=msfile,
 	     field='',
