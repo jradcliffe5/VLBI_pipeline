@@ -105,6 +105,10 @@ gencal(vis=msfile,\
        infile='%s/%s.gc'%(cwd,p_c))
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
+rmdirs(['%s/%s.tsys'%(cwd,p_c),
+	    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
+	    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
+
 tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile, doplot=False)
 gencal(vis=msfile, 
 	   caltable='%s/%s.tecim'%(cwd,p_c),

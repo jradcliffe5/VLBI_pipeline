@@ -1087,6 +1087,11 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	tb = casatools.table()
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
+	pol_loc = []
+	for j,i in range(len(msinfo['SPECTRAL_WINDOW']['spw_pols'])):
+		if i[0] == i[1]:
+			pol_loc.append(j)
+
 	#if npol > 2:
 		#npol = 2
 	nants = len(msinfo['ANTENNAS']['anttoID'])
@@ -1115,7 +1120,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 			x = np.arange(j*nchan,(j+1)*nchan,1)
 			for i in range(nants):
 				autocorrs = np.empty((npol,nchan),dtype=complex)
-				for k in range(npol):
+				for k in pol_loc:
 					try:
 						subt = tb.query('ANTENNA1==%s and ANTENNA2==%s and FIELD_ID==%s and DATA_DESC_ID==%s'%(i,i,calibrators[h],j))
 						flag = subt.getcol('FLAG')
