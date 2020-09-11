@@ -1075,6 +1075,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	'''
 	This function will fit to the autocorrelations of each antenna on a spw by spw and pol basis
 	'''
+	func_name = inspect.stack()[0][3]
 
 	msfile = '%s.ms'%epoch
 
@@ -1083,19 +1084,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	cb.open(msfile,False,False,False)
 	cb.createcaltable('%s.auto.bpass'%(epoch), 'Complex', 'B Jones', False)
 	cb.close()
-	'''
-	bandpass(vis=msfile,
-			 caltable='%s.auto.bpass'%(epoch),
-			 field=','.join(calibrators),
-			 solint='inf',
-			 antenna='',
-			 spw='',
-			 combine='scan',
-			 solnorm=False,
-			 refant='0,1,2,3,4,5,6,7,8,9,10',
-			 fillgaps=0,
-			 minsnr=10.)
-	'''
+
 	tb = casatools.table()
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
@@ -1104,9 +1093,6 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	nants = len(msinfo['ANTENNAS']['anttoID'])
 	nchan = msinfo['SPECTRAL_WINDOW']['nchan']
 
-	nrows=int(np.ceil(float(nants)/3.))
-	gs = gridspec.GridSpec(nrows=nrows,ncols=3, width_ratios=np.ones(3), height_ratios=np.ones(nrows)/3.)
-	
 	tbnrows = len(calibrators)*nspw*nants
 	TIME = np.empty(tbnrows)
 	FIELD_ID = np.empty(tbnrows)
@@ -1124,13 +1110,11 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	runc=0
 	tb.open(msfile)
 	for h in range(len(calibrators)):
-		#fig = plt.figure(1,figsize=(27,9))
 		subt=tb.query('ANTENNA1==ANTENNA2 and FIELD_ID==%s'%(calibrators[h]))
 		t_cal = np.average(subt.getcol('TIME'))
 		for j in range(nspw):
 			x = np.arange(j*nchan,(j+1)*nchan,1)
 			for i in range(nants):
-				#ax = fig.add_subplot(gs[i])
 				autocorrs = np.empty((npol,nchan),dtype=complex)
 				for k in range(npol):
 					try:
@@ -1158,11 +1142,42 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 							data_median_filter = data_median[(data_median<quant)|(data_median==np.nan)]
 							data_median_i = np.interp(x=x,xp=x_filter,fp=data_median_filter,left=data_median_filter[0],right=data_median_filter[-1])
 							data_median_i = scipy_clipper(data_median_i)
-						if renormalise == 'max':
-							data_median_i = data_median_i/np.max(data_median_i)
-						if renormalise == 'median':
-							data_median_i = data_median_i/np.median(data_median_i[10:25])
-						#ax.scatter(x,data_median_i,c=polcol[k],marker=polmar[k])
+						if renormalise.startswith('max'):
+							if renormalise.split('max')[1] == '':
+								data_median_i = data_median_i/np.max(data_median_i)
+							else:
+								try:
+									chan_pc = (100.-float(renormalise.split('max')[1]))/200.
+									chan1 = int(nchan*chan_pc)
+									chan2 = int(nchan*(1-chan_pc))
+									data_median_i = data_median_i/np.max(data_median_i[chan1:chan2])
+								except:
+									casalog.post(priority='SEVERE',origin=func_name,message='Needs to be in the format maxXX where XX is the percentage of the band to use (from the middle of the spw)')
+									sys.exit()
+						if renormalise.startswith('median'):
+							if renormalise.split('median')[1] == '':
+								data_median_i = data_median_i/np.median(data_median_i)
+							else:
+								try:
+									chan_pc = (100.-float(renormalise.split('median')[1]))/200.
+									chan1 = int(nchan*chan_pc)
+									chan2 = int(nchan*(1-chan_pc))
+									data_median_i = data_median_i/np.median(data_median_i[chan1:chan2])
+								except:
+									casalog.post(priority='SEVERE',origin=func_name,message='Needs to be in the format medianXX where XX is the percentage of the band to use (from the middle of the spw)')
+									sys.exit()
+						if renormalise.startswith('mean'):
+							if renormalise.split('mean')[1] == '':
+								data_median_i = data_median_i/np.mean(data_median_i)
+							else:
+								try:
+									chan_pc = (100.-float(renormalise.split('mean')[1]))/200.
+									chan1 = int(nchan*chan_pc)
+									chan2 = int(nchan*(1-chan_pc))
+									data_median_i = data_median_i/np.mean(data_median_i[chan1:chan2])
+								except:
+									casalog.post(priority='SEVERE',origin=func_name,message='Needs to be in the format meanXX where XX is the percentage of the band to use (from the middle of the spw)')
+									sys.exit()
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
@@ -1175,16 +1190,9 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 				ANTENNA1[runc] = i
 				CPARAM[:,:,runc] = autocorrs
 				runc+=1
-				#ax2.scatter(x, scipy_clipper(data_median),c=polcol[k])
-				#ax3.scatter(x, scipy_clipper(data_median)-data_median,c=polcol[k])
-
-			
-			#fig.savefig('%s_autocorr_bpass.png'%epoch,bbox_inches='tight')
-			#smart_autocorr_clip(np.mean(np.abs(data),axis=2)[0])
-
 	tb.close()
+
 	tb.open('%s.auto.bpass'%(epoch),nomodify=False)
-	#tb.removerows(np.arange(0,tb.nrows(),1))
 	tb.addrows(tbnrows)
 	tb.putcol('TIME',TIME)
 	tb.putcol('CPARAM',CPARAM)
@@ -1217,6 +1225,27 @@ def clip_fitsfile(model,im,snr):
 def append_pbcor_info(vis, params):
 	pb_data = load_json('%s/data/primary_beams.json'%params['global']['vlbipipe_path'])
 	tb = casatools.table()
+
+	tb.open('%s/SPECTRAL_WINDOW'%vis)
+	bwidth = np.sum(tb.getcol('TOTAL_BANDWIDTH'))
+	freq_range = [tb.getcol('CHAN_FREQ')[0][0],tb.getcol('CHAN_FREQ')[0][0]+bwidth]
+	cfreq = np.average(freq_range)/1e9
+	tb.close()
+
+	freq_bands =  {'L':[1.35,1.75], 
+	               'S':[2.15,2.35], 
+	               'C':[3.9,7.9], 
+	               'X':[8.0,8.8], 
+	               'Ku':[12.0,15.4], 
+	               'K':[21.7,24.1], 
+	               'Q':[41.0,45.0]}
+
+	band='Unk'
+	for k in freq_bands.keys():
+		if (cfreq<freq_bands[k][1])&(cfreq>freq_bands[k][0]):
+			band=k
+
+
 	tb.open('%s/ANTENNA'%vis,nomodify=False)
 	name = tb.getcol('NAME')
 	station = tb.getcol('STATION')
@@ -1228,27 +1257,36 @@ def append_pbcor_info(vis, params):
 	pb_squint = []
 	pb_freq = []
 	for i in range(len(name)):
-		if (name[i] in pb_data.keys()):
-			dish_diam.append(pb_data[name[i]]['L']['diameter'])
-			pb_params.append(",".join(np.array(pb_data[station[i]]['L']['pb_params']).astype(str).tolist()))
-			pb_squint.append(",".join(np.array(pb_data[station[i]]['L']['pb_squint']).astype(str).tolist()))
-			pb_freq.append(pb_data[name[i]]['L']['pb_freq'])
-			pb_model.append(pb_data[name[i]]['L']['pb_model'])
-			pb_source.append(pb_data[name[i]]['L']['pb_source'])
-		elif (station[i] in pb_data.keys()):
-			dish_diam.append(pb_data[station[i]]['L']['diameter'])
-			pb_params.append(",".join(np.array(pb_data[station[i]]['L']['pb_params']).astype(str).tolist()))
-			pb_squint.append(",".join(np.array(pb_data[station[i]]['L']['pb_squint']).astype(str).tolist()))
-			pb_freq.append(pb_data[name[i]]['L']['pb_freq'])
-			pb_model.append(pb_data[station[i]]['L']['pb_model'])
-			pb_source.append(pb_data[station[i]]['L']['pb_source'])
-		else:
+		try:
+			if (name[i] in pb_data.keys()):
+				dish_diam.append(pb_data[name[i]][band]['diameter'])
+				pb_params.append(",".join(np.array(pb_data[station[i]][band]['pb_params']).astype(str).tolist()))
+				pb_squint.append(",".join(np.array(pb_data[station[i]][band]['pb_squint']).astype(str).tolist()))
+				pb_freq.append(pb_data[name[i]][band]['pb_freq'])
+				pb_model.append(pb_data[name[i]][band]['pb_model'])
+				pb_source.append(pb_data[name[i]][band]['pb_source'])
+			elif (station[i] in pb_data.keys()):
+				dish_diam.append(pb_data[station[i]][band]['diameter'])
+				pb_params.append(",".join(np.array(pb_data[station[i]][band]['pb_params']).astype(str).tolist()))
+				pb_squint.append(",".join(np.array(pb_data[station[i]][band]['pb_squint']).astype(str).tolist()))
+				pb_freq.append(pb_data[name[i]][band]['pb_freq'])
+				pb_model.append(pb_data[station[i]][band]['pb_model'])
+				pb_source.append(pb_data[station[i]][band]['pb_source'])
+			else:
+				dish_diam.append(0.0)
+				pb_params.append('')
+				pb_squint.append('')
+				pb_freq.append(0.0)
+				pb_model.append('NO_INFO')
+				pb_source.append("NO_INFO")
+		except:
 			dish_diam.append(0.0)
 			pb_params.append('')
 			pb_squint.append('')
 			pb_freq.append(0.0)
 			pb_model.append('NO_INFO')
 			pb_source.append("NO_INFO")
+
 	add_cols = {'PB_MODEL':{'comment'         : 'pbmodel description',
 							'dataManagerGroup': 'StandardStMan',
 							'dataManagerType' : 'StandardStMan',
@@ -1284,7 +1322,6 @@ def append_pbcor_info(vis, params):
 							'maxlen'          : 0,
 							'option'          : 0,
 							'valueType'       : 'string'}
-
 				}
 	try:
 		tb.addcols(add_cols)
