@@ -44,7 +44,7 @@ else:
 for i,j in enumerate(fields):
 	fields[i] = str(msinfo['FIELD']['fieldtoID'][j])
 
-fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo, calc_auto='median', calibrators=fields, renormalise='median', filter_RFI=True)
+fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo, calc_auto='mean', calibrators=fields, renormalise='median60', filter_RFI=True)
 
 if params['fit_autocorrs']["interp_bad_solutions"] == True:
 	interpgain(caltable='%s/%s.auto.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)

@@ -1091,10 +1091,9 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	for j,i in enumerate(msinfo['SPECTRAL_WINDOW']['spw_pols']):
 		if i[0] == i[1]:
 			pol_loc.append(j)
-	#print('HERE',pol_loc)
-	#pol_loc=[0,3]
-	#if npol > 2:
-		#npol = 2
+	if npol > 2:
+		npol = 2
+
 	nants = len(msinfo['ANTENNAS']['anttoID'])
 	nchan = msinfo['SPECTRAL_WINDOW']['nchan']
 
@@ -1121,16 +1120,16 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 			x = np.arange(j*nchan,(j+1)*nchan,1)
 			for i in range(nants):
 				autocorrs = np.empty((npol,nchan),dtype=complex)
-				for k in pol_loc:
+				for k,l in enumerate(pol_loc):
 					try:
 						subt = tb.query('ANTENNA1==%s and ANTENNA2==%s and FIELD_ID==%s and DATA_DESC_ID==%s'%(i,i,calibrators[h],j))
 						flag = subt.getcol('FLAG')
 						data = np.abs(subt.getcol('DATA'))
 						data[flag==True] = np.nan
 						if calc_auto == 'mean':
-							data_median = np.sqrt(np.nanmean(data,axis=2)[k])
+							data_median = np.sqrt(np.nanmean(data,axis=2)[l])
 						elif calc_auto=='median':
-							data_median = np.sqrt(np.nanmedian(data,axis=2)[k])
+							data_median = np.sqrt(np.nanmedian(data,axis=2)[l])
 						else:
 							sys.exit()
 						polcol=['r','k']
