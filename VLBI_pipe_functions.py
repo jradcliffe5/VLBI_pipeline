@@ -1088,7 +1088,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
 	pol_loc = []
-	for j,i in range(len(msinfo['SPECTRAL_WINDOW']['spw_pols'])):
+	for j,i in enumerate(msinfo['SPECTRAL_WINDOW']['spw_pols']):
 		if i[0] == i[1]:
 			pol_loc.append(j)
 
