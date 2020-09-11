@@ -105,7 +105,7 @@ gencal(vis=msfile,\
        infile='%s/%s.gc'%(cwd,p_c))
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
-rmdirs(['%s/%s.tsys'%(cwd,p_c),
+rmdirs(['%s/%s.tecim'%(cwd,p_c),
 	    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
 	    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
