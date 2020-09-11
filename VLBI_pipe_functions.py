@@ -190,7 +190,6 @@ def rmfiles(files):
 			casalog.post(priority="INFO",origin=func_name,message='No file found - %s'% i)
 	return
 
-
 def rmdirs(dirs):
 	func_name = inspect.stack()[0][3]
 	for i in dirs:
@@ -1088,8 +1087,8 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	tb = casatools.table()
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
-	if npol > 2:
-		npol = 2
+	#if npol > 2:
+		#npol = 2
 	nants = len(msinfo['ANTENNAS']['anttoID'])
 	nchan = msinfo['SPECTRAL_WINDOW']['nchan']
 
