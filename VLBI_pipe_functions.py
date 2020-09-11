@@ -1091,7 +1091,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	for j,i in enumerate(msinfo['SPECTRAL_WINDOW']['spw_pols']):
 		if i[0] == i[1]:
 			pol_loc.append(j)
-
+	print(pol_loc)
 	#if npol > 2:
 		#npol = 2
 	nants = len(msinfo['ANTENNAS']['anttoID'])
@@ -1126,7 +1126,6 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						flag = subt.getcol('FLAG')
 						data = np.abs(subt.getcol('DATA'))
 						data[flag==True] = np.nan
-						#print(data)
 						if calc_auto == 'mean':
 							data_median = np.sqrt(np.nanmean(data,axis=2)[k])
 						elif calc_auto=='median':
