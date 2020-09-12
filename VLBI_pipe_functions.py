@@ -1360,8 +1360,8 @@ def pad_antennas(caltable='',ants=[],gain=False):
 
 	tb.close()
 
-def empty_f(x):
-	return x
+def empty_f(x,mult=1.):
+	return x*mult
 
 def correct_phases(x,units):
 	x = (x+ np.pi) % (2 * np.pi) - np.pi

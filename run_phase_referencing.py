@@ -215,6 +215,25 @@ for i in range(len(fields)):
 				parallel=True
 			else:
 				parallel = False
+			if params['phase_referencing']['masking'] == 'peak':
+				tclean(vis=msfile,
+				   imagename='%s-%s%s'%(fields[i], cal_type[i][j], j),
+				   field='%s'%fields[i],
+				   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i]]/1000.),
+				   imsize=imsize,
+				   deconvolver='%s'%deconvolver_tclean[0],
+				   nterms=deconvolver_tclean[1],
+				   niter = 0,
+				   weighting=weight,
+				   parallel=parallel
+				   )
+				peak = imstat(imagename='%s-%s%s.image'%(fields[i], cal_type[i][j], j))
+				peak = peak['maxpos'][:2]
+				beam = imhead(imagename='%s-%s%s.image'%(fields[i], cal_type[i][j], j))
+				beam = np.ceil(1.2*(beam['restoringbeam']['major']['value']/7.2e3/(np.abs(beam['incr'][1])*(180/np.pi)))).astype(int)
+				masking=['user','circle[[%spix, %spix], %spix]'%(peak[0],peak[1],beam),4.0,1.0]
+			elif params['phase_referencing']['masking'] == 'auto':
+				masking = ['auto-multithresh','',4.0,1.0]
 			tclean(vis=msfile,
 				   imagename='%s-%s%s'%(fields[i], cal_type[i][j], j),
 				   field='%s'%fields[i],
@@ -225,9 +244,10 @@ for i in range(len(fields)):
 				   niter = int(1e5),
 				   weighting=weight,
 				   nsigma=1.2,
-				   usemask='auto-multithresh',
-				   noisethreshold=4.0,
-				   sidelobethreshold=1.0,
+				   usemask=masking[0],
+				   mask=masking[1],
+				   noisethreshold=masking[2],
+				   sidelobethreshold=masking[3],
 				   parallel=parallel
 				   )
 			if deconvolver_tclean[1]>1:
@@ -257,22 +277,42 @@ for i in range(len(fields)):
 						antennas = antennas+'!%s;'%k
 					if antennas.endswith(';'):
 						antennas = antennas[:-1]
+				if params['phase_referencing']['masking'] == 'peak':
+					tclean(vis=msfile,
+					       imagename='%s-initmodel'%(fields[i+1]),
+						   field='%s'%fields[i+1],
+					       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1]]/1000.),
+					       imsize=imsize,
+					       deconvolver='%s'%deconvolver_tclean[0],
+					       nterms=deconvolver_tclean[1],
+					       niter = 0,
+					       weighting=weight,
+					       parallel=parallel
+					   )
+					peak = imstat(imagename='%s-%s%s.image'%(fields[i], cal_type[i][j], j))
+					peak = peak['maxpos'][:2]
+					beam = imhead(imagename='%s-%s%s.image'%(fields[i], cal_type[i][j], j))
+					beam = np.ceil(1.2*(beam['restoringbeam']['major']['value']/7.2e3/(np.abs(beam['incr'][1])*(180/np.pi)))).astype(int)
+					masking=['user','circle[[%spix, %spix], %spix]'%(peak[0],peak[1],beam),4.0,1.0]
+				elif params['phase_referencing']['masking'] == 'auto':
+					masking = ['auto-multithresh','',4.0,1.0]
 				tclean(vis=msfile,
 					   imagename='%s-initmodel'%(fields[i+1]),
 					   field='%s'%fields[i+1],
-					   antenna=antennas,
-					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i]]/1000.),
+					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1]]/1000.),
 					   imsize=imsize,
 					   deconvolver='%s'%deconvolver_tclean[0],
 					   nterms=deconvolver_tclean[1],
 					   niter = int(1e5),
 					   weighting=weight,
 					   nsigma=1.2,
-					   usemask='auto-multithresh',
-					   noisethreshold=4.0,
-					   sidelobethreshold=1.0,
+					   usemask=masking[0],
+					   mask=masking[1],
+					   noisethreshold=masking[2],
+					   sidelobethreshold=masking[3],
 					   parallel=parallel
 					   )
+
 				if deconvolver_tclean[1]>1:
 					model = []
 					for k in range(deconvolver_tclean[1]):
