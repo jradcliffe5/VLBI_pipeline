@@ -1383,7 +1383,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 			casalog.post(priority='SEVERE',origin=func_name,message='Wrong thing to plot for table')
 			sys.exit()
 	elif 'FPARAM' in tb.colnames():
-		if yaxis in ['delay','phase','tsys','rate','disp']:
+		if yaxis in ['delay','phase','tsys','rate','disp','tec']:
 			gaincol='FPARAM'
 		else:
 			casalog.post(priority='SEVERE',origin=func_name,message='Wrong thing to plot for table')
@@ -1398,7 +1398,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					'delay':[1,empty_f,'Delay (nsec)'],
 					'phase':[0,empty_f, 'Phase (deg)'],
 					'rate':[2,empty_f, 'Rate (psec/sec)'],
-					'disp':[3,empty_f, 'Disp. Delay (milliTEC)']
+					'disp':[3,empty_f, 'Disp. Delay (TEC)'],
+					'tec' : [0,empty_f, 'TEC']
 					},
 				'CPARAM':{
 					'amp':[0,np.real, 'Amplitude'],
@@ -1412,6 +1413,10 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 	spw = np.unique(tb.getcol('SPECTRAL_WINDOW_ID'))
 	pol_cols = ['r','k','b','g']
 	pol_symbols = ['o','^','*','+']
+	pol_names=[]
+	for i in msinfo['SPECTRAL_WINDOW']['spw_pols']:
+		if i[0] == i[1]:
+			pol_names.append(i)
 
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
@@ -1444,7 +1449,12 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					min_time = time.min()
 					time = (time - min_time)/3600.
 					ax = fig.add_subplot(gs00[s])
-					for pol in range(2):
+					polrange=2
+					if yaxis == 'tec':
+						polrange=1
+						pol_names=['']
+					for pol in range(polrange):
+						#print(polrange)
 						if gaincol == 'FPARAM':
 							if yaxis == 'tsys':
 								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
@@ -1453,17 +1463,27 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 								if plotflag == True:
 									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 							else:
-								if gain.shape[0] == 2:
+								if (gain.shape[0] == 2) | (gain.shape[0] == 1):
 									increm = 1
 									col_params[gaincol][yaxis][0] = 0
 								else:
 									increm = 4
-								gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
+								if yaxis=='tec':
+									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e16)
+								elif yaxis=='disp':
+									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e3)
+								else:
+									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
 								flag_t = flag[col_params[gaincol][yaxis][0]+int(increm*pol),0,:]
 								if yaxis == 'phase':
 									gain_t = correct_phases(gain_t,units='deg')
 									#ax.set_ylim([-180,180])
 								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+								try:
+									if np.max(gain_t[flag_t==0])-np.min(gain_t[flag_t==0])>1e5:
+										ax.set_yscale('symlog')
+								except:
+									pass
 								if plotflag == True:
 									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 						elif gaincol == 'CPARAM':
@@ -1491,8 +1511,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						ax.xaxis.set_ticklabels([])
 					if s == 0:
 						handles=[]
-						for i in range(2):
-							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%msinfo['SPECTRAL_WINDOW']['spw_pols'][i]))
+						for i in range(polrange):
+							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%pol_names[i]))
 						ax.legend(handles=handles)
 					else:
 						pass
@@ -1518,7 +1538,11 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						if len(spw) == 1:
 							spw_average = (msinfo['SPECTRAL_WINDOW']['freq_range'][0]+msinfo['SPECTRAL_WINDOW']['freq_range'][1])/2.
 						freqs = (np.ones(gain.shape[2])*(spw_average))/1.0e9
-						for pol in range(2):
+						polrange=2
+						if yaxis == 'tec':
+							polrange=1
+							pol_names=['']
+						for pol in range(polrange):
 							if gaincol == 'FPARAM':
 								if yaxis == 'tsys':
 									gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
@@ -1527,17 +1551,27 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 									if plotflag == True:
 										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 								else:
-									if gain.shape[0] == 2:
+									if (gain.shape[0] == 2) | (gain.shape[0] == 1):
 										increm = 1
 										col_params[gaincol][yaxis][0] = 0
 									else:
 										increm = 4
-									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
+									if yaxis=='tec':
+										gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e16)
+									elif yaxis=='disp':
+										gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e3)
+									else:
+										gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
 									flag_t = flag[col_params[gaincol][yaxis][0]+int(increm*pol),0,:]
 									if yaxis == 'phase':
 										gain_t = correct_phases(gain_t,units='deg')
 										#ax.set_ylim([-180,180])
 									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									try:
+										if np.max(gain_t[flag_t==0])-np.min(gain_t[flag_t==0])>1e5:
+											ax.set_yscale('symlog')
+									except:
+										pass
 									if plotflag == True:
 										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 							elif gaincol == 'CPARAM':
@@ -1554,7 +1588,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
 						chan_width = msinfo['SPECTRAL_WINDOW']['chan_width']
 						freqs = np.arange(ch0+(s*spwbw),ch0+((s+1)*spwbw),chan_width)/1.0e9
-						for pol in range(2):
+						polrange=2
+						for pol in range(polrange):
 							if gaincol == 'FPARAM':
 								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:]).flatten()
 								flag_t = flag[pol,col_params[gaincol][yaxis][0],:].flatten()
@@ -1575,8 +1610,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 									ax.plot(freqs_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 					if s == 0:
 						handles=[]
-						for i in range(2):
-							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%msinfo['SPECTRAL_WINDOW']['spw_pols'][i]))
+						for i in range(polrange):
+							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%pol_names[i]))
 						ax.legend(handles=handles)
 				ax.set_xlim(np.array(msinfo['SPECTRAL_WINDOW']['freq_range'])/1e9)
 				pdf.savefig(bbox_inches='tight')
