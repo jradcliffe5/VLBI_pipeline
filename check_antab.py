@@ -1,4 +1,4 @@
-import inspect, os, sys, json
+import inspect, os, sys, json, re 
 import copy
 ## Python 2 will need to adjust for casa 6
 import collections, optparse
@@ -81,7 +81,7 @@ for line in file:
 			temp = i.split(' ')
 			temp = list(filter(None, temp))
 			if i.startswith('GAIN'):
-				data_head['TELESCOPE'] = temp[1]
+				data_head['TELESCOPE'] = temp[1].upper()
 				ants.append([temp[1],ncount])
 				for j in temp:
 					if j.startswith('DPFU'):
@@ -188,11 +188,29 @@ if options['replace']!=False:
 		except:
 			casalog.post(origin=filename,priority='INFO',message='Please replace %s on line %s with nominal DPFUs'%(i,dpfurepl[i]))
 
-def map_index_to_tsys(ant,tsys_pl,index_pl):
-	print(index_pl[ant].replace("\'",'').split('=')[1].strip().split(','))
+def map_index_to_tsys(tsys_pl,index_pl):
+	indexes = []
+	sorted_tsys = {}
+	print(index_pl)
+	for i in index_pl.keys():
+		temp = index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip()
+		indexes = indexes + re.split(',|\|',temp)
+	indexes = np.unique(indexes)
+	for i in tsys_pl.keys():
+		temp = np.array(index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip().split(','))
+		for m,k in enumerate(indexes):
+			#tsys_pl[i][:,]
+			res = [x for x in temp if re.search(k, x)][0]
+			idx = np.where(res==temp)[0][0]
+			if m == 0:
+				temp_tsys = tsys_pl[i][:,idx]
+			else:
+				temp_tsys = np.vstack([temp_tsys,tsys_pl[i][:,idx]])
+		sorted_tsys[i] = temp_tsys
+	return sorted_tsys, indexes
+	#print(index_pl[ant].replace("\'",'').split('=')[1].strip().split(','))
 
 if options['plot'] == True:
-	print(tsys_pl)
 	from matplotlib.backends.backend_pdf import PdfPages
-	map_index_to_tsys(ant='EF',tsys_pl=tsys_pl,index_pl=index_pl)
+	sorted_tsys, indexes = map_index_to_tsys(tsys_pl=tsys_pl,index_pl=index_pl)
 	#with PdfPages('%s'%figfile) as pdf:
