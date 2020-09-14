@@ -41,12 +41,15 @@ parser = optparse.OptionParser(usage=usage)
 
 parser.add_option("-a", "--antab", action="store", type="string", dest="antab_file")
 parser.add_option("-r", "--replace", action="store", dest="replace", default=False)
+parser.add_option("-p","--plot",dest="plot",action="store_true",default=False)
 
 (options, args) = parser.parse_args()
 options = vars(options)
 
 if options['replace']!=False:
 	replace_vals = options['replace'].split(',')
+else:
+	replace_vals = []
 
 comments = ('!','*')
 
@@ -60,6 +63,8 @@ data = []
 data_head = {}
 replace_lines = {}
 dpfurepl = {}
+tsys_pl = {}
+index_pl = {}
 tsys = []
 errorm=[]
 ants = []
@@ -87,6 +92,7 @@ for line in file:
 						if j.rstrip().endswith(','):
 							errorm.append('Delete errant , on POLY on antenna %s (line %d)'%(data_head['TELESCOPE'],ncount))
 			elif i.startswith('INDEX'):
+				index_pl[data_head['TELESCOPE']] = i
 				if data_head['TELESCOPE'] in replace_vals:
 					repl=ncount+1
 			elif i.startswith('TSYS'):
@@ -97,6 +103,8 @@ for line in file:
 			else:
 				tsys.append(temp[2:])
 		tsys = np.array(tsys).astype(float)
+		if (tsys != [])&(options['plot']==True):
+			tsys_pl[data_head['TELESCOPE']] = tsys
 		if data_head['TELESCOPE'] in replace_vals:
 			if tsys !=[]:
 				replace_lines['%d'%repl] = np.ones(tsys.shape)
@@ -134,6 +142,8 @@ else:
 	for i in errorm:
 		casalog.post(origin=filename,priority='WARN',message=i)
 
+
+## Replace Tsys with bad values
 if options['replace']!=False:
 	replace_starts = []
 	for i in replace_lines.keys():
@@ -177,3 +187,12 @@ if options['replace']!=False:
 			casalog.post(origin=filename,priority='INFO',message='Please replace %s on line %s with nominal DPFUs (%s , %s)'%(i,dpfurepl[i],dpfus[0],dpfus[1]))
 		except:
 			casalog.post(origin=filename,priority='INFO',message='Please replace %s on line %s with nominal DPFUs'%(i,dpfurepl[i]))
+
+def map_index_to_tsys(ant,tsys_pl,index_pl):
+	print(index_pl[ant].replace("\'",'').split('=')[1].strip().split(','))
+
+if options['plot'] == True:
+	print(tsys_pl)
+	from matplotlib.backends.backend_pdf import PdfPages
+	map_index_to_tsys(ant='EF',tsys_pl=tsys_pl,index_pl=index_pl)
+	#with PdfPages('%s'%figfile) as pdf:
