@@ -28,6 +28,7 @@ except:
 	from taskinit import *
 	from bandpass_cli import bandpass_cli as bandpass
 	casa6=False
+	
 
 class NpEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -1236,12 +1237,12 @@ def append_pbcor_info(vis, params):
 	tb.close()
 
 	freq_bands =  {'L':[1.35,1.75], 
-	               'S':[2.15,2.35], 
-	               'C':[3.9,7.9], 
-	               'X':[8.0,8.8], 
-	               'Ku':[12.0,15.4], 
-	               'K':[21.7,24.1], 
-	               'Q':[41.0,45.0]}
+				   'S':[2.15,2.35], 
+				   'C':[3.9,7.9], 
+				   'X':[8.0,8.8], 
+				   'Ku':[12.0,15.4], 
+				   'K':[21.7,24.1], 
+				   'Q':[41.0,45.0]}
 
 	band='Unk'
 	for k in freq_bands.keys():
@@ -1745,6 +1746,73 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 	file.write("\n")
 	file.flush()
 
+def plot_tec_maps(msfile,tec_image,plotfile):
+	try:
+		from casatasks.private import simutil
+	except:
+		import simutil
+	try:
+		from astropy.io import fits
+	except:
+		import pyfits as fits
+	try:
+		from astropy import wcs
+	except:
+		sys.exit()
+
+	tb = casatools.table()
+	tb.open('%s/ANTENNA'%msfile)
+	pos = tb.getcol('POSITION')
+	u = simutil.simutil()
+	lon = []
+	lat = []
+	for i in range(pos.shape[1]):
+		longitude, latitude, altitude = u.xyz2long(pos[0][i], pos[1][i], pos[2][i], 'WGS84')
+		lon.append(longitude*(180./np.pi))
+		lat.append(latitude*(180./np.pi))
+	if tec_image.endswith('.im'):
+		rmfiles([tec_image+'.fits'])
+		exportfits(imagename=tec_image,fitsimage=tec_image+'.fits')
+
+	hdu = fits.open(tec_image+'.fits')
+	wcs = wcs.WCS(hdu[0].header,naxis=2)
+
+	nplo = 5
+	hr = np.ones(nplo+1)
+	hr[0] = 1/20.
+	gs = gridspec.GridSpec(nrows=nplo+1,ncols=nplo,hspace=0.05,wspace=0.05,height_ratios=hr)
+	data = hdu[0].data
+	with PdfPages('%s'%plotfile) as pdf:
+		nplo2=nplo**2
+		time = hdu[0].header['CRVAL3']
+		minmax = [np.min(data),np.max(data)]
+		for j in range(np.ceil(data.shape[0]/nplo2).astype(int)):
+			fig = plt.figure(1,figsize=(18,18))
+			for i in range(nplo2):
+				nco = j*nplo2 + i
+				if nco < data.shape[0]:
+					ax = fig.add_subplot(gs[i+nplo],projection=wcs)
+					t = time_convert(time+(nco*hdu[0].header['CDELT3']))
+					im = ax.imshow(data[nco],vmin=minmax[0],vmax=minmax[1],rasterized=True)
+					ax.coords[0].set_ticks_visible(True)
+					ax.coords[1].set_ticks_visible(True)
+					ax.coords[0].set_axislabel(' ')
+					ax.coords[1].set_axislabel(' ')
+					if i%nplo!=0:
+						ax.coords[1].set_ticklabel_visible(False)
+					if i < nplo2-nplo:
+						ax.coords[0].set_ticklabel_visible(False)
+					ax.text(0.05,0.05,t[0],ha='left',va='bottom',transform=ax.transAxes,bbox=dict(boxstyle='round', fc="w", ec="k"))
+					ax.scatter(lon,lat,transform=ax.get_transform('world'),c='w',ec='k',marker='o')
+			ax = fig.add_subplot(gs[0,:])
+			cb = plt.colorbar(mappable=im,cax=ax,orientation='horizontal')
+			ax.xaxis.set_ticks_position('top')
+			fig.text(0.5,0.915,r'TEC',ha='center',va='top')
+			fig.text(0.085,0.5,r'Latitude (deg)',rotation=90,ha='left',va='center')
+			fig.text(0.5,0.07,r'Longitude (deg)',ha='center',va='bottom')
+			pdf.savefig(bbox_inches='tight')
+			plt.close()
+
 def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 
 	#
@@ -1756,7 +1824,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 	#    perform extrapolation.
 	#    Christopher A. Hales (and now heavily modified by J. Radcliffe)
 	#
-	#    Version 2 (tested with CASA Version 5.7.0)
+	#    Version 2 (tested with CASA Version 5.7.0 & 6.1)
 	#    Changelog - 08-09-2020 (Jack Radcliffe)
 	#    * uses scipy interp1d to provide multiple interpolation methods
 	#    * added support for fringe tables

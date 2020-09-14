@@ -110,6 +110,14 @@ rmdirs(['%s/%s.tecim'%(cwd,p_c),
 	    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
 tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile, doplot=False)
+if casa6 == True:
+	plot_tec_maps(msfile=msfile,
+		          tec_image=tec_image,
+		          plotfile='%s/%s_TEC.pdf'%(cwd,p_c))
+	plot_tec_maps(msfile=msfile,
+		          tec_image=tec_rms_image,
+		          plotfile='%s/%s_TEC_RMS.pdf'%(cwd,p_c))
+
 gencal(vis=msfile, 
 	   caltable='%s/%s.tecim'%(cwd,p_c),
        caltype='tecim', 

@@ -41,5 +41,6 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 
-import tec_maps
-tec_image, tec_rms_image, plotname = tec_maps.create(vis='eg078e.ms', doplot=True)
+
+plot_tec_maps('er047a_small.ms','er047a_small.ms.IGS_TEC.im','test.pdf')
+plot_tec_maps('er047a_small.ms','er047a_small.ms.IGS_RMS_TEC.im','test_rms.pdf')
