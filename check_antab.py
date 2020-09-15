@@ -235,9 +235,10 @@ if options['replace']!=False:
 		except:
 			casalog.post(origin=filename,priority='INFO',message='Please replace %s on line %s with nominal DPFUs'%(i,dpfurepl[i]))
 
-figfile='%s_tsys.pdf'%options['antab_file']
-casalog.post(priority='INFO',origin=filename,message='Plotting Tsys values, will be saved to %s_tsys.pdf'%options['antab_file'])
+
 if options['plot'] == True:
+	figfile='%s_tsys.pdf'%options['antab_file']
+	casalog.post(priority='INFO',origin=filename,message='Plotting Tsys values, will be saved to %s_tsys.pdf'%options['antab_file'])
 	from matplotlib.backends.backend_pdf import PdfPages
 	sorted_tsys, indexes = map_index_to_tsys(tsys_pl=tsys_pl,index_pl=index_pl)
 	pols = []

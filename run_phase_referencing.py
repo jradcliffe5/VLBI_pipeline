@@ -102,6 +102,7 @@ for i in range(len(fields)):
 					solint=params['phase_referencing']['sol_interval'][i][j],
 					calmode=calmode,
 					solnorm=True,
+					normtype='median',
 					refant=refant,
 					gaintype=gaintype,
 					combine=params['phase_referencing']['combine'][i][j],
