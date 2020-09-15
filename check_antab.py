@@ -3,6 +3,8 @@ import copy
 ## Python 2 will need to adjust for casa 6
 import collections, optparse
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
@@ -51,6 +53,37 @@ if options['replace']!=False:
 else:
 	replace_vals = []
 
+
+def map_index_to_tsys(tsys_pl,index_pl):
+	indexes = []
+	sorted_tsys = {}
+	for i in index_pl.keys():
+		temp = index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip()
+		indexes = indexes + re.split(',|\|',temp)
+	indexes = np.unique(indexes)
+	for i in tsys_pl.keys():
+		temp = np.array(index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip().split(','))
+		for m,k in enumerate(indexes):
+			#tsys_pl[i][:,]
+			res = [x for x in temp if re.search(k, x)][0]
+			idx = np.where(res==temp)[0][0]
+			if m == 0:
+				temp_tsys = tsys_pl[i][:,idx]
+			else:
+				temp_tsys = np.vstack([temp_tsys,tsys_pl[i][:,idx]])
+		sorted_tsys[i] = temp_tsys
+	return sorted_tsys, indexes
+
+def convert_time(time):
+	conv_time = []
+	for i in time:
+		temp = i.split(',')
+		if temp[1].count(":") == 2:
+			conv_time.append((float(temp[0])*24)+float(temp[1].split(':')[0])+(float(temp[1].split(':')[1])/60.)+(float(temp[1].split(':')[2])/3600.))
+		else:
+			conv_time.append((float(temp[0])*24)+float(temp[1].split(':')[0])+(float(temp[1].split(':')[1])/60.)+(float(temp[1].split('.')[1])/3600.))
+	return conv_time
+
 comments = ('!','*')
 
 try:
@@ -65,9 +98,12 @@ replace_lines = {}
 dpfurepl = {}
 tsys_pl = {}
 index_pl = {}
+time_pl = {}
 tsys = []
+time = []
 errorm=[]
 ants = []
+time_min_max = [1e9,-1e9,'']
 ncount = 0
 repl = 1
 for line in file:
@@ -101,10 +137,19 @@ for line in file:
 				if i.rstrip().endswith(','):
 					errorm.append('Delete errant , on POLY on antenna %s (line %d)'%(data_head['TELESCOPE'],ncount))
 			else:
+				time.append(",".join(temp[:2]))
 				tsys.append(temp[2:])
-		tsys = np.array(tsys).astype(float)
+		tsys = np.array(tsys).astype(float) 
 		if (tsys != [])&(options['plot']==True):
 			tsys_pl[data_head['TELESCOPE']] = tsys
+			conv_time = convert_time(time)
+			time_pl[data_head['TELESCOPE']] = conv_time
+			if np.max(conv_time) > time_min_max[1]:
+				time_min_max[1] = np.max(conv_time)
+			if np.min(conv_time) < time_min_max[0]:
+				time_min_max[0] = np.min(conv_time)
+				time_min_max[2] = time[np.where(conv_time==np.min(conv_time))[0][0]]
+
 		if data_head['TELESCOPE'] in replace_vals:
 			if tsys !=[]:
 				replace_lines['%d'%repl] = np.ones(tsys.shape)
@@ -117,12 +162,14 @@ for line in file:
 				errant_lines = (ncount-tsys.shape[0]) + np.where(np.any((tsys==999.9)|(tsys==(999.0)), axis=1))[0]
 				errorm.append('Change values of 999.9/999.9 on telescope %s to -999.9 (lines %s)'%(data_head['TELESCOPE'],', '.join(errant_lines.astype(str).tolist())))
 		tsys=[]
+		time = []
 		data = []
 	elif line.startswith(comments) == False:
 		ncount+=1
 		data.append(line)
 	else:
 		ncount+=1
+
 
 ## Check for duplicate ants
 ants = np.array(ants).T
@@ -188,29 +235,50 @@ if options['replace']!=False:
 		except:
 			casalog.post(origin=filename,priority='INFO',message='Please replace %s on line %s with nominal DPFUs'%(i,dpfurepl[i]))
 
-def map_index_to_tsys(tsys_pl,index_pl):
-	indexes = []
-	sorted_tsys = {}
-	print(index_pl)
-	for i in index_pl.keys():
-		temp = index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip()
-		indexes = indexes + re.split(',|\|',temp)
-	indexes = np.unique(indexes)
-	for i in tsys_pl.keys():
-		temp = np.array(index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip().split(','))
-		for m,k in enumerate(indexes):
-			#tsys_pl[i][:,]
-			res = [x for x in temp if re.search(k, x)][0]
-			idx = np.where(res==temp)[0][0]
-			if m == 0:
-				temp_tsys = tsys_pl[i][:,idx]
-			else:
-				temp_tsys = np.vstack([temp_tsys,tsys_pl[i][:,idx]])
-		sorted_tsys[i] = temp_tsys
-	return sorted_tsys, indexes
-	#print(index_pl[ant].replace("\'",'').split('=')[1].strip().split(','))
-
+figfile='%s_tsys.pdf'%options['antab_file']
+casalog.post(priority='INFO',origin=filename,message='Plotting Tsys values, will be saved to %s_tsys.pdf'%options['antab_file'])
 if options['plot'] == True:
 	from matplotlib.backends.backend_pdf import PdfPages
 	sorted_tsys, indexes = map_index_to_tsys(tsys_pl=tsys_pl,index_pl=index_pl)
-	#with PdfPages('%s'%figfile) as pdf:
+	pols = []
+	spw = []
+	for i in indexes:
+		pols.append(i[0])
+		spw.append(int(i[1]))
+	pols = np.unique(pols)
+	spw = np.unique(spw)
+	with PdfPages('%s'%figfile) as pdf:
+		for a in sorted_tsys.keys():
+			casalog.post(priority='INFO',origin=filename,message='Plotting Tsys for %s'%a)
+			gs = gridspec.GridSpec(nrows=len(spw),ncols=1,hspace=0.0)
+			fig = plt.figure(1)
+			ax1 = fig.add_subplot(gs[:])
+			ax1.set_ylabel('Tsys',labelpad=38)
+			ax1.set_xlabel('Time (hr from %s)'%" ".join(time_min_max[2].split(',')),labelpad=28)
+			ax1.set_title('Tsys against time for antenna %s'%(a))
+			if len(spw) >1:
+				ax1.set_xticks([],minor=True)
+				ax1.set_xticks([])
+				ax1.set_xticklabels([])
+				ax1.set_yticks([],minor=True)
+				ax1.set_yticks([])
+				ax1.set_yticklabels([])
+			tsys_vals = sorted_tsys[a]
+			time_vals = time_pl[a] - time_min_max[0]
+			marker_symbol = ['o','s']
+			marker_color = ['k','r']
+			for n,s in enumerate(spw):
+				ax = fig.add_subplot(gs[s-1])
+				for m,p in enumerate(pols):
+					polar = '%s%s'%(p,s)
+					idx = np.where(polar==indexes)[0][0]
+					ax.plot(time_vals[tsys_vals[idx]>0],tsys_vals[idx][tsys_vals[idx]>0],'%s%s'%(marker_symbol[m],marker_color[m]),label='%s'%p,rasterized=True)
+				if n == 0:
+					ax.legend()
+				if n < len(spw)-1:
+					ax.xaxis.set_ticklabels([])
+				ax.set_xlim(0,time_min_max[1]-time_min_max[0])
+			pdf.savefig(bbox_inches='tight')
+			plt.close()
+
+
