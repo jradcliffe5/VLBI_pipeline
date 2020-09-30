@@ -57,6 +57,12 @@ for i in range(len(fields)):
 				paramactive = [True,True,True]
 			else:
 				paramactive = [True,True,False]
+			if i > 0:
+				delaywindow=[-20,20]
+				ratewindow=[-20,20]
+			else:
+				delaywindow=[]
+				ratewindow = []
 			fringefit(vis=msfile,
 					  caltable=caltable,
 					  field=fields[i],
@@ -67,6 +73,8 @@ for i in range(len(fields)):
 					  combine=params['phase_referencing']['combine'][i][j],
 					  minsnr=params['phase_referencing']['min_snr'],
 					  paramactive=paramactive,
+					  delaywindow=delaywindow,
+					  ratewindow=ratewindow,
 					  gaintable=gaintables['gaintable'],
 					  gainfield=gaintables['gainfield'],
 					  interp=gaintables['interp'],
