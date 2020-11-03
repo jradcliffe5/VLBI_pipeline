@@ -1,0 +1,10 @@
+2020-11-03 19:42:39 :: 7138 :: CASAStart :: Starting CASA at: 2020-11-03 19:42:39.700477 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Variant: 
+2020-11-03 19:42:40 :: 7138 :: CASAStop :: Stopping CASA at: 2020-11-03 19:42:40.021268 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Start time: 2020-11-03 19:42:39.700477 Variant: 
+2020-11-03 19:42:56 :: 7219 :: CASAStart :: Starting CASA at: 2020-11-03 19:42:56.553821 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Variant: 
+2020-11-03 19:42:56 :: 7219 :: CASAStop :: Stopping CASA at: 2020-11-03 19:42:56.688311 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Start time: 2020-11-03 19:42:56.553821 Variant: 
+2020-11-03 19:44:01 :: 7262 :: CASAStart :: Starting CASA at: 2020-11-03 19:44:01.857991 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Variant: 
+2020-11-03 19:44:01 :: 7262 :: CASAStop :: Stopping CASA at: 2020-11-03 19:44:01.985486 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Start time: 2020-11-03 19:44:01.857991 Variant: 
+2020-11-03 19:44:17 :: 7302 :: CASAStart :: Starting CASA at: 2020-11-03 19:44:17.434641 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Variant: 
+2020-11-03 19:44:17 :: 7302 :: CASAStop :: Stopping CASA at: 2020-11-03 19:44:17.563993 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Start time: 2020-11-03 19:44:17.434641 Variant: 
+2020-11-03 19:44:32 :: 7342 :: CASAStart :: Starting CASA at: 2020-11-03 19:44:32.177133 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Variant: 
+2020-11-03 19:44:32 :: 7342 :: CASAStop :: Stopping CASA at: 2020-11-03 19:44:32.750705 Version 5.7.0-134   Platform: Darwin-19.6.0-x86_64-i386-64bit Start time: 2020-11-03 19:44:32.177133 Variant: 

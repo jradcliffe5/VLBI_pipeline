@@ -44,6 +44,7 @@ parser = optparse.OptionParser(usage=usage)
 parser.add_option("-a", "--antab", action="store", type="string", dest="antab_file")
 parser.add_option("-r", "--replace", action="store", dest="replace", default=False)
 parser.add_option("-p","--plot",dest="plot",action="store_true",default=False)
+parser.add_option("-c",dest="c")
 
 (options, args) = parser.parse_args()
 options = vars(options)
