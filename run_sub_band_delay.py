@@ -47,7 +47,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 	else:
 		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
 
-	params['sub_band_delay']['extensive_search'] = False
+	#params['sub_band_delay']['extensive_search'] = False
 	if params['sub_band_delay']['do_disp_delays'] == True:
 		paramactive = [True,True,True]
 	else:
@@ -73,6 +73,10 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 				  parang=gaintables['parang'])
 
 	elif params['sub_band_delay']['extensive_search'] == True:
+		if i == 0:
+			if os.path.exists('%s.sbd_eb'%p_c):
+				rmdirs(['%s.sbd_eb'%p_c])
+			os.system('mkdir %s.sbd_eb'%p_c)
 		do_eb_fringefit(vis=msfile,
                         caltable='%s.sbd'%(p_c),
                         field=fields,

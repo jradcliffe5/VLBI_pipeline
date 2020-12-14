@@ -62,10 +62,12 @@ def map_index_to_tsys(tsys_pl,index_pl):
 		temp = index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip()
 		indexes = indexes + re.split(',|\|',temp)
 	indexes = np.unique(indexes)
+	print(indexes)
 	for i in tsys_pl.keys():
 		temp = np.array(index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip().split(','))
 		for m,k in enumerate(indexes):
 			#tsys_pl[i][:,]
+			print(m,k)
 			res = [x for x in temp if re.search(k, x)][0]
 			idx = np.where(res==temp)[0][0]
 			if m == 0:

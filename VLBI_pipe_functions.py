@@ -15,6 +15,7 @@ from scipy.interpolate import interp1d
 from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
+from itertools import cycle
 
 try:
 	# CASA 6
@@ -511,8 +512,23 @@ def get_ms_info(msfile):
 	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
 	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1).astype(str),fields))
 	msinfo['FIELD'] = field
-	#save_json('vp_fields_to_id.json',field)
 	tb.close()
+	## scans
+	ms.open(msfile)
+	scans = ms.getscansummary()
+	ms.close()
+	scan = {}
+	for i in list(scans.keys()):
+		print(i)
+		fieldid = scans[i]['0']['FieldId']
+		if fieldid not in list(scan.keys()):
+			#print(i)
+			scan[fieldid] = [i]
+			print(fieldid,scan[fieldid])
+		else:
+			vals = scan[fieldid]
+			scan[fieldid].append(i)
+	msinfo['SCANS'] = scan
 	## Get telescope_name
 	tb.open('%s/OBSERVATION'%msfile)
 	msinfo['TELE_NAME'] = tb.getcol('TELESCOPE_NAME')[0]
@@ -1695,8 +1711,15 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 	try:
 		if casa6 == True:	
 			from casampi.MPICommandClient import MPICommandClient
+			from casampi import MPIEnvironment
+			servers = MPIEnvironment.MPIEnvironment.mpi_server_rank_list()
+			servers = cycle(servers)
 		else:
 			from mpi4casa.MPICommandClient import MPICommandClient
+			from mpi4casa import MPIEnvironment
+			servers = MPIEnvironment.MPIEnvironment.mpi_server_rank_list()
+			servers = cycle(servers)
+
 		client = MPICommandClient()
 		client.set_log_mode('redirect')
 		client.start_services()
@@ -1704,10 +1727,6 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		cmd = []
 	except:
 		parallel=False
-	if os.path.exists('%s_eb'%caltable):
-		rmdirs(['%s_eb'%caltable])
-	os.system('mkdir %s_eb'%caltable)
-
 	refants = []
 	err_array = []
 	for i in msinfo['ANTENNAS']['anttoID'].keys():
@@ -1717,22 +1736,31 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 			random.shuffle(ant_temp)
 			ant_temp.insert(0,i)
 			refants.append(ant_temp)
+
+	fields = field.split(',')
+	scans = []
+	for i,j in enumerate(fields):
+		f_id = msinfo['FIELD']['fieldtoID'][j]
+		scans.append(msinfo['SCANS'][f_id])
+	print(scans)
 	if parallel==True:
 		cmd=[]
 		for i in range(len(refants)):
-			#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
-			cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s);"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, ','.join(refants[i]), zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'])
-			cmd2 = "import os; os.system('touch %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
-			try:
-				cmdId = client.push_command_request(command=cmd1+cmd2,block=False)
-				#cmdId = client.push_command_request(command=cmd1,parameters=params,block=False)
-				#cmdId = client.push_command_request(command=cmd2,target_server=cmdId,block=False)
-				cmd.append(cmdId[0])
-			except:
-				print('fringefit failed for refant - %s'%(refants[i][0]))
-				pass
+			current_server = next(servers)
+			for j in range(len(scans)):
+				#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
+				cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s, scan='%d');"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, refants[i][0], zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'],scans[j])
+				cmd2 = "import os; os.system('touch %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
+				try:
+					cmdId = client.push_command_request(command=cmd1+cmd2,block=False,target_server=[current_server])
+					#cmdId = client.push_command_request(command=cmd1,parameters=params,block=False)
+					#cmdId = client.push_command_request(command=cmd2,target_server=cmdId,block=False)
+					cmd.append(cmdId[0])
+				except:
+					print('fringefit failed for refant - %s'%(refants[i][0]))
+					pass
 		resultList = client.get_command_response(cmd,block=True)
-
+	
 def progressbar(it, prefix="", size=60, file=sys.stdout):
 	count = len(it)
 	def show(j):
