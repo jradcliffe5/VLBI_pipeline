@@ -1741,15 +1741,20 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 	scans = []
 	for i,j in enumerate(fields):
 		f_id = msinfo['FIELD']['fieldtoID'][j]
-		scans.append(msinfo['SCANS'][f_id])
+		scans = scans + msinfo['SCANS'][str(f_id)]
+	scans = np.sort(np.array(scans))
 	print(scans)
+
+
+	
 	if parallel==True:
 		cmd=[]
 		for i in range(len(refants)):
 			current_server = next(servers)
+			append=True
 			for j in range(len(scans)):
 				#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
-				cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s, scan='%d');"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, refants[i][0], zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'],scans[j])
+				cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s, scan='%s');"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, refants[i][0], zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'],scans[j])
 				cmd2 = "import os; os.system('touch %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
 				try:
 					cmdId = client.push_command_request(command=cmd1+cmd2,block=False,target_server=[current_server])
@@ -1760,6 +1765,21 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 					print('fringefit failed for refant - %s'%(refants[i][0]))
 					pass
 		resultList = client.get_command_response(cmd,block=True)
+
+def generate_ff_full_table(msinfo):
+	tb = casatools.table()
+	t = np.array([])
+	for i in msinfo['ANTENNAS']['IDtoant'].values():
+		try:
+			tb.open('eg078b.sbd_eb/eg078b.sbd_%s'%i)
+			t2 = tb.getcol('TIME')
+			print(len(t2))
+			t = np.hstack([t,t2])
+			tb.close()
+		except:
+			print('no ant %s'%i)
+	times = np.unique(t)
+	#for i in 
 	
 def progressbar(it, prefix="", size=60, file=sys.stdout):
 	count = len(it)

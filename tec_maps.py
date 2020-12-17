@@ -215,7 +215,7 @@ def create(vis,doplot=False,imname=''):
 	return create0(ms_name=vis,plot_vla_tec=doplot,im_name=imname)
 
 
-def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',user_email='',affiliation=''):
+def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',password='',user_email='',affiliation=''):
 	"""
 ## =============================================================================
 ##
@@ -301,7 +301,7 @@ def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',u
 		ymd_date_num = 0
 		array = []
 		for ymd_date in day_list:
-			points_long,points_lat,ref_long,ref_lat,incr_long,incr_lat,incr_time,num_maps,tec_array,tec_type = get_IGS_TEC(ymd_date)
+			points_long,points_lat,ref_long,ref_lat,incr_long,incr_lat,incr_time,num_maps,tec_array,tec_type = get_IGS_TEC(ymd_date,username,password)
 			## Fill a new array with all the full set of TEC/DTEC values for all days in the observation set.
 			if tec_type != '':
 				if ymd_date_num == 0:
@@ -401,7 +401,7 @@ def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',u
 
 
 
-def get_IGS_TEC(ymd_date):
+def get_IGS_TEC(ymd_date,username,password):
 	"""
 ## =============================================================================
 ##
@@ -476,7 +476,7 @@ def get_IGS_TEC(ymd_date):
 	if does_exist == '':
 		print('Retrieving the following file: ', igs_file)
 
-		CDDIS = 'ftp://cddis.gsfc.nasa.gov/gnss/products/ionex'
+		CDDIS = 'https://cddis.nasa.gov/archive/gnss/products/ionex'
 		file_location = CDDIS+'/'+str(year)+'/'+str(dayofyear)+'/'
 
 		workDir2 = workDir.replace(' ','\\ ')
@@ -484,7 +484,9 @@ def get_IGS_TEC(ymd_date):
 			get_file = file_location+igs_file+'.Z'
 			retrieve = test_connection(get_file)
 			if retrieve == True:
-				os.system('curl -J '+get_file+' > '+workDir2+igs_file+'.Z')
+				#os.system('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file+' > '+workDir2+igs_file+'.Z')
+				os.system('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file)
+				os.system('cp %s %s%s.Z'%(get_file,workDir2,igs_file))
 				os.system('uncompress '+igs_file+'.Z')
 				does_exist = check_existence(igs_file)
 			else:

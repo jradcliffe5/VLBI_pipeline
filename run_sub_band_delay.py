@@ -73,27 +73,32 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 				  parang=gaintables['parang'])
 
 	elif params['sub_band_delay']['extensive_search'] == True:
+		'''
 		if i == 0:
 			if os.path.exists('%s.sbd_eb'%p_c):
 				rmdirs(['%s.sbd_eb'%p_c])
 			os.system('mkdir %s.sbd_eb'%p_c)
 		do_eb_fringefit(vis=msfile,
-                        caltable='%s.sbd'%(p_c),
-                        field=fields,
-                        solint=params['sub_band_delay']['sol_interval'][i],
-                        timerange=params['sub_band_delay']['time_range'][i],
-                        zerorates=True,
-                        niter=params['sub_band_delay']['fringe_niter'],
-                        append=append,
-  						minsnr=params['sub_band_delay']['min_snr'][i],
-                        msinfo=msinfo,
-                        gaintable_dict=gaintables,
-                        casa6=casa6)
+						caltable='%s.sbd'%(p_c),
+						field=fields,
+						solint=params['sub_band_delay']['sol_interval'][i],
+						timerange=params['sub_band_delay']['time_range'][i],
+						zerorates=True,
+						niter=params['sub_band_delay']['fringe_niter'],
+						append=append,
+						minsnr=params['sub_band_delay']['min_snr'][i],
+						msinfo=msinfo,
+						gaintable_dict=gaintables,
+						casa6=casa6)
+		'''
+		print('run sbd')
 	else:
 		casalog.post(origin=filename,message='Wrong parameter for extensive baseline (true/false)',priority='SEVERE')
 		sys.exit()
+if params['sub_band_delay']['extensive_search'] == True:
+	generate_ff_full_table(msinfo)
 
-
+'''
 if params['sub_band_delay']['modify_sbd']['run'] == True:
 	#rmdirs(['%s/%s.sbd.bpass'%(cwd,p_c)])
 	#auto_modify_sbdcal(msfile=msfile,
@@ -114,3 +119,4 @@ gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['sub_band_delay'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+'''

@@ -82,6 +82,10 @@
             "jump_ident_pc" :  20,
             "interp"        : "linear,linear"
         },
+        "ionex_options":{
+            "username"      : "",
+            "password"      : ""
+        },
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
