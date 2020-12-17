@@ -58,7 +58,7 @@ if doaccor==True:
 		          tablein='%s/%s.accor'%(cwd,p_c),
 		          caltable='%s/%s.accor'%(cwd,p_c),
 			      smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
-'''
+
 ### Run prior-cals
 if params['apriori_cal']["do_observatory_flg"] == True:
 	if os.path.exists('%s/%s_casa.flags'%(cwd,p_c)):
@@ -78,9 +78,9 @@ gencal(vis=msfile,\
 if casa6 == True:
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_time.pdf'%p_c)
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_freq.pdf'%p_c)
-'''
+
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
-'''
+
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
 	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
@@ -103,7 +103,7 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.gcal'%(cwd,p_c),\
        infile='%s/%s.gc'%(cwd,p_c))
-'''
+
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
 rmdirs(['%s/%s.tecim'%(cwd,p_c),
