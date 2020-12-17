@@ -18,7 +18,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-import tec_maps
+
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
@@ -113,7 +113,8 @@ rmdirs(['%s/%s.tecim'%(cwd,p_c),
 tec_image, tec_rms_image, plotname = tec_maps.create0(ms_name=msfile, 
 	                                                  plot_vla_tec=False, 
 	                                                  username=params['apriori_cal']["ionex_options"]["username"],
-	                                                  password=params['apriori_cal']["ionex_options"]["password"])
+	                                                  password=params['apriori_cal']["ionex_options"]["password"],
+	                                                  force_to=params['apriori_cal']["ionex_options"]["ionex_type"])
 if casa6 == True:
 	plot_tec_maps(msfile=msfile,
 		          tec_image=tec_image,

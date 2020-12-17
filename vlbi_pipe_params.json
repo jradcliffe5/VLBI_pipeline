@@ -83,6 +83,7 @@
             "interp"        : "linear,linear"
         },
         "ionex_options":{
+            "ionex_type"    : "rapid",
             "username"      : "",
             "password"      : ""
         },

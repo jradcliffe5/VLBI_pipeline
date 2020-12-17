@@ -1855,7 +1855,7 @@ def plot_tec_maps(msfile,tec_image,plotfile):
 			ax = fig.add_subplot(gs[0,:])
 			cb = plt.colorbar(mappable=im,cax=ax,orientation='horizontal')
 			ax.xaxis.set_ticks_position('top')
-			fig.text(0.5,0.915,r'TEC',ha='center',va='top')
+			fig.text(0.5,0.915,r'TECU',ha='center',va='top')
 			fig.text(0.085,0.5,r'Latitude (deg)',rotation=90,ha='left',va='center')
 			fig.text(0.5,0.07,r'Longitude (deg)',ha='center',va='bottom')
 			pdf.savefig(bbox_inches='tight')

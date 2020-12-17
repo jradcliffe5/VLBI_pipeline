@@ -30,6 +30,7 @@
 ##                                              number instead of an integer will 
 ##                                              result in an error in the future
 ##    Modified by J. Radcliffe 2020/09/10  v2.8 Adjusted code to run on CASA 6
+##                             2020/12/17  v2.9 Added fixes due to ftp server changing
 ##
 ##
 ##    Tested in CASA 6.1 on MacOSX 10.15
@@ -215,7 +216,7 @@ def create(vis,doplot=False,imname=''):
 	return create0(ms_name=vis,plot_vla_tec=doplot,im_name=imname)
 
 
-def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',password='',user_email='',affiliation=''):
+def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',password='',user_email='',affiliation='',force_to='final'):
 	"""
 ## =============================================================================
 ##
@@ -301,7 +302,7 @@ def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',p
 		ymd_date_num = 0
 		array = []
 		for ymd_date in day_list:
-			points_long,points_lat,ref_long,ref_lat,incr_long,incr_lat,incr_time,num_maps,tec_array,tec_type = get_IGS_TEC(ymd_date,username,password)
+			points_long,points_lat,ref_long,ref_lat,incr_long,incr_lat,incr_time,num_maps,tec_array,tec_type = get_IGS_TEC(ymd_date,username,password,force_to)
 			## Fill a new array with all the full set of TEC/DTEC values for all days in the observation set.
 			if tec_type != '':
 				if ymd_date_num == 0:
@@ -401,7 +402,7 @@ def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',p
 
 
 
-def get_IGS_TEC(ymd_date,username,password):
+def get_IGS_TEC(ymd_date,username,password,force_to):
 	"""
 ## =============================================================================
 ##
@@ -454,8 +455,16 @@ def get_IGS_TEC(ymd_date,username,password):
 	if dayofyear < 100 and dayofyear >= 10:
 		dayofyear = '0'+str(dayofyear)
 
-	## Outputing the name of the IONEX file you require.  
-	igs_file = 'igsg'+str(dayofyear)+'0.'+str(list(str(year))[2])+''+str(list(str(year))[3])+'i'
+	## Outputing the name of the IONEX file you require. 
+	if force_to == 'final':
+		pf = 'igsg'
+	elif force_to == 'rapid':
+		pf = 'igrg'
+	elif force_to == 'jpl':
+		pf = 'jprg'
+	else:
+		sys.exit()
+	igs_file = pf+str(dayofyear)+'0.'+str(list(str(year))[2])+''+str(list(str(year))[3])+'i'
 
 	## =========================================================================
 	##
