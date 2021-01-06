@@ -81,6 +81,9 @@ class IdiData:
         tbhdu = hdulist['FREQUENCY']
         assert tbhdu.data['FREQID'][0] == 1
         freqs = tbhdu.data['BANDFREQ'][0]
+        if self.n_band == 1:
+            freqs = [freqs]
+            pass
         self.freqs = np.array([x + self.ref_freq for x in freqs])
         assert len(self.freqs) == self.n_band
 
@@ -241,7 +244,8 @@ def process_values(infp, keys, pols, idi, data):
     if len(spws) != idi.n_band:
         print('INDEX for antenna %s does not match FITS-IDI file'
               % antenna_name, file=sys.stderr)
-        sys.exit(1)
+        pass
+    spws = range(idi.n_band)
     timeoff = 0
     if 'TIMEOFF' in keys:
         timeoff = float(keys['TIMEOFF'])
@@ -267,8 +271,11 @@ def process_values(infp, keys, pols, idi, data):
                 for pol in ['R', 'L']:
                     try:
                         value = float(values[spwmap[(pol, spw)]])
+                        if value == 999.9:
+                            value = float(-999.9)
+                            pass
                     except:
-                        value = float("nan")
+                        value = float(-999.9)
                         pass
                     tsys[pol].append(value)
                     continue
@@ -282,7 +289,7 @@ def process_values(infp, keys, pols, idi, data):
                 data.freqid.append(1)
                 data.tsys_1.append(tsys['R'])
                 data.tsys_2.append(tsys['L'])
-                data.tant.append(idi.n_band * [float('nan')])
+                data.tant.append(idi.n_band * [float(-999.9)])
                 pass
             pass
         if line.strip().endswith('/'):

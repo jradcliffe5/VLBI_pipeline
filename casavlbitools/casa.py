@@ -140,6 +140,8 @@ def gain_common(gain, antenna, band, bfreq, efreq, btime, etime,
         max_za = 90 - min_elevation
         min_za = 90 - max_elevation
         poly = transform_altaz_poly(gain['POLY'], min_za, max_za)
+    elif 'EQUAT' in gain and gain['POLY'] == [1.0]:
+        poly = np.poly1d([1.0])
     else:
         print('Unsupported gain curve type for antenna %s' % antenna)
         return
