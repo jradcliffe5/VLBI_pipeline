@@ -492,6 +492,8 @@ def get_IGS_TEC(ymd_date,username,password,force_to):
 		if does_exist == '':        
 			get_file = file_location+igs_file+'.Z'
 			retrieve = test_connection(get_file)
+			print(retrieve)
+			retrieve = True
 			if retrieve == True:
 				#os.system('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file+' > '+workDir2+igs_file+'.Z')
 				print('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file)
