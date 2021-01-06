@@ -124,6 +124,7 @@ for line in file:
 				ants.append([temp[1],ncount])
 				for j in temp:
 					if j.startswith('DPFU'):
+						print(j)
 						data_head['DPFU'] = np.array(j.split("DPFU=")[1].split(",")).astype(float)
 						if data_head['TELESCOPE'] in replace_vals:
 							dpfurepl[data_head['TELESCOPE']] = ncount
@@ -142,7 +143,7 @@ for line in file:
 			else:
 				time.append(",".join(temp[:2]))
 				tsys.append(temp[2:])
-		tsys = np.array(tsys).astype(float) 
+		tsys = np.array(tsys,dtype=object).astype(float) 
 		if (tsys != [])&(options['plot']==True):
 			tsys_pl[data_head['TELESCOPE']] = tsys
 			conv_time = convert_time(time)

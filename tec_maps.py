@@ -389,7 +389,7 @@ def create0(ms_name,tec_server='IGS',plot_vla_tec=False,im_name='',username='',p
 			print('You need to supply your username, e-mail, and affiliation to access the Madrigal server.')
 			CASA_image = ''
 			CASA_RMS_image = ''
-  
+  	plot_name = ''
 	## Returns the name of the TEC image generated
 	print('The following TEC map was generated: '+CASA_image+' & '+CASA_RMS_image)
 	if len(plot_name)>0:
