@@ -496,6 +496,9 @@ def get_IGS_TEC(ymd_date,username,password,force_to):
 				#os.system('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file+' > '+workDir2+igs_file+'.Z')
 				print('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file)
 				os.system('wget --user '+username+' --password '+password+' --auth-no-challenge '+get_file)
+				if os.path.exists(get_file) == False:
+					os.system('curl -c cookies.html -n -L -u %s:%s -O %s' % (username,password,get_file))
+					os.system('rm cookies.html') 
 				os.system('cp %s %s%s.Z'%(get_file,workDir2,igs_file))
 				os.system('uncompress '+igs_file+'.Z')
 				does_exist = check_existence(igs_file)
