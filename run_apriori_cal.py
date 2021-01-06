@@ -112,8 +112,8 @@ rmdirs(['%s/%s.tecim'%(cwd,p_c),
 
 tec_image, tec_rms_image, plotname = tec_maps.create0(ms_name=msfile, 
 	                                                  plot_vla_tec=False, 
-	                                                  username=params['apriori_cal']["ionex_options"]["username"],
-	                                                  password=params['apriori_cal']["ionex_options"]["password"],
+	                                                  username='anonymous',
+	                                                  password=params['global']["email_progress"],
 	                                                  force_to=params['apriori_cal']["ionex_options"]["ionex_type"])
 if casa6 == True:
 	plot_tec_maps(msfile=msfile,
