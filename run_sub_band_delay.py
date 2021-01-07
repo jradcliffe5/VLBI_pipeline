@@ -98,7 +98,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 if params['sub_band_delay']['extensive_search'] == True:
 	generate_ff_full_table(msinfo)
 
-'''
+
 if params['sub_band_delay']['modify_sbd']['run'] == True:
 	#rmdirs(['%s/%s.sbd.bpass'%(cwd,p_c)])
 	#auto_modify_sbdcal(msfile=msfile,
@@ -119,4 +119,3 @@ gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['sub_band_delay'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
-'''

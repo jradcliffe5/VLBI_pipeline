@@ -122,11 +122,12 @@ if casa6 == True:
 	plot_tec_maps(msfile=msfile,
 		          tec_image=tec_rms_image,
 		          plotfile='%s/%s_TEC_RMS.pdf'%(cwd,p_c))
-
+print(tec_image)
 gencal(vis=msfile, 
 	   caltable='%s/%s.tecim'%(cwd,p_c),
        caltype='tecim', 
-       infile=tec_image)
+       infile=tec_image+'/',
+       uniform=False)
 gaintables = append_gaintable(gaintables,['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
 applycal(vis=msfile,

@@ -519,7 +519,7 @@ def get_ms_info(msfile):
 	ms.close()
 	scan = {}
 	for i in list(scans.keys()):
-		print(i)
+		#print(i)
 		fieldid = scans[i]['0']['FieldId']
 		if fieldid not in list(scan.keys()):
 			#print(i)
@@ -579,7 +579,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 	nchan=len(gain[0,:,0])
 	
 	k=1
-	print('maxant', maxant)
+	#print('maxant', maxant)
 	numflag=0.0
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
@@ -606,7 +606,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 					gain[:,:,(ant==k) & (dd==j)]=subgain
 
 
-	print('numflag', numflag)
+	#print('numflag', numflag)
 	 
 	###
 	tb.putcol('FLAG', flg)
@@ -701,6 +701,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	gain_edit = copy.deepcopy(gain)*0
 	t=tb.getcol('TIME')
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	#print(dd)
 	npol=gain.shape[0]
 	for k in range(npol):
 		print('npol=%s'%k)
