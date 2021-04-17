@@ -204,7 +204,7 @@ for i in range(len(fields)):
 					          im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
 					          snr=10.0)
 				os.system('%s -name %s-%s%s -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i][k],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i][k]],msfile))
-				if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)) and (k == (len(fields[i])-1)):
+				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
 						os.system('%s -name %s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 						(";".join(params['global']["wsclean_command"]),
@@ -280,7 +280,7 @@ for i in range(len(fields)):
 				   nterms=deconvolver_tclean[1],
 				   model=model,
 				   usescratch=True)
-				if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)) and (k == (len(fields[i])-1)):
+				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
 						delims = []
 						for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
