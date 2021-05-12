@@ -2,7 +2,7 @@
 ## Extra parameters to be set in vlbi_pipe_params.json
 
 
-parameter_file = VLBI_pipeline/vlbi_pipe_params.json
+parameter_file = vlbi_pipe_params.json
 make_scripts = True
 run_jobs = True
 
@@ -13,11 +13,13 @@ make_mms = 0
 apriori_cal = 0
 init_flag = 0
 fit_autocorrs = 0
-sub_band_delay = 1
-bandpass_cal = 1
-phase_referencing = 1
-apply_target = 0
+sub_band_delay = 0
+bandpass_cal = 0
+phase_referencing = 0
+apply_target = 1
 ## Wide-field steps ##
 apply_to_all = 0
+primary_beam_cor = 0
+mssc = 0
 
 

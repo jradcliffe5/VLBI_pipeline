@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078d",
-        "cwd"               :  "/Users/jackradcliffe/Astro/GOODSN_VLBI_EG078/EG078D/Calibration/calibration",
+        "project_code"      :  "eg078b",
+        "cwd"               :  "/Users/jackradcliffe/Documents/EG078B",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",
@@ -12,14 +12,14 @@
         "default_mpiprocs"  :    24,
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "mpirun",
+        "mpicasapath"       :  "",
         "casapath"          :  "python",
         "singularity"       :  false,
-        "AOflag_command"    : ["module load chpc/singularity","singularity exec /mnt/lustre/users/jradcliffe/singularity_ims/kern5-dev.simg aoflagger"],
+        "AOflag_command"    : ["/Volumes/HD-LXU3/anaconda3/envs/mpy3.6/bin/aoflagger"],
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["EF","T6","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
+        "refant"            : ["EF","ON","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
         "fringe_finders"    : ["3C345","DA193"],
         "phase_calibrators" : ["J1241+602","J1234+619"],
         "targets"           : ["HDFC0155"],
@@ -44,7 +44,8 @@
     "import_fitsidi":{
         "const_obs_id"      :  true,
         "scan_gap"          :  15.0,
-        "remove_idi"        : true,
+        "remove_idi"        :  true,
+        "make_backup"       :  true,
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -83,9 +84,8 @@
             "interp"        : "linear,linear"
         },
         "ionex_options":{
-            "ionex_type"    : "rapid",
-            "username"      : "",
-            "password"      : ""
+        	"run"           :  false,
+            "ionex_type"    : "rapid"
         },
         "hpc_options":{
             "partition"     :  "default",
@@ -97,8 +97,8 @@
         }
     },
     "init_flag":{
-        "AO_flag_strategy"  :  "J1234_619.rfis",
-        "AO_flag_fields"    : ["J1241+602","J1234+619","HDFC0155"],
+        "AO_flag_strategy"  :  "VLBI_pipeline/aoflag_strategies/faint_sources.rfis",
+        "AO_flag_fields"    : ["J1234+619","HDFC0155"],
         "flag_edge_chans":{
             "run"           :  true,
             "edge_chan_flag":  "5%"
@@ -106,7 +106,7 @@
         "autocorrelations"  :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"3C345":30.0,"2007+777":30.0,"*":10.0},
+            "quack_time"    :  {"3C345":30.0,"DA193":30.0,"*":10.0},
             "quack_mode"    :  "beg"
         },
         "hpc_options":{
@@ -168,7 +168,7 @@
         }
     },
     "phase_referencing":{        
-        "select_calibrators":  "default",
+        "select_calibrators":  [["J1241+602"],["J1234+619"]],
         "cal_type"          : [[  "f",  "f",  "f",  "k",   "p", "ap", "ap",  "ap",   "p"],["f" ,"f",   "p"]],   
         "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","1min","1min"],["inf","inf","inf"]],
         "combine"           : [["spw","spw",   "",   "",    "","spw",   "", "spw",    ""],["spw","spw", ""]],

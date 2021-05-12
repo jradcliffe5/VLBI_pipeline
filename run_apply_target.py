@@ -59,6 +59,7 @@ for i in params['global']['targets']:
 		print('not implemented yet')
 	else:
 		pass
+	delims = []
 	for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 		delims.append('%s-initimage*'%(i,z))
 	rmdirs(delims)

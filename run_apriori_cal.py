@@ -106,29 +106,31 @@ gencal(vis=msfile,\
 
 gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
-rmdirs(['%s/%s.tecim'%(cwd,p_c),
-	    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
-	    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
+if params['apriori_cal']['ionex_options']['run'] == True:
+	rmdirs(['%s/%s.tecim'%(cwd,p_c),
+		    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
+		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
-tec_image, tec_rms_image, plotname = tec_maps.create0(ms_name=msfile, 
-	                                                  plot_vla_tec=False, 
-	                                                  username='anonymous',
-	                                                  password=params['global']["email_progress"],
-	                                                  force_to=params['apriori_cal']["ionex_options"]["ionex_type"])
-if casa6 == True:
-	plot_tec_maps(msfile=msfile,
-		          tec_image=tec_image,
-		          plotfile='%s/%s_TEC.pdf'%(cwd,p_c))
-	plot_tec_maps(msfile=msfile,
-		          tec_image=tec_rms_image,
-		          plotfile='%s/%s_TEC_RMS.pdf'%(cwd,p_c))
-print(tec_image)
-gencal(vis=msfile, 
-	   caltable='%s/%s.tecim'%(cwd,p_c),
-       caltype='tecim', 
-       infile=tec_image+'/',
-       uniform=False)
-gaintables = append_gaintable(gaintables,['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
+	tec_image, tec_rms_image, plotname = tec_maps.create0(ms_name=msfile, 
+		                                                  plot_vla_tec=False, 
+		                                                  username='anonymous',
+		                                                  password=params['global']["email_progress"],
+		                                                  force_to=params['apriori_cal']["ionex_options"]["ionex_type"])
+	if casa6 == True:
+		plot_tec_maps(msfile=msfile,
+			          tec_image=tec_image,
+			          plotfile='%s/%s_TEC.pdf'%(cwd,p_c))
+		plot_tec_maps(msfile=msfile,
+			          tec_image=tec_rms_image,
+			          plotfile='%s/%s_TEC_RMS.pdf'%(cwd,p_c))
+
+
+	gencal(vis=msfile, 
+		   caltable='%s/%s.tecim'%(cwd,p_c),
+	       caltype='tecim', 
+	       infile=tec_image+'/',
+	       uniform=False)
+	gaintables = append_gaintable(gaintables,['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
 applycal(vis=msfile,
 	     field='',

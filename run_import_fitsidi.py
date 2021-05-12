@@ -78,6 +78,10 @@ append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['proj
 if params['import_fitsidi']['remove_idi'] == True:
 	rmfiles(idifiles)
 
+if params['import_fitsidi']['make_backup'] == True:
+	rmfiles(["%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global']['project_code'])])
+	os.system("tar -cvzf %s/%s_backup.tar.gz %s/%s.ms"%(params['global']['cwd'],params['global']['project_code'],params['global']['cwd'],params['global']['project_code']))
+
 
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 
