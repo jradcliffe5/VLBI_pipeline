@@ -150,8 +150,10 @@ if params["prepare_data"]["flag_file"] != "none":
 		if telescop == 'EVN':
 			flagfile="%s/%s.uvflg"%(params['global']['cwd'],params['global']['project_code'])
 			if os.path.exists(flagfile) == False:
-				casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
-				sys.exit()
+				flagfile="%s/%s_1.uvflg"%(params['global']['cwd'],params['global']['project_code'])
+				if os.path.exists(flagfile) == False:
+					casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
+					sys.exit()
 		elif telescop == 'VLBA':
 			flagfile="%s/%s.flag"%(params['global']['cwd'],params['global']['project_code'])
 			if os.path.exists(flagfile) == False:

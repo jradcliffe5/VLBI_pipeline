@@ -179,6 +179,7 @@
         "fringe_niter"      :  300,
         "min_snr"           :  5.0,
         "imaging_params"    :  "auto",
+        "masking"           :  "peak",
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
