@@ -1,0 +1,21 @@
+taskname           = "split"
+vis                =  "/Users/jackradcliffe/Documents/EG078B/eg078b.ms"
+outputvis          =  "/Users/jackradcliffe/Documents/EG078B/HDFC0155_calibrated2.ms"
+keepmms            =  True
+field              =  ""
+spw                =  ""
+scan               =  ""
+antenna            =  ""
+correlation        =  ""
+timerange          =  ""
+intent             =  ""
+array              =  ""
+uvrange            =  ""
+observation        =  ""
+feed               =  ""
+datacolumn         =  "corrected"
+keepflags          =  True
+width              =  1
+timebin            =  "0s"
+combine            =  ""
+#split(vis="/Users/jackradcliffe/Documents/EG078B/eg078b.ms",outputvis="/Users/jackradcliffe/Documents/EG078B/HDFC0155_calibrated2.ms",keepmms=True,field="",spw="",scan="",antenna="",correlation="",timerange="",intent="",array="",uvrange="",observation="",feed="",datacolumn="corrected",keepflags=True,width=1,timebin="0s",combine="")
