@@ -1,0 +1,22 @@
+taskname           = "plotcal"
+caltable           =  "eg078e.tsys_original/"
+xaxis              =  "time"
+yaxis              =  "tsys"
+poln               =  ""
+field              =  ""
+antenna            =  ""
+spw                =  ""
+timerange          =  ""
+subplot            =  431
+overplot           =  False
+clearpanel         =  "Auto"
+iteration          =  "antenna,spw"
+plotrange          =  []
+showflags          =  False
+plotsymbol         =  "o"
+plotcolor          =  "blue"
+markersize         =  5.0
+fontsize           =  10.0
+showgui            =  True
+figfile            =  ""
+#plotcal(caltable="eg078e.tsys_original/",xaxis="time",yaxis="tsys",poln="",field="",antenna="",spw="",timerange="",subplot=431,overplot=False,clearpanel="Auto",iteration="antenna,spw",plotrange=[],showflags=False,plotsymbol="o",plotcolor="blue",markersize=5.0,fontsize=10.0,showgui=True,figfile="")
