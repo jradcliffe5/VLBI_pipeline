@@ -80,6 +80,7 @@ for i in range(len(fields)):
 					  gainfield=gaintables['gainfield'],
 					  interp=gaintables['interp'],
 					  spwmap=gaintables['spwmap'],
+					  corrdepflags=True,
 					  parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
 				interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
@@ -114,6 +115,7 @@ for i in range(len(fields)):
 					normtype='median',
 					refant=refant,
 					gaintype=gaintype,
+					corrdepflags=True,
 					combine=params['phase_referencing']['combine'][i][j],
 					minsnr=params['phase_referencing']['min_snr'],
 					gaintable=gaintables['gaintable'],

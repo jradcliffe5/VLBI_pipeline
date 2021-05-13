@@ -65,6 +65,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 				  niter=params['sub_band_delay']['fringe_niter'],
 				  refant=refant,
 				  append=append,
+				  corrdepflags=True,
 				  minsnr=params['sub_band_delay']['min_snr'][i],
 				  gaintable=gaintables['gaintable'],
 				  gainfield=gaintables['gainfield'],

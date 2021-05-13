@@ -87,6 +87,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 fillgaps=16,
 			 minsnr=params['bandpass_cal']['min_snr'],
 			 gaintable=gaintab,
+			 corrdepflags=True,
 			 gainfield=gaintables['gainfield'],
 			 interp=gaintables['interp'],
 			 spwmap=gaintables['spwmap'],
