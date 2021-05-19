@@ -62,7 +62,7 @@ if steps_run['prepare_data'] == 0:
 					casalog.post(origin=filename,message='Could not move files with rsync or cp ... exiting',priority='SEVERE')
 					sys.exit()
 			idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])
-else:
+else: 
 	for j,i in enumerate(idifiles):
 		idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])
 

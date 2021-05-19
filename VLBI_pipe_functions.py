@@ -524,7 +524,6 @@ def get_ms_info(msfile):
 		if fieldid not in list(scan.keys()):
 			#print(i)
 			scan[fieldid] = [i]
-			print(fieldid,scan[fieldid])
 		else:
 			vals = scan[fieldid]
 			scan[fieldid].append(i)
@@ -541,7 +540,7 @@ def get_ms_info(msfile):
 		ms.selecttaql('FIELD_ID==%s'%field['fieldtoID'][i])
 		try:
 			max_uv = ms.getdata('uvdist')['uvdist'].max()
-			image_params[i] = ((speed_light/high_freq)/max_uv)*(180./np.pi)*(3.6e6/3.)
+			image_params[i] = ((speed_light/high_freq)/max_uv)*(180./np.pi)*(3.6e6/5.)
 		except:
 			pass
 		ms.reset()
@@ -1971,18 +1970,65 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 def apply_to_all(prefix,files,tar,params,casa6):
 	cwd = params['global']['cwd']
 	i = prefix
+	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 	importfitsidi(fitsidifile=files,
 		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 		          constobsid=params['import_fitsidi']["const_obs_id"],
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+
+	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
+	if params['apriori_cal']["do_observatory_flg"] == True:
+		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
+			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
+	if params['init_flag']['flag_edge_chans']['run'] == True:
+
+		ec=calc_edge_channels(value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
+							  nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
+							  nchan=msinfo['SPECTRAL_WINDOW']['nchan'])
+
+		flagdata(vis=msfile,
+				 mode='manual',
+				 spw=ec)
+
+	if params['init_flag']['autocorrelations'] == True:
+		if steps_run['init_flag'] == 1:
+			flagmanager(vis=msfile,
+					    mode='restore',
+					    versionname='autocorrelations')
+		else:
+			flagmanager(vis=msfile,
+				        mode='save',
+				        versionname='autocorrelations')
+		flagdata(vis=msfile,
+			     mode='manual',
+			     autocorr=True)
+
+	if params['init_flag']['quack_data']['run'] == True:
+		quack_ints = params['init_flag']['quack_data']['quack_time']
+		quack_mode = params['init_flag']['quack_data']['quack_mode']
+		if type(quack_ints)==dict:
+			for j in quack_ints.keys():
+				if j == '*':
+					flagdata(vis=msfile,
+						     field=j,
+						     mode='quack',
+						     quackinterval=quack_ints[j],
+						     quackmode=quack_mode)
+		elif type(quack_ints)==float:
+			flagdata(vis=msfile,
+				     mode='quack',
+				     quackinterval=quack_ints,
+				     quackmode=quack_mode)
+
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
+			 field='*',
 		     gaintable=gaintables['gaintable'],
 			 gainfield=gaintables['gainfield'],
 			 interp=gaintables['interp'],
 			 spwmap=gaintables['spwmap'],
 			 parang=gaintables['parang'])
-	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
+	rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  outputvis='%s/%s.ms'%(cwd,i))
