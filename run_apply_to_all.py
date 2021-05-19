@@ -4,6 +4,7 @@ import tarfile
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
+mpipath = os.path.dirname(os.path.realpath(filename))
 
 from VLBI_pipe_functions import *
 
@@ -19,6 +20,7 @@ except:
 	from taskinit import casalog
 	casa6=False
 
+
 try:
 	if casa6 == True:	
 		from casampi.MPICommandClient import MPICommandClient
@@ -28,6 +30,7 @@ try:
 	client.set_log_mode('redirect')
 	client.start_services()
 	parallel=True
+	cmd = []
 except:
 	parallel=False
 
@@ -50,25 +53,16 @@ target_path = params['apply_to_all']['target_path']
 
 target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NAME'],project_code=params['global']['project_code'],idifiles=[])
 
-print(target_files)
-params['import_fitsidi']["const_obs_id"] = False
-'''
-if parallel == True:
-	cmd = []
-	for i in target_files.keys():
-		if i !='tar':
-			cmd1 = "importfitsidi(fitsidifile=%s, vis='%s.ms', constobsid=%s, scanreindexgap_s=%s)"%("%s"%target_files[i], i, params['import_fitsidi']["const_obs_id"], params['import_fitsidi']["scan_gap"])
+for i in target_files.keys():
+	if i!='tar':
+		if parallel == True:
+			cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; params = load_json(inputs['parameter_file']); apply_to_all(prefix=%s,files=%s,tar=%s,params=params,casa6=%s)"%(mpipath,i,target_files[i],target_files['tar'],casa6)
 			cmdId = client.push_command_request(cmd1,block=False)
-			cmdId = client.push_command_request("applycal(vis='%s.ms', gaintable=%s, parang=True)"%(i,"%s"%gaintables['gaintable']),block=False,target_server=cmdId)
 			cmd.append(cmdId[0])
+		else:
+			apply_to_all(prefix=i,files=target_files[i],tar=target_files['tar'],params=params,casa6=casa6)
 if parallel == True:
 	resultList = client.get_command_response(cmd,block=True)
-'''
-#importfitsidi(fitsidifile=idifiles,\
-#	          vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
-#	          constobsid=params['import_fitsidi']["const_obs_id"],\
-#	          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
-#		cmd.append(cmdId[0])
 
 if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 	msinfo = get_ms_info(msfile)

@@ -1967,3 +1967,22 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 			subt.done()
 	
 	tb.done()
+
+def apply_to_all(prefix,files,tar,params,casa6):
+	cwd = params['global']['cwd']
+	i = prefix
+	gaintables = load_gaintables(params, casa6=casa6)
+	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+	importfitsidi(fitsidifile=files,
+		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
+		          constobsid=params['import_fitsidi']["const_obs_id"],
+		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
+		     gaintable=gaintables['gaintable'],
+			 gainfield=gaintables['gainfield'],
+			 interp=gaintables['interp'],
+			 spwmap=gaintables['spwmap'],
+			 parang=gaintables['parang'])
+	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
+	split(vis='%s/%s_presplit.ms'%(cwd,i),
+			  outputvis='%s/%s.ms'%(cwd,i))

@@ -44,7 +44,7 @@ applycal(vis='%s/%s'%(cwd,msfile),
 		 parang=gaintables['parang'])
 
 for i in params['global']['targets']:
-	rmdirs(['%s/%s_calibrated.ms'%(cwd,i)])
+	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
 	split(vis='%s/%s'%(cwd,msfile),
 		  field=i,
 		  outputvis='%s/%s_calibrated.ms'%(cwd,i))
