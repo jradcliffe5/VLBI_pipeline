@@ -28,6 +28,10 @@ except:
 	from casac import casac as casatools
 	from taskinit import *
 	from bandpass_cli import bandpass_cli as bandpass
+	from importfitsidi_cli import importfitsidi_cli as importfitsidi
+	from flagdata_cli import flagdata_cli as flagdata
+	from applycal_cli import applycal_cli as applycal
+	from split_cli import split_cli as split
 	casa6=False
 	
 
