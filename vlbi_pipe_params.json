@@ -213,6 +213,7 @@
     "apply_to_all":{  
         "target_path"       : "./target_files/",      
         "pbcor":{
+            "run"           : true,
             "implementation": "IDG",
             "vex_file"      : "",
             "diff_corr"     : true

@@ -32,6 +32,7 @@ except:
 	from flagdata_cli import flagdata_cli as flagdata
 	from applycal_cli import applycal_cli as applycal
 	from split_cli import split_cli as split
+	from gencal_cli import gencal_cli as gencal
 	casa6=False
 	
 
@@ -2036,3 +2037,4 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  outputvis='%s/%s.ms'%(cwd,i))
+	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])

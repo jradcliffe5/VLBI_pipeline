@@ -19,6 +19,7 @@ phase_referencing = 0
 apply_target = 0
 ## Wide-field steps ##
 apply_to_all = 1
+flag_all = 0
 primary_beam_cor = 0
 mssc = 0
 
