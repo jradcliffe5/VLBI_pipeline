@@ -5,6 +5,7 @@ __pycache__/
 *.last
 # C extensions
 *.so
+*.vex 
 
 # Distribution / packaging
 .Python

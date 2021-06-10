@@ -214,8 +214,8 @@
         "target_path"       : "./target_files/",      
         "pbcor":{
             "run"           : true,
-            "implementation": "IDG",
-            "vex_file"      : "",
+            "implementation": "uvcorr",
+            "vex_file"      : "eg078b.vex",
             "diff_corr"     : true
         },
         "image":{

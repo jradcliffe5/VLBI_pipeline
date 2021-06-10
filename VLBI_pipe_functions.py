@@ -1,4 +1,4 @@
-import re, os, json, inspect, sys, copy, glob, tarfile, random
+import re, os, json, inspect, sys, copy, glob, tarfile, random, math
 import collections
 from collections import OrderedDict
 ## Numerical routines
@@ -1973,17 +1973,21 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 	tb.done()
 
 def apply_to_all(prefix,files,tar,params,casa6):
+	func_name = inspect.stack()[0][3]
+
 	cwd = params['global']['cwd']
 	i = prefix
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
+	'''
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 	importfitsidi(fitsidifile=files,
 		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 		          constobsid=params['import_fitsidi']["const_obs_id"],
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
-
+	'''
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
+	'''
 	if params['apriori_cal']["do_observatory_flg"] == True:
 		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
 			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
@@ -2026,7 +2030,11 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				     mode='quack',
 				     quackinterval=quack_ints,
 				     quackmode=quack_mode)
+	'''
+	if params['apply_to_all']['pbcor']['run'] == True:
+			primary_beam_correction(msfile=msfile,prefix=i,params=params)
 
+	'''
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 			 field='*',
 		     gaintable=gaintables['gaintable'],
@@ -2038,3 +2046,68 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+	'''
+
+def angsep(ra1rad,dec1rad,ra2rad,dec2rad):
+	x=math.cos(ra1rad)*math.cos(dec1rad)*math.cos(ra2rad)*math.cos(dec2rad)
+	y=math.sin(ra1rad)*math.cos(dec1rad)*math.sin(ra2rad)*math.cos(dec2rad)
+	z=math.sin(dec1rad)*math.sin(dec2rad)
+
+	rad=math.acos(x+y+z)
+
+	# use Pythargoras approximation if rad < 1 arcsec
+	if rad<0.000004848:
+	    rad=math.sqrt((math.cos(dec1rad)*(ra1rad-ra2rad))**2+(dec1rad-dec2rad)**2)
+	    
+	# Angular separation
+	return rad
+	
+def primary_beam_correction(msfile,prefix,params):
+	func_name = inspect.stack()[0][3]
+	msinfo = get_ms_info(msfile)
+	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
+	npol = msinfo['SPECTRAL_WINDOW']['npol']
+	nants = len(msinfo['ANTENNAS']['anttoID'])
+
+	if params['apply_to_all']['pbcor']['implementation'] == 'aproject':
+		casalog.post(priority="INFO",origin=func_name,message='IDG not implemented just yet')
+	elif params['apply_to_all']['pbcor']['implementation'] == 'aprojectdiff':
+		casalog.post(priority="INFO",origin=func_name,message='IDG differential not implemented just yet')
+	elif params['apply_to_all']['pbcor']['implementation'] == 'uvcorr':
+		rmdirs(['%s.pbcor'%(prefix)])
+		cb = casatools.calibrater()
+		cb.open(msfile,False,False,False)
+		cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', False)
+		cb.close()
+
+		if params['apply_to_all']['pbcor']['vex_file'] != '':
+			tbnrows = nspw*nants
+		else:
+			if os.path.exists(params['apply_to_all']['pbcor']['vex_file']) == False:
+				casalog.post(origin=func_name,message='Vex file %s does not exist, please correct'%params['apply_to_all']['pbcor']['vex_file'],priority='SEVERE')
+				sys.exit()
+			else:
+				sched = vex.Vex(params['apply_to_all']['pbcor']['vex_file']).sched
+				calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
+				re_sched = []
+				for i in range(len(scan)):
+					if scan[i]['source'] not in calibrators:
+						re_sched.append(scan[i])
+					else:
+						pass
+				tbnrows = nspw*nants
+
+		TIME = np.empty(tbnrows)
+		FIELD_ID = np.empty(tbnrows)
+		SPECTRAL_WINDOW_ID = np.empty(tbnrows)
+		ANTENNA1 = np.empty(tbnrows)
+		ANTENNA2 = np.zeros(tbnrows)
+		INTERVAL = np.zeros(tbnrows)
+		OBSERVATION_ID = np.zeros(tbnrows)
+		CPARAM = np.empty((npol,1,tbnrows),dtype=complex)
+		PARAMERR = np.ones((npol,1,tbnrows))
+		FLAG = np.zeros((npol,1,tbnrows))
+		SNR =  np.ones((npol,1,tbnrows))
+		WEIGHT = np.empty(tbnrows)
+
+
