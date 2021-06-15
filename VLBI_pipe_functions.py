@@ -516,7 +516,7 @@ def get_ms_info(msfile):
 	field = {}
 	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
 	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1).astype(str),fields))
-	msinfo['FIELD'] = field
+	field['field_radec'] = dict(zip(fields,tb.getcol('PHASE_DIR')))
 	tb.close()
 	## scans
 	ms.open(msfile)
@@ -541,15 +541,26 @@ def get_ms_info(msfile):
 	high_freq = spw['freq_range'][1]
 	
 	ms.open(msfile)
+	f = []
+	indx = []
 	for i in field['fieldtoID'].keys():
 		ms.selecttaql('FIELD_ID==%s'%field['fieldtoID'][i])
 		try:
 			max_uv = ms.getdata('uvdist')['uvdist'].max()
 			image_params[i] = ((speed_light/high_freq)/max_uv)*(180./np.pi)*(3.6e6/5.)
+			f.append(i)
+			indx.append(field['fieldtoID'][i])
 		except:
 			pass
 		ms.reset()
+	for i in f:
+		ra_dec_f = field['field_radec'][i]
 	ms.close()
+	field = {}
+	field['fieldtoID'] =dict(zip(f, indx))
+	field['IDtofield'] =dict(zip(np.array(indx).astype(str),f))
+	field['field_radec'] = dict(zip(f,ra_dec_f))
+	msinfo['FIELD'] = field
 	msinfo["IMAGE_PARAMS"] = image_params
 	
 	return msinfo
@@ -1985,6 +1996,9 @@ def apply_to_all(prefix,files,tar,params,casa6):
 		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 		          constobsid=params['import_fitsidi']["const_obs_id"],
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+	
+	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),
+	              params=params)
 	'''
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 	'''
@@ -2064,7 +2078,10 @@ def angsep(ra1rad,dec1rad,ra2rad,dec2rad):
 	
 def primary_beam_correction(msfile,prefix,params):
 	func_name = inspect.stack()[0][3]
-	msinfo = get_ms_info(msfile)
+	import vex
+
+	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],prefix), array=get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix)), append=False)
+	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
 	nants = len(msinfo['ANTENNAS']['anttoID'])
@@ -2080,22 +2097,31 @@ def primary_beam_correction(msfile,prefix,params):
 		cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', False)
 		cb.close()
 
-		if params['apply_to_all']['pbcor']['vex_file'] != '':
+		if params['apply_to_all']['pbcor']['vex_file'] == '':
 			tbnrows = nspw*nants
 		else:
 			if os.path.exists(params['apply_to_all']['pbcor']['vex_file']) == False:
+				vex_t = False
 				casalog.post(origin=func_name,message='Vex file %s does not exist, please correct'%params['apply_to_all']['pbcor']['vex_file'],priority='SEVERE')
 				sys.exit()
 			else:
-				sched = vex.Vex(params['apply_to_all']['pbcor']['vex_file']).sched
+				vex_t = True
+				vex_params = vex.Vex(params['apply_to_all']['pbcor']['vex_file'])
+				scans = vex_params.sched
+				source = vex_params.source
 				calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
 				re_sched = []
-				for i in range(len(scan)):
-					if scan[i]['source'] not in calibrators:
-						re_sched.append(scan[i])
+				for i in range(len(scans)):
+					if scans[i]['source'] not in calibrators:
+						re_sched.append(scans[i])
 					else:
 						pass
-				tbnrows = nspw*nants
+				tbnrows = nspw*nants*len(re_sched)
+
+		targets=[]
+		for i in msinfo['FIELD']['fieldtoID'].keys():
+			if i not in calibrators:
+				targets.append(i)
 
 		TIME = np.empty(tbnrows)
 		FIELD_ID = np.empty(tbnrows)
@@ -2110,4 +2136,12 @@ def primary_beam_correction(msfile,prefix,params):
 		SNR =  np.ones((npol,1,tbnrows))
 		WEIGHT = np.empty(tbnrows)
 
+		if vex_t == False:
+			print('inp')
+		else:
+			for i in range(len(re_sched)):
+				time = re_sched[i]['mjd_floor'] + re_sched[i]['start_hr'] / 24.
+				for j in range(list(msinfo['ANTENNAS']['anttoID'].values)):
+					print('hi')
+					
 

@@ -77,7 +77,7 @@ class Vex(object):
 		# Extract desired information
 		# SOURCE ========================================================
 		SOURCE = self.get_sector('SOURCE')
-		source = []
+		source = {}
 		indef = False
 
 		for i in range(len(SOURCE)):
@@ -101,8 +101,8 @@ class Vex(object):
 					ref_coord_frame = ret
 
 				if line[0:6] == "enddef":
-					source.append({'source': source_name, 'ra': ra, 'dec': dec,
-								   'ref_coord_frame': ref_coord_frame})
+					source[source_name] = {'ra': ra, 'dec': dec,
+								   'ref_coord_frame': ref_coord_frame}
 					indef = False
 
 		self.source = source
