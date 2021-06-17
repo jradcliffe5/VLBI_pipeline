@@ -516,7 +516,6 @@ def get_ms_info(msfile):
 	field = {}
 	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
 	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1).astype(str),fields))
-	field['field_radec'] = dict(zip(fields,tb.getcol('PHASE_DIR')))
 	tb.close()
 	## scans
 	ms.open(msfile)
@@ -553,13 +552,10 @@ def get_ms_info(msfile):
 		except:
 			pass
 		ms.reset()
-	for i in f:
-		ra_dec_f = field['field_radec'][i]
 	ms.close()
 	field = {}
 	field['fieldtoID'] =dict(zip(f, indx))
 	field['IDtofield'] =dict(zip(np.array(indx).astype(str),f))
-	field['field_radec'] = dict(zip(f,ra_dec_f))
 	msinfo['FIELD'] = field
 	msinfo["IMAGE_PARAMS"] = image_params
 	
@@ -1990,7 +1986,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	i = prefix
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
-	'''
+	
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 	importfitsidi(fitsidifile=files,
 		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
@@ -1999,9 +1995,9 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),
 	              params=params)
-	'''
+	
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
-	'''
+	
 	if params['apriori_cal']["do_observatory_flg"] == True:
 		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
 			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
@@ -2044,11 +2040,22 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				     mode='quack',
 				     quackinterval=quack_ints,
 				     quackmode=quack_mode)
-	'''
+	
 	if params['apply_to_all']['pbcor']['run'] == True:
-			primary_beam_correction(msfile=msfile,prefix=i,params=params)
-
-	'''
+			pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
+			gt = gaintables['gaintable']
+			gf = gaintables['gainfield']
+			gspw = gaintables['spwmap']
+			gin = gaintables['interp']
+			gt.append(pbcor_table)
+			gf.append("")
+			gspw.append([])
+			gin.append("linear")
+			gaintables['gaintable'] = gt
+			gaintables['gainfield'] = gf
+			gaintables['spwmap'] = gspw
+			gaintables['interp'] = gin
+	
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 			 field='*',
 		     gaintable=gaintables['gaintable'],
@@ -2060,9 +2067,31 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-	'''
+	
 
-def angsep(ra1rad,dec1rad,ra2rad,dec2rad):
+def angsep(ra1hms,dec1dms,ra2rad,dec2rad):
+	ra = re.split('h|m|s',ra1hms)
+	dec = re.split('d|\'|"',dec1dms)
+
+	ra1hh=(float(ra[0]))*15.
+	ra1mm=(float(ra[1])/60.)*15.
+	ra1ss=(float(ra[2])/3600.)*15.
+
+	ra1deg=ra1hh+ra1mm+ra1ss
+	ra1rad=ra1deg*math.pi/180.
+
+	dec1hh=abs(float(dec[0]))
+	dec1mm=float(dec[1])/60
+	dec1ss=float(dec[2])/3600
+
+	if float(dec[0]) < 0:
+		dec1deg=-1*(dec1hh+dec1mm+dec1ss)
+	else:
+		dec1deg=dec1hh+dec1mm+dec1ss
+
+	dec1rad=dec1deg*math.pi/180
+
+
 	x=math.cos(ra1rad)*math.cos(dec1rad)*math.cos(ra2rad)*math.cos(dec2rad)
 	y=math.sin(ra1rad)*math.cos(dec1rad)*math.sin(ra2rad)*math.cos(dec2rad)
 	z=math.sin(dec1rad)*math.sin(dec2rad)
@@ -2079,12 +2108,27 @@ def angsep(ra1rad,dec1rad,ra2rad,dec2rad):
 def primary_beam_correction(msfile,prefix,params):
 	func_name = inspect.stack()[0][3]
 	import vex
+	cb = casatools.calibrater()
+	tb = casatools.table()
+	qa = casatools.quanta()
 
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],prefix), array=get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix)), append=False)
-	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
+	#save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],prefix), array=get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix)), append=False)
+	#msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
+	msinfo = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix))
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
 	nants = len(msinfo['ANTENNAS']['anttoID'])
+
+	tb.open(msfile+'/ANTENNA')
+	ant_name = tb.getcol('NAME')
+	pb_freq = tb.getcol('PB_FREQ')
+	pb_model = tb.getcol('PB_MODEL')
+	pb_params = list(tb.getcol('PB_PARAM'))
+	pb_squint = list(tb.getcol('PB_SQUINT'))
+	tb.close()
+	pb_parameters = {}
+	for i,j in enumerate(ant_name):
+		pb_parameters[j] = {'freq':pb_freq[i],'model':pb_model[i],'params':np.array(pb_params[i].split(',')).astype(float),'squint':np.array(pb_squint[i].split(',')).astype(float)}
 
 	if params['apply_to_all']['pbcor']['implementation'] == 'aproject':
 		casalog.post(priority="INFO",origin=func_name,message='IDG not implemented just yet')
@@ -2092,9 +2136,8 @@ def primary_beam_correction(msfile,prefix,params):
 		casalog.post(priority="INFO",origin=func_name,message='IDG differential not implemented just yet')
 	elif params['apply_to_all']['pbcor']['implementation'] == 'uvcorr':
 		rmdirs(['%s.pbcor'%(prefix)])
-		cb = casatools.calibrater()
 		cb.open(msfile,False,False,False)
-		cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', False)
+		cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', True)
 		cb.close()
 
 		if params['apply_to_all']['pbcor']['vex_file'] == '':
@@ -2118,13 +2161,22 @@ def primary_beam_correction(msfile,prefix,params):
 						pass
 				tbnrows = nspw*nants*len(re_sched)
 
+
 		targets=[]
 		for i in msinfo['FIELD']['fieldtoID'].keys():
 			if i not in calibrators:
 				targets.append(i)
+		tb = casatools.table()
+		tb.open(msfile+'/FIELD')
+		radec = tb.getcol('PHASE_DIR').T
+		fie = tb.getcol('NAME')
+		target = {}
+		for i in targets:
+			target[i] = radec[np.where(fie==i)[0][0]].squeeze()
+
 
 		TIME = np.empty(tbnrows)
-		FIELD_ID = np.empty(tbnrows)
+		FIELD_ID = np.zeros(tbnrows)
 		SPECTRAL_WINDOW_ID = np.empty(tbnrows)
 		ANTENNA1 = np.empty(tbnrows)
 		ANTENNA2 = np.zeros(tbnrows)
@@ -2139,9 +2191,58 @@ def primary_beam_correction(msfile,prefix,params):
 		if vex_t == False:
 			print('inp')
 		else:
+			runc=0
 			for i in range(len(re_sched)):
-				time = re_sched[i]['mjd_floor'] + re_sched[i]['start_hr'] / 24.
-				for j in range(list(msinfo['ANTENNAS']['anttoID'].values)):
-					print('hi')
-					
+				## get scan lengths and times
+				scan_l = []
+				for j in re_sched[i]['scan'].keys():
+					scan_l.append(re_sched[i]['scan'][j]['scan_sec'])
+				scan_l = np.average(scan_l)/2./3600.
+				time = (re_sched[i]['mjd_floor'] + (re_sched[i]['start_hr']+scan_l) / 24.)
+				q = qa.quantity('%s d'%time)
+				time = qa.convert(q,'s')['value']
+
+				## get ang separation
+				if len(target) == 1:
+					radec_target = target[list(msinfo['FIELD']['IDtofield'].values())[0]]
+				else:
+					casalog.post(origin=func_name,message='Multiple targets .. it will mess up at the moment',priority='SEVERE')
+					sys.exit()
+				radec_teles = source[re_sched[i]['source']]
+				offset = angsep(radec_teles['ra'],radec_teles['dec'],radec_target[0],radec_target[1])
+
+				## get pb_params
+				IDtoant = msinfo['ANTENNAS']['IDtoant']
+				for j in list(msinfo['ANTENNAS']['anttoID'].values()):
+					for k in range(msinfo['SPECTRAL_WINDOW']['nspws']):
+						obs_freq = msinfo['SPECTRAL_WINDOW']['freq_range'][0] + ((k+1)-0.5)*msinfo['SPECTRAL_WINDOW']['spw_bw']
+						attenuation = pb_model_uvcorr(parameters=pb_parameters[IDtoant[str(j)]]['params'],model=pb_parameters[IDtoant[str(j)]]['model'], obs_freq=obs_freq,angsep=offset)
+						ANTENNA1[runc] = int(j)
+						SPECTRAL_WINDOW_ID[runc] = int(k)
+						TIME[runc] = time
+						CPARAM[:,:,runc] = attenuation+0j
+						runc+=1
+
+			tb.open('%s.pbcor'%(prefix),nomodify=False)
+			tb.addrows(tbnrows)
+			tb.putcol('TIME',TIME)
+			tb.putcol('CPARAM',CPARAM)
+			tb.putcol('PARAMERR',PARAMERR)
+			tb.putcol('FLAG',FLAG)
+			tb.putcol('SNR',SNR)
+			tb.putcol('ANTENNA1',ANTENNA1)
+			tb.putcol('ANTENNA2',ANTENNA2)
+			tb.putcol('SPECTRAL_WINDOW_ID',SPECTRAL_WINDOW_ID)
+			tb.putcol('FIELD_ID',FIELD_ID)
+			tb.close()
+	return '%s.pbcor'%(prefix)
+
+def pb_model_uvcorr(parameters,model,obs_freq,angsep):
+	from scipy import constants as c
+	if model == 'G':
+		P = 1
+		attenuation = P*np.e**(-1*((angsep**2)*4*np.log(2)*(parameters[0]**2))/((c.c/obs_freq)**2))
+	elif model == 'B':
+		print('hi')
+	return np.sqrt(attenuation)
 
