@@ -103,11 +103,15 @@
             "run"           :  true,
             "edge_chan_flag":  "5%"
         },
-        "autocorrelations"  :  false,
+        "flag_autocorrs"    :  false,
         "quack_data":{
             "run"           :  true,
             "quack_time"    :  {"3C345":30.0,"DA193":30.0,"*":10.0},
             "quack_mode"    :  "beg"
+        },
+        "manual_flagging":{
+            "run"           :  false,
+            "flag_file"     :  ""
         },
         "hpc_options":{
             "partition"     :  "default",

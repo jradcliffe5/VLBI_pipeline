@@ -52,7 +52,7 @@ if params['init_flag']['flag_edge_chans']['run'] == True:
 			 mode='manual',
 			 spw=ec)
 
-if params['init_flag']['autocorrelations'] == True:
+if params['init_flag']['flag_autocorrs'] == True:
 	if steps_run['init_flag'] == 1:
 		flagmanager(vis=msfile,
 				    mode='restore',
@@ -91,6 +91,24 @@ if params['init_flag']['quack_data']['run'] == True:
 	else:
 		casalog.post(priority='SEVERE',origin=filename,message='quack can either be dictionary to map antenna to quacking time or float to apply to all telescopes')
 		sys.exit()
+
+if params['init_flag']['manual_flagging']['run'] == True:
+	if steps_run['init_flag'] == 1:
+		flagmanager(vis=msfile,
+				    mode='restore',
+				    versionname='manual_flags')
+	else:
+		flagmanager(vis=msfile,
+			        mode='save',
+			        versionname='manual_flags')
+	if os.path.exists('%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))==True:
+		flagdata(vis=msfile,
+				 mode='list',
+				 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
+	else:
+		casalog.post(priority='SEVERE',origin=filename,message='flag file %s/%s does not exist'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
+		sys.exit()
+
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['init_flag'] = 1

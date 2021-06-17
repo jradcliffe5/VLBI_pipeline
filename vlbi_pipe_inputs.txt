@@ -7,10 +7,10 @@ make_scripts = True
 run_jobs = True
 
 ## Steps to run ##
-prepare_data = 0
-import_fitsidi = 0
+prepare_data = 1
+import_fitsidi = 1
 make_mms = 0
-apriori_cal = 0
+apriori_cal = 1
 init_flag = 0
 fit_autocorrs = 0
 sub_band_delay = 0
@@ -18,9 +18,8 @@ bandpass_cal = 0
 phase_referencing = 0
 apply_target = 0
 ## Wide-field steps ##
-apply_to_all = 1
+apply_to_all = 0
 flag_all = 0
-primary_beam_cor = 0
 mssc = 0
 
 

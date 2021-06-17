@@ -284,7 +284,7 @@ def write_hpc_headers(step,params):
 					 'job_name'      :'#SBATCH -J %s'%hpc_opts['job_name'],
 					 'hpc_account'   :'#SBATCH --account %s'%hpc_opts['hpc_account'],
 					 'email_progress':'#SBATCH --mail-type=BEGIN,END,FAIL\n#SBATCH --mail-user=%s'%hpc_opts['email_progress'],
-					 'error':'#SBATCH -o %s.sh.stdout.log\n#SBATCH -e %s.sh.stderr.log'%(hpc_opts['error'],hpc_opts['error'])
+					 'error':'#SBATCH -o logs/%s.sh.stdout.log\n#SBATCH -e logs/%s.sh.stderr.log'%(hpc_opts['error'],hpc_opts['error'])
 					},
 				'pbs':{
 					 'partition'     :'#PBS -q %s'%hpc_opts['partition'],
@@ -296,7 +296,7 @@ def write_hpc_headers(step,params):
 					 'job_name'      :'#PBS -N %s'%hpc_opts['job_name'],
 					 'hpc_account'   :'#PBS -P %s'%hpc_opts['hpc_account'],
 					 'email_progress':'#PBS -m abe -M %s'%hpc_opts['email_progress'],
-					 'error':'#PBS -o %s.sh.stdout.log\n#PBS -e %s.sh.stderr.log'%(hpc_opts['error'],hpc_opts['error'])
+					 'error':'#PBS -o logs/%s.sh.stdout.log\n#PBS -e logs/%s.sh.stderr.log'%(hpc_opts['error'],hpc_opts['error'])
 					},
 				'bash':{
 					 'partition'     :'',
@@ -402,10 +402,29 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
 		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['flag_strategy'],msfile)
+		
+	elif aoflag=='widefield':
+		if (params['global']['job_manager'] == 'pbs'):
+			commands.append('cd %s'%params['global']['cwd'])
+		for i in params['global']['AOflag_command']:
+			commands.append(i)
+		msfile='%s.ms'%params['global']['project_code']
+		fields=params[step]['flag_fields']
+		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+			msinfo = get_ms_info(msfile)
+			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+		else:
+			msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+		ids = []
+		for i in fields:
+			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
+		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
+		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['flag_strategy'],msfile)
 	else:
 		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
 		sys.exit()
 
+	commands.append('mv "casa"*"log" "logs"')
 	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
@@ -2011,7 +2030,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				 mode='manual',
 				 spw=ec)
 
-	if params['init_flag']['autocorrelations'] == True:
+	if params['init_flag']['autocorrs'] == True:
 		if steps_run['init_flag'] == 1:
 			flagmanager(vis=msfile,
 					    mode='restore',
@@ -2040,6 +2059,11 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				     mode='quack',
 				     quackinterval=quack_ints,
 				     quackmode=quack_mode)
+
+	if params['init_flag']['manual_flagging']['run'] == True:
+		flagdata(vis=msfile,
+				 mode='list',
+				 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 	
 	if params['apply_to_all']['pbcor']['run'] == True:
 			pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
