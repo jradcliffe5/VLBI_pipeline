@@ -2,6 +2,7 @@
 # a interferometric array vex schedule class
 #
 #    Copyright (C) 2018 Hotaka Shiokawa
+#    Heavily modified by Jack Radcliffe 2021
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -26,8 +27,9 @@ from builtins import object
 
 import numpy as np
 import re
+import math
 
-from astropy.time import Time
+
 import os
 
 ###################################################################################################
@@ -312,17 +314,103 @@ class Vex(object):
 # Function to find MJD (int!) and hour in UT from vex format,
 # e.g, 2016y099d05h00m00s
 
+def jd_to_mjd(jd):
+	"""
+	Convert Julian Day to Modified Julian Day
+	
+	Parameters
+	----------
+	jd : float
+		Julian Day
+		
+	Returns
+	-------
+	mjd : float
+		Modified Julian Day
+	
+	"""
+	return jd - 2400000.5
+
+def date_to_jd(year,month,day):
+	"""
+	Convert a date to Julian Day.
+	
+	Algorithm from 'Practical Astronomy with your Calculator or Spreadsheet', 
+		4th ed., Duffet-Smith and Zwart, 2011.
+	
+	Parameters
+	----------
+	year : int
+		Year as integer. Years preceding 1 A.D. should be 0 or negative.
+		The year before 1 A.D. is 0, 10 B.C. is year -9.
+		
+	month : int
+		Month as integer, Jan = 1, Feb. = 2, etc.
+	
+	day : float
+		Day, may contain fractional part.
+	
+	Returns
+	-------
+	jd : float
+		Julian Day
+		
+	Examples
+	--------
+	Convert 6 a.m., February 17, 1985 to Julian Day
+	
+	>>> date_to_jd(1985,2,17.25)
+	2446113.75
+	
+	"""
+	if month == 1 or month == 2:
+		yearp = year - 1
+		monthp = month + 12
+	else:
+		yearp = year
+		monthp = month
+	
+	# this checks where we are in relation to October 15, 1582, the beginning
+	# of the Gregorian calendar.
+	if ((year < 1582) or
+		(year == 1582 and month < 10) or
+		(year == 1582 and month == 10 and day < 15)):
+		# before start of Gregorian calendar
+		B = 0
+	else:
+		# after start of Gregorian calendar
+		A = math.trunc(yearp / 100.)
+		B = 2 - A + math.trunc(A / 4.)
+		
+	if yearp < 0:
+		C = math.trunc((365.25 * yearp) - 0.75)
+	else:
+		C = math.trunc(365.25 * yearp)
+		
+	D = math.trunc(30.6001 * (monthp + 1))
+	
+	jd = B + C + D + day + 1720994.5
+	
+	return jd
+	
+
 
 def vexdate_to_MJD_hr(vexdate):
 	"""Find the integer MJD and UT hour from vex format date.
 	"""
-
 	time = re.findall(r"[-+]?\d+[\.]?\d*", vexdate)
 	year = int(time[0])
 	date = int(time[1])
 	yeardatetime = ("%04i" % year) + ':' + ("%03i" % date) + ":00:00:00.000"
-	t = Time(yeardatetime, format='yday')
-	mjd = t.mjd
+	try:
+		from astropy.time import Time
+		t = Time(yeardatetime, format='yday')
+		mjd = t.mjd
+	except:
+		from datetime import datetime
+		res = datetime.strptime(str(year)+ "-" +str(date), "%Y-%j").strftime("%d-%m-%Y").split('-')
+		t = date_to_jd(int(res[2]),int(res[1]),int(res[0]))
+		mjd = jd_to_mjd(t)
 	hour = int(time[2]) + float(time[3]) / 60. + float(time[4]) / 60. / 60.
 
 	return mjd, hour
