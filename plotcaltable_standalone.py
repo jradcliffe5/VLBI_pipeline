@@ -205,6 +205,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 	for i in msinfo['SPECTRAL_WINDOW']['spw_pols']:
 		if i[0] == i[1]:
 			pol_names.append(i)
+	polrange=len(msinfo['SPECTRAL_WINDOW']['spw_pols'])
 
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
@@ -237,12 +238,10 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					min_time = time.min()
 					time = (time - min_time)/3600.
 					ax = fig.add_subplot(gs00[s])
-					polrange=2
 					if yaxis == 'tec':
 						polrange=1
 						pol_names=['']
 					for pol in range(polrange):
-						#print(polrange)
 						if gaincol == 'FPARAM':
 							if yaxis == 'tsys':
 								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])

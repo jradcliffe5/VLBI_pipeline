@@ -1465,6 +1465,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 	for i in msinfo['SPECTRAL_WINDOW']['spw_pols']:
 		if i[0] == i[1]:
 			pol_names.append(i)
+	polrange = len(msinfo['SPECTRAL_WINDOW']['spw_pols'])
 
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
@@ -1497,7 +1498,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					min_time = time.min()
 					time = (time - min_time)/3600.
 					ax = fig.add_subplot(gs00[s])
-					polrange=2
 					if yaxis == 'tec':
 						polrange=1
 						pol_names=['']
@@ -1586,7 +1586,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						if len(spw) == 1:
 							spw_average = (msinfo['SPECTRAL_WINDOW']['freq_range'][0]+msinfo['SPECTRAL_WINDOW']['freq_range'][1])/2.
 						freqs = (np.ones(gain.shape[2])*(spw_average))/1.0e9
-						polrange=2
 						if yaxis == 'tec':
 							polrange=1
 							pol_names=['']
@@ -1636,7 +1635,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
 						chan_width = msinfo['SPECTRAL_WINDOW']['chan_width']
 						freqs = np.arange(ch0+(s*spwbw),ch0+((s+1)*spwbw),chan_width)/1.0e9
-						polrange=2
 						for pol in range(polrange):
 							if gaincol == 'FPARAM':
 								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:]).flatten()
