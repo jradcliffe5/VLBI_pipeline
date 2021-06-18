@@ -1697,13 +1697,21 @@ def make_tarfile(output_filename, source_dir):
 	with tarfile.open(output_filename, "w:gz") as tar:
 		tar.add(source_dir, arcname=os.path.basename(source_dir))
   
-def extract_tarfile(tar_file,cwd):
+def extract_tarfile(tar_file,cwd,delete_tar):
+	func_name = inspect.stack()[0][3]
 	tar = tarfile.open("%s"%tar_file)
+	files = tar.getnames()
 	for member in tar.getmembers():
-		print("Extracting %s" % member.name)
+		casalog.post(priority='INFO',origin=func_name,message='Extracting: %s' % member.name)
 		tar.extract(member, path=cwd)
+	if delete_tar == True:
+		rmdirs(["%s"%tar_file])
+	for i in range(len(files)):
+		files[i] = cwd+files[i]
+	return files
 
 def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
+	func_name = inspect.stack()[0][3]
 	if idifiles == []:
 		idifiles={}
 		if telescope == 'EVN':
@@ -1725,11 +1733,11 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 					check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
-					for k in files:
-						tarf = tarfile.open("%s/%s"%(target_dir,k), "r:gz")
-						idifiles[k.split('.tar.gz')[0]] = tarf.getnames()
-						tarf.close()
+					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
+					for k in unique_files:
+						idifiles[k] = glob.glob('%s/%s*'%(target_dir,k))
 				else:
+					casalog.post(priority='SEVERE',origin=func_name,message='Target files must all be .tar.gz or .idi files')
 					sys.exit()
 			else:
 				sys.exit()
@@ -2005,15 +2013,20 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	i = prefix
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
+	target_dir = params['apply_to_all']['target_path']
+
+	if tar == True:
+		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 	importfitsidi(fitsidifile=files,
 		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 		          constobsid=params['import_fitsidi']["const_obs_id"],
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+	if tar == True:
+		rmfiles(files)
 	
-	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),
-	              params=params)
+	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 	
@@ -2066,19 +2079,19 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 	
 	if params['apply_to_all']['pbcor']['run'] == True:
-			pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
-			gt = gaintables['gaintable']
-			gf = gaintables['gainfield']
-			gspw = gaintables['spwmap']
-			gin = gaintables['interp']
-			gt.append(pbcor_table)
-			gf.append("")
-			gspw.append([])
-			gin.append("linear")
-			gaintables['gaintable'] = gt
-			gaintables['gainfield'] = gf
-			gaintables['spwmap'] = gspw
-			gaintables['interp'] = gin
+		pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
+		gt = gaintables['gaintable']
+		gf = gaintables['gainfield']
+		gspw = gaintables['spwmap']
+		gin = gaintables['interp']
+		gt.append(pbcor_table)
+		gf.append("")
+		gspw.append([])
+		gin.append("linear")
+		gaintables['gaintable'] = gt
+		gaintables['gainfield'] = gf
+		gaintables['spwmap'] = gspw
+		gaintables['interp'] = gin
 	
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 			 field='*',
@@ -2155,9 +2168,11 @@ def primary_beam_correction(msfile,prefix,params):
 		pb_parameters[j] = {'freq':pb_freq[i],'model':pb_model[i],'params':np.array(pb_params[i].split(',')).astype(float),'squint':np.array(pb_squint[i].split(',')).astype(float)}
 
 	if params['apply_to_all']['pbcor']['implementation'] == 'aproject':
-		casalog.post(priority="INFO",origin=func_name,message='IDG not implemented just yet')
+		casalog.post(priority="SEVERE",origin=func_name,message='IDG not implemented just yet')
+		sys.exit()
 	elif params['apply_to_all']['pbcor']['implementation'] == 'aprojectdiff':
-		casalog.post(priority="INFO",origin=func_name,message='IDG differential not implemented just yet')
+		casalog.post(priority="SEVERE",origin=func_name,message='IDG differential not implemented just yet')
+		sys.exit()
 	elif params['apply_to_all']['pbcor']['implementation'] == 'uvcorr':
 		rmdirs(['%s.pbcor'%(prefix)])
 		cb.open(msfile,False,False,False)

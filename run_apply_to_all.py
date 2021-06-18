@@ -52,15 +52,6 @@ target_path = params['apply_to_all']['target_path']
 
 target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NAME'],project_code=params['global']['project_code'],idifiles=[])
 
-#os.system('mkdir backup_gaintables')
-#for i in gaintables['gaintable']:
-#	os.system('cp -r %s backup_gaintables/'%i)
-
-#for i in gaintables['gaintable']:
-#	tb = casatools.table()
-#	tb.open(i,nomodify=False)
-#	tb.putcol('FIELD_ID',(np.ones(tb.getcol('FIELD_ID').shape)*192).astype(int))
-#	tb.close()
 
 for i in target_files.keys():
 	if i!='tar':
@@ -72,10 +63,3 @@ for i in target_files.keys():
 			apply_to_all(prefix=i,files=target_files[i],tar=target_files['tar'],params=params,casa6=casa6)
 if parallel == True:
 	resultList = client.get_command_response(cmd,block=True)
-
-
-if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
-	msinfo = get_ms_info(msfile)
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
-else:
-	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
