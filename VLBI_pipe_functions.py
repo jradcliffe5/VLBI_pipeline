@@ -2080,18 +2080,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	
 	if params['apply_to_all']['pbcor']['run'] == True:
 		pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
-		gt = gaintables['gaintable']
-		gf = gaintables['gainfield']
-		gspw = gaintables['spwmap']
-		gin = gaintables['interp']
-		gt.append(pbcor_table)
-		gf.append("")
-		gspw.append([])
-		gin.append("linear")
-		gaintables['gaintable'] = gt
-		gaintables['gainfield'] = gf
-		gaintables['spwmap'] = gspw
-		gaintables['interp'] = gin
+		gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'nearest'])
 	
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 			 field='*',
