@@ -2043,7 +2043,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				 mode='manual',
 				 spw=ec)
 
-	if params['init_flag']['autocorrs'] == True:
+	if params['init_flag']['flag_autocorrs'] == True:
 		if steps_run['init_flag'] == 1:
 			flagmanager(vis=msfile,
 					    mode='restore',
@@ -2228,7 +2228,8 @@ def primary_beam_correction(msfile,prefix,params):
 		WEIGHT = np.empty(tbnrows)
 
 		if vex_t == False:
-			print('inp')
+			casalog.post(origin=func_name,message='Non-vex implementation not written yet',priority='SEVERE')
+			sys.exit()
 		else:
 			runc=0
 			for i in range(len(re_sched)):
