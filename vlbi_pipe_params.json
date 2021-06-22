@@ -216,7 +216,9 @@
         }
     },
     "apply_to_all":{  
-        "target_path"       : "./target_files/",      
+        "target_path"       : "./target_files/",
+        "target_outpath"    : "./target_output",
+        "tar_output"        : true,      
         "pbcor":{
             "run"           : true,
             "implementation": "uvcorr",

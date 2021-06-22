@@ -63,5 +63,6 @@ for i in target_files.keys():
 		else:
 			apply_to_all(prefix=i,files=target_files[i],tar=target_files['tar'],params=params,casa6=casa6)
 			os.system('bash %s/job_flag_all.bash %s'%(cwd,'%s/%s.ms'%(cwd,i)))
+			apply_tar_output(prefix=i,params=params)
 if parallel == True:
 	resultList = client.get_command_response(cmd,block=True)

@@ -2085,7 +2085,19 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-	
+
+def apply_tar_output(prefix,params):
+	i = prefix
+	cwd = params['global']['cwd']
+	msfile ='%s/%s.ms'%(cwd,i)
+	if params['apply_to_all']['tar_output'] == True:
+		make_tarfile(output_filename=msfile+'.tar.gz', source_dir='%s'%(msfile))
+		rmdirs([msfile])
+		if params['apply_to_all']['target_outpath'] !='':
+			os.system('mv %s/%s.tar.gz %s/'%(cwd,msfile,params['apply_to_all']['target_outpath']))
+	else:
+		if params['apply_to_all']['target_outpath'] !='':
+			os.system('mv %s/%s %s/'%(cwd,msfile,params['apply_to_all']['target_outpath']))
 
 def angsep(ra1hms,dec1dms,ra2rad,dec2rad):
 	ra = re.split('h|m|s',ra1hms)
