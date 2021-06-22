@@ -413,7 +413,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('cd %s'%params['global']['cwd'])
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
-		commands[-1] = commands[-1]+'-strategy %s $1'%(params['init_flag']['AO_flag_strategy'])
+		commands[-1] = commands[-1]+' -strategy %s $1'%(params['init_flag']['AO_flag_strategy'])
 	else:
 		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
 		sys.exit()
@@ -1686,6 +1686,8 @@ def clip_model(model, im, snr):
 		ia.close()
 
 def make_tarfile(output_filename, source_dir):
+	func_name = inspect.stack()[0][3]
+	casalog.post(priority='INFO',origin=func_name,message='Tarring %s to form %s' % (source_dir,output_filename))
 	with tarfile.open(output_filename, "w:gz") as tar:
 		tar.add(source_dir, arcname=os.path.basename(source_dir))
   
