@@ -57,7 +57,7 @@ target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NA
 for i in target_files.keys():
 	if i!='tar':
 		if parallel == True:
-			cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file']); apply_to_all(prefix='%s',files=%s,tar=%s,params=params,casa6=%s); os.system('bash %s/job_flag_all.bash %s.ms'); apply_tar_output(prefix=%s,params=params)"%(mpipath,i,target_files[i],target_files['tar'],casa6,cwd,i,i)
+			cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file']); apply_to_all(prefix='%s',files=%s,tar=%s,params=params,casa6=%s); os.system('bash %s/job_flag_all.bash %s.ms'); apply_tar_output(prefix='%s',params=params)"%(mpipath,i,target_files[i],target_files['tar'],casa6,cwd,i,i)
 			cmdId = client.push_command_request(cmd1,block=False)
 			cmd.append(cmdId[0])
 		else:
