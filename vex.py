@@ -21,9 +21,12 @@
 from __future__ import division
 from __future__ import print_function
 
-from builtins import str
-from builtins import range
-from builtins import object
+try:
+	from builtins import str
+	from builtins import range
+	from builtins import object
+except:
+	pass
 
 import numpy as np
 import re
