@@ -262,16 +262,21 @@ def write_hpc_headers(step,params):
 		casalog.post(priority='SEVERE',origin=func_name, message='Incorrect job manager, please select from pbs, slurm or bash')
 		sys.exit()
 
+	if step == 'flag_all':
+		step2 = 'apply_to_all'
+	else:
+		step2 = step
+
 	for i in ['partition','walltime','nodetype']:
-		if params[step]["hpc_options"][i] == 'default':
+		if params[step2]["hpc_options"][i] == 'default':
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
-			hpc_opts[i] = params[step]["hpc_options"][i]
+			hpc_opts[i] = params[step2]["hpc_options"][i]
 	for i in ['nodes','cpus','mpiprocs']:
-		if params[step]["hpc_options"][i] == -1:
+		if params[step2]["hpc_options"][i] == -1:
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
-			hpc_opts[i] = params[step]["hpc_options"][i]
+			hpc_opts[i] = params[step2]["hpc_options"][i]
 	
 
 	hpc_dict = {'slurm':{
@@ -401,25 +406,14 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		for i in fields:
 			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
-		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['flag_strategy'],msfile)
-		
-	elif aoflag=='widefield':
+		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'],msfile)
+
+	elif aoflag=='manual':
 		if (params['global']['job_manager'] == 'pbs'):
 			commands.append('cd %s'%params['global']['cwd'])
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
-		msfile='%s.ms'%params['global']['project_code']
-		fields=params[step]['flag_fields']
-		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
-			msinfo = get_ms_info(msfile)
-			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
-		else:
-			msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-		ids = []
-		for i in fields:
-			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
-		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
-		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['flag_strategy'],msfile)
+		commands[-1] = commands[-1]+'-strategy %s $1'%(params['init_flag']['AO_flag_strategy'])
 	else:
 		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
 		sys.exit()

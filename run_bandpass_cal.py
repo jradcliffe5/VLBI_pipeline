@@ -17,6 +17,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
+casalog.origin('vp_bandpass_cal')
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])

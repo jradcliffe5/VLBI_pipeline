@@ -19,7 +19,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-
+casalog.origin('vp_apply_to_all')
 
 try:
 	if casa6 == True:
@@ -33,6 +33,7 @@ try:
 	cmd = []
 except:
 	parallel=False
+
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
@@ -61,5 +62,6 @@ for i in target_files.keys():
 			cmd.append(cmdId[0])
 		else:
 			apply_to_all(prefix=i,files=target_files[i],tar=target_files['tar'],params=params,casa6=casa6)
+			os.system('bash %s/job_flag_all.bash %s'%(cwd,'%s/%s.ms'%(cwd,i)))
 if parallel == True:
 	resultList = client.get_command_response(cmd,block=True)

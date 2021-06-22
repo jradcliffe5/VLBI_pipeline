@@ -19,6 +19,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
+casalog.origin('vp_run_vlbi_pipe')
 
 ## Imports input_file
 try:
@@ -55,9 +56,12 @@ else:
 	steps_run=load_json('vp_steps_run.json')
 
 ## Time to build all scripts
+if steps['apply_to_all'] == 1:
+	steps['flag_all'] = 1
 if inputs['make_scripts'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
+			casalog.post(priority='INFO',origin=filename,message='Writing script for step: %s'%i)
 			write_hpc_headers(step=i,params=params)
 			if i in ['import_fitsidi']:
 				parallel=False
@@ -69,13 +73,17 @@ if inputs['make_scripts'] == 'True':
 				parallel=False
 			if i=='init_flag':
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
+			elif i == 'flag_all':
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='manual',casa6=casa6)
 			else:
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
-
+if steps['apply_to_all'] == 1:
+	del steps['flag_all']
 
 if inputs['run_jobs'] == 'True':
 	jobs_to_run = []
 	for i in steps.keys():
 		if steps[i]==1:
 			jobs_to_run.append(i)
+	casalog.post(priority='INFO',origin=filename,message='Writing runfile script for steps: %s'%", ".join(jobs_to_run))
 	write_job_script(steps=jobs_to_run,job_manager=params['global']['job_manager'])

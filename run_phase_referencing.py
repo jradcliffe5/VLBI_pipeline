@@ -17,7 +17,6 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-
 casalog.origin('vp_phase_referencing')
 
 inputs = load_json('vp_inputs.json')
