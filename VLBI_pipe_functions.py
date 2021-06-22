@@ -318,14 +318,19 @@ def write_hpc_headers(step,params):
 				}
 
 	hpc_header= ['#!/bin/bash']
+
+	if step=='flag_all':
+		hpc_job = 'bash'
+	else:
+		hpc_job = hpc_opts['job_manager']
 	for i in hpc_opts.keys():
 		if i != 'job_manager':
 			if hpc_opts[i] != '':
 				if hpc_dict[hpc_opts['job_manager']][i] !='':
-					hpc_header.append(hpc_dict[hpc_opts['job_manager']][i])
+					hpc_header.append(hpc_dict[hpc_job][i])
 
 
-	with open('job_%s.%s'%(step,hpc_opts['job_manager']), 'w') as filehandle:
+	with open('job_%s.%s'%(step,hpc_job), 'w') as filehandle:
 		for listitem in hpc_header:
 			filehandle.write('%s\n' % listitem)
 
@@ -2008,7 +2013,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
 	target_dir = params['apply_to_all']['target_path']
-	
+
 	if tar == True:
 		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
