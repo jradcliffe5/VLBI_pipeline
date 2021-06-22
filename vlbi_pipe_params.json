@@ -76,6 +76,7 @@
             "interp"        : "linear"
         },
         "do_observatory_flg": true,
+        "make_gaincurve"    : true,
         "tsys_options":{
             "interp_flags"  :  true,
             "smooth"        :  true,
