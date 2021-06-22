@@ -424,7 +424,11 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		sys.exit()
 
 	commands.append('mv "casa"*"log" "logs"')
-	with open('job_%s.%s'%(step,params['global']['job_manager']), 'a') as filehandle:
+	if step=='flag_all':
+		job_m = 'bash'
+	else:
+		job_m = params['global']['job_manager']
+	with open('job_%s.%s'%(step,job_m), 'a') as filehandle:
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
 
