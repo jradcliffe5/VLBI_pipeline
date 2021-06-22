@@ -2008,7 +2008,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
 	target_dir = params['apply_to_all']['target_path']
-
+	'''
 	if tar == True:
 		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
@@ -2019,9 +2019,8 @@ def apply_to_all(prefix,files,tar,params,casa6):
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 	if tar == True:
 		rmfiles(files)
-	
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
-	
+	'''
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 	
 	if params['apriori_cal']["do_observatory_flg"] == True:
