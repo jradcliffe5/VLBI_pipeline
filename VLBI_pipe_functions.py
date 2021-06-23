@@ -2130,6 +2130,10 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	if params['apply_to_all']['pbcor']['run'] == True:
 		pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
 		gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'nearest'])
+		if params['apply_to_all']['pbcor']['backup_caltables'] == True:
+			archive = tarfile.open("%s_caltables.tar"%p_c, "a")
+			archive.add(pbcor_table, arcname=i.split('/')[-1])
+			archive.close()
 	
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 			 field='*',
@@ -2144,36 +2148,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 			  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 
-	if params['apply_to_all']['pbcor']['backup_caltables'] == True:
-		append_tar_file(buf=pbcor_table.split('/')[-1],filename="%s_caltables.tar.gz"%p_c,output_path='./',replace=True)
 	
-
-def append_tar_file(buf, file_name, output_path, replace=True):
-    """
-    append a buf to an existing tar file if not already there, or if replace=True
-    """
-    if not os.path.isfile(output_path):
-        return
-
-    with tempfile.TemporaryDirectory() as tempdir:
-        tmp_path = os.path.join(tempdir, 'tmp.tar.gz')
-
-        with tarfile.open(output_path, "r:gz") as tar:
-            if not replace:
-                if file_name in (member.name for member in tar):
-                    return
-
-            fileobj = buf
-            tarinfo = tarfile.TarInfo(file_name)
-            tarinfo.size = len(fileobj.getvalue())
-
-            with tarfile.open(tmp_path, "w:gz") as tmp:
-                for member in tar:
-                    if member.name != file_name:
-                        tmp.addfile(member, tar.extractfile(member.name))
-                tmp.addfile(tarinfo, fileobj)
-
-        os.rename(tmp_path, output_path)
 
 def apply_tar_output(prefix,params):
 	i = prefix

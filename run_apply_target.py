@@ -93,7 +93,7 @@ for i in params['global']['targets']:
 
 if params['apply_target']["backup_caltables"] == True:
 	rmfiles(["%s_caltables.tar.gz"%p_c])
-	archive = tarfile.open("%s_caltables.tar.gz"%p_c, "w|gz")
+	archive = tarfile.open("%s_caltables.tar"%p_c, "w")
 	for i in gaintables['gaintable']:
 		archive.add(i, arcname=i.split('/')[-1])
 	archive.close()
