@@ -2067,8 +2067,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	if tar == 'True':
 		rmfiles(files)
 	
-	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
-	
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 
 	if parallel == True:
@@ -2077,6 +2075,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 		partition(vis=msfile2,\
 				  outputvis=msfile)
 		rmdirs([msfile2])
+
+	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	
 	if params['apriori_cal']["do_observatory_flg"] == True:
 		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
