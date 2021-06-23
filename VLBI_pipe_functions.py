@@ -16,7 +16,7 @@ from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
-
+import tempfile
 try:
 	# CASA 6
 	import casatools
@@ -2145,10 +2145,39 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 
 	if params['apply_to_all']['pbcor']['backup_caltables'] == True:
-		archive = tarfile.open("%s_caltables.tar.gz"%p_c, "w|gz")
-		archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
-		archive.close()
+		append_tar_file(pbcor_table.split('/')[-1],"%s_caltables.tar.gz"%p_c,output_path='./',replace=False)
 	
+
+def append_tar_file(buf, file_name, output_path, replace=True):
+    """
+    append a buf to an existing tar file if not already there, or if replace=True
+    """
+    if not os.path.isfile(output_path):
+        return
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        tmp_path = os.path.join(tempdir, 'tmp.tar.gz')
+
+        with tarfile.open(output_path, "r:bz2") as tar:
+            if not replace:
+                if file_name in (member.name for member in tar):
+                    return
+
+            if isinstance(buf, str):
+                buf = buf.encode("utf-8")
+
+            fileobj = BytesIO(buf)
+            tarinfo = tarfile.TarInfo(file_name)
+            tarinfo.size = len(fileobj.getvalue())
+
+            with tarfile.open(tmp_path, "w:gz") as tmp:
+                for member in tar:
+                    if member.name != file_name:
+                        tmp.addfile(member, tar.extractfile(member.name))
+                tmp.addfile(tarinfo, fileobj)
+
+        os.rename(tmp_path, output_path)
+
 def apply_tar_output(prefix,params):
 	i = prefix
 	cwd = params['global']['cwd']
