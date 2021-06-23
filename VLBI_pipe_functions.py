@@ -262,21 +262,16 @@ def write_hpc_headers(step,params):
 		casalog.post(priority='SEVERE',origin=func_name, message='Incorrect job manager, please select from pbs, slurm or bash')
 		sys.exit()
 
-	if step == 'flag_all':
-		step2 = 'apply_to_all'
-	else:
-		step2 = step
-
 	for i in ['partition','walltime','nodetype']:
-		if params[step2]["hpc_options"][i] == 'default':
+		if params[step]["hpc_options"][i] == 'default':
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
-			hpc_opts[i] = params[step2]["hpc_options"][i]
+			hpc_opts[i] = params[step]["hpc_options"][i]
 	for i in ['nodes','cpus','mpiprocs']:
-		if params[step2]["hpc_options"][i] == -1:
+		if params[step]["hpc_options"][i] == -1:
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
-			hpc_opts[i] = params[step2]["hpc_options"][i]
+			hpc_opts[i] = params[step]["hpc_options"][i]
 	
 
 	hpc_dict = {'slurm':{
@@ -319,10 +314,24 @@ def write_hpc_headers(step,params):
 
 	hpc_header= ['#!/bin/bash']
 
-	if step=='flag_all':
-		hpc_job = 'bash'
-	else:
-		hpc_job = hpc_opts['job_manager']
+	if step == 'apply_to_all':
+		file = open("%s/target_files.txt"%params['global']['cwd'], "r")
+		nonempty_lines = [line.strip("\n") for line in file if line != "\n"]
+		line_count = len(nonempty_lines)
+		file.close()
+		if params[step]['hpc_options']['max_jobs'] == -1:
+			tasks = '0-'+str(line_count-1)
+		else:
+			if (line_count-1) > params[step]['hpc_options']['max_jobs']:
+				tasks = '0-'+str(line_count-1)+'%'+str(params[step]['hpc_options']['max_jobs'])
+			else:
+				tasks = '0-'+str(line_count-1)
+		hpc_dict['slurm']['array_job'] = '#SBATCH --array='+tasks
+		hpc_dict['pbs']['array_job'] = '#PBS -t '+tasks
+		hpc_dict['bash']['array_job'] = ''
+		hpc_opts['array_job'] = -1
+
+	hpc_job = hpc_opts['job_manager']
 	for i in hpc_opts.keys():
 		if i != 'job_manager':
 			if hpc_opts[i] != '':
@@ -413,21 +422,49 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
 		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'],msfile)
 
-	elif aoflag=='manual':
+	elif aoflag=='apply_to_all':
 		if (params['global']['job_manager'] == 'pbs'):
 			commands.append('cd %s'%params['global']['cwd'])
+		elif (params['global']['job_manager'] == 'slurm'):
+			commands.append('a=$SLURM_ARRAY_TASK_ID')
+		commands.append('readarray array < %s/target_files.txt'%params['global']['cwd'])
+
+		if parallel == True:
+			mpicasapath = params['global']['mpicasapath']
+		else:
+			mpicasapath = ''
+		if params['global']['singularity'] == True:
+			singularity='singularity exec'
+		else:
+			singularity=''
+		if (params['global']['job_manager'] == 'pbs'):
+			job_commands=''
+			commands.append('cd %s'%params['global']['cwd'])
+			if (parallel == True):
+				job_commands='--map-by node -hostfile $PBS_NODEFILE'
+		else:
+			job_commands=''
+		
+		if casa6 == False:
+			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		else:
+			commands.append('%s %s %s %s %s/run_%s.py 0 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+
+		commands.append("IFS=' ' read -r -a arrays <<< \"${array[$a]}\"")
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
-		commands[-1] = commands[-1]+' -strategy %s $1'%(params['init_flag']['AO_flag_strategy'])
+		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}.ms'%(params['init_flag']['AO_flag_strategy'])
+
+		if casa6 == False:
+			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		else:
+			commands.append('%s %s %s %s %s/run_%s.py 1 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	else:
 		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
 		sys.exit()
 
 	commands.append('mv "casa"*"log" "logs"')
-	if step=='flag_all':
-		job_m = 'bash'
-	else:
-		job_m = params['global']['job_manager']
+	job_m = params['global']['job_manager']
 	with open('job_%s.%s'%(step,job_m), 'a') as filehandle:
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
@@ -2016,9 +2053,9 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	i = prefix
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
-	target_dir = params['apply_to_all']['target_path']
+	target_dir = params['prepare_apply_all']['target_path']
 
-	if tar == True:
+	if tar == 'True':
 		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
@@ -2026,7 +2063,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 		          constobsid=params['import_fitsidi']["const_obs_id"],
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
-	if tar == True:
+	if tar == 'True':
 		rmfiles(files)
 	
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)

@@ -56,8 +56,6 @@ else:
 	steps_run=load_json('vp_steps_run.json')
 
 ## Time to build all scripts
-if steps['apply_to_all'] == 1:
-	steps['flag_all'] = 1
 if inputs['make_scripts'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
@@ -73,12 +71,11 @@ if inputs['make_scripts'] == 'True':
 				parallel=False
 			if i=='init_flag':
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
-			elif i == 'flag_all':
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='manual',casa6=casa6)
+			elif i == 'apply_to_all':
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
 			else:
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
-if steps['apply_to_all'] == 1:
-	del steps['flag_all']
+
 
 if inputs['run_jobs'] == 'True':
 	jobs_to_run = []

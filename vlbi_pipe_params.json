@@ -215,8 +215,18 @@
             "nodetype"      :  "default"
         }
     },
-    "apply_to_all":{  
+    "prepare_apply_all":{
         "target_path"       : "./target_files/",
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "apply_to_all":{  
         "target_outpath"    : "./target_output",
         "tar_output"        : true,      
         "pbcor":{
@@ -235,7 +245,8 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
-            "nodetype"      :  "default"
+            "nodetype"      :  "default",
+            "max_jobs"      : 24
         }
     }
 }
