@@ -59,3 +59,6 @@ with open('target_files.txt', 'w') as f:
 		if i != 'tar':
 			f.write(tar+" "+i+" "+" ".join(target_files[i])+'\n')
 
+steps_run['prepare_apply_all'] = 1
+save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+

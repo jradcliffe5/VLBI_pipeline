@@ -196,7 +196,7 @@
     },
     "apply_target":{
         "statistical_reweigh":{
-                "run": true,
+                "run": false,
                 "timebin"   :  "10s",
                 "chanbin"   :  "spw",
                 "statalg"   :  "classic",
@@ -205,7 +205,8 @@
         "weigh_by_ants":{
                 "run": true
         },
-        "image_target": true,
+        "backup_caltables"  : true,
+        "image_target"      : true,
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -234,7 +235,7 @@
             "implementation": "uvcorr",
             "vex_file"      : "",
             "pointing_centre"  : ["12h36m42s","62d12m45s"],
-            "diff_corr"     : true
+            "backup_caltables"  : true
         },
         "image":{
             "run"           : true,

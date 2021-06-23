@@ -46,9 +46,11 @@ applycal(vis='%s/%s'%(cwd,msfile),
 
 for i in params['global']['targets']:
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
+	
 	split(vis='%s/%s'%(cwd,msfile),
 		  field=i,
 		  outputvis='%s/%s_calibrated.ms'%(cwd,i))
+	
 	if params['apply_target']["statistical_reweigh"]['run'] == True:
 		statwt(vis='%s/%s_calibrated.ms'%(cwd,i),
 			   timebin=params['apply_target']["statistical_reweigh"]["timebin"],
@@ -64,6 +66,7 @@ for i in params['global']['targets']:
 	for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 		delims.append('%s-initimage%s'%(i,z))
 	rmdirs(delims)
+	
 	tclean(vis='%s/%s_calibrated.ms'%(cwd,i),
 		   imagename='%s-initimage'%i,
 		   field='%s'%i,
@@ -77,9 +80,17 @@ for i in params['global']['targets']:
 		   noisethreshold=4.0,
 		   sidelobethreshold=1.0
 		   )
+	
 	#rmfiles(['%s/%s.tar.gz'%(cwd,i)])
 	#make_tarfile(output_filename='%s_calibrated.tar.gz'%i, source_dir='%s/%s_calibrated.ms'%(cwd,i))
 	#rmdirs(['%s/%s_calibrated.ms'%(cwd,i)])
+
+if params['apply_target']["backup_caltables"] == True:
+	rmfiles(["%s_caltables.tar.gz"%p_c])
+	archive = tarfile.open("%s_caltables.tar.gz"%p_c, "w|gz")
+	for i in gaintables['gaintable']:
+		archive.add(i, arcname=i.split('/')[-1])
+	archive.close()
 
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apply_target'] = 1

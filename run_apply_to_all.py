@@ -66,8 +66,10 @@ if steps_run['make_mms'] == 1:
 else:
 	parallel = False
 
-if sys.argv[i] == '0':
-	apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel)
+#if sys.argv[i] == '0':
+#	apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel)
 if sys.argv[i] == '1':
 	apply_tar_output(prefix=prefix,params=params)
 
+steps_run['apply_to_all'] = 1
+save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
