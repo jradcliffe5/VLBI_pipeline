@@ -2132,7 +2132,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 		gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'nearest'])
 		if params['apply_to_all']['pbcor']['backup_caltables'] == True:
 			archive = tarfile.open("%s_caltables.tar"%p_c, "a")
-			archive.add(pbcor_table, arcname=i.split('/')[-1])
+			archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 			archive.close()
 	
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
@@ -2188,6 +2188,7 @@ def primary_beam_correction(msfile,prefix,params):
 	cb = casatools.calibrater()
 	tb = casatools.table()
 	qa = casatools.quanta()
+	cwd = params['global']['cwd']
 
 	#save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],prefix), array=get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix)), append=False)
 	#msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
@@ -2266,10 +2267,10 @@ def primary_beam_correction(msfile,prefix,params):
 					obs_freq = msinfo['SPECTRAL_WINDOW']['freq_range'][0] + ((float(k)+1.0)-0.5)*msinfo['SPECTRAL_WINDOW']['spw_bw']
 					attenuation = pb_model_uvcorr(parameters=pb_parameters[IDtoant[str(j)]]['params'],model=pb_parameters[IDtoant[str(j)]]['model'], obs_freq=obs_freq,angsep=offset)
 					atten.append(attenuation)
-				gencal(vis=msfile, caltable='%s.pbcor'%(prefix), caltype='amp', antenna=','.join(str(e) for e in antenna_list), spw='%d'%k, parameter=atten)
+				gencal(vis=msfile, caltable='%s/%s.pbcor'%(cwd,prefix), caltype='amp', antenna=','.join(str(e) for e in antenna_list), spw='%d'%k, parameter=atten)
 		else:
 			cb.open(msfile,False,False,False)
-			cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', True)
+			cb.createcaltable('%s/%s.pbcor'%(cwd,prefix), 'Complex', 'G Jones', True)
 			cb.close()
 			TIME = np.empty(tbnrows)
 			FIELD_ID = np.zeros(tbnrows)
@@ -2309,7 +2310,7 @@ def primary_beam_correction(msfile,prefix,params):
 						CPARAM[:,:,runc] = attenuation+0j
 						runc+=1
 
-			tb.open('%s.pbcor'%(prefix),nomodify=False)
+			tb.open('%s/%s.pbcor'%(cwd,prefix),nomodify=False)
 			tb.addrows(tbnrows)
 			tb.putcol('TIME',TIME)
 			tb.putcol('CPARAM',CPARAM)
@@ -2321,7 +2322,7 @@ def primary_beam_correction(msfile,prefix,params):
 			tb.putcol('SPECTRAL_WINDOW_ID',SPECTRAL_WINDOW_ID)
 			tb.putcol('FIELD_ID',FIELD_ID)
 			tb.close()
-	return '%s.pbcor'%(prefix)
+	return '%s/%s.pbcor'%(cwd,prefix)
 
 def pb_model_uvcorr(parameters,model,obs_freq,angsep):
 	from scipy import constants as c
