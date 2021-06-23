@@ -1991,6 +1991,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 		          constobsid=params['import_fitsidi']["const_obs_id"],
 		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 
+	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 	if params['apriori_cal']["do_observatory_flg"] == True:
 		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
@@ -2037,13 +2038,20 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				     
 				     
 	flagdata(vis=msfile, mode='list', inpfile='manual.flags')
-	###gencal(pbcor)
+	###gencal(%s/%s.pbcor)
+	inputs = load_json('vp_inputs.json')
+	params = load_json(inputs['parameter_file'])
+	steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
+	gaintables = load_gaintables(params, casa6=casa6)
+	cwd = params['global']['cwd']
+	p_c=params['global']['project_code']
 	refant = find_refants(params['global']['refant'],msinfo)
 	tb = casatools.table()
 	ms = casatools.ms()
 	## field and dish diameter information
 	tb.open('%s/ANTENNA'%msfile)
 	D = tb.getcol('DISH_DIAMETER')
+	ANTENNAS = tb.getcol('STATION')
 	tb.close()
 	tb.open('%s/FIELD'%msfile)
 	pc = tb.getcol('PHASE_DIR')###PHASE CENTRE IN radians
@@ -2059,19 +2067,16 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	rmdirs(['%s/%s.pbcor'%(cwd,p_c)])
 	gaintab = []
 	gaintab=gaintables['gaintable']
-	flagmanager(vis=msfile,mode='save',versionname='pbcor')
+	#flagmanager(vis=msfile,mode='save',versionname='pbcor')
 	pbcorr=[]
 	for ii in range(Sample_size):
-		pbcorr.append(np.sqrt((math.exp(- 85.57*D[ii]**2*sep**2))))
+		pbcorr.append(np.sqrt((np.e**(- 85.57*D[ii]**2*sep[0]**2)))[0])
 		d+1      
-	gencal(vis=msfile, caltable='pc.pbcor', caltype='amp', antenna='JB, WB, EF, MC, NT, O8, T6, UR, TR, HH, SV, ZC, BD, IR, SR, PI, DA, KN, DE, CM', parameter=pbcorr[ii])
-	flagmanager(vis=msfile,mode='restore',versionname='pbcor')
+	gencal(vis=msfile, caltable='%s/%s.pbcor'%(cwd,p_c), caltype='amp', antenna='JB, WB, EF, MC, NT, O8, T6, UR, TR, HH, SV, ZC, BD, IR, SR, PI, DA, KN, DE, CM', parameter=pbcorr)
+	#flagmanager(vis=msfile,mode='restore',versionname='pbcor')
 	gaintables = append_gaintable(gaintables,['%s/%s.pbcor'%(cwd,p_c),'',[],'linear'])
-	save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 
-	
-	
-	 
+
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 			 field='*',
 		     gaintable=gaintables['gaintable'],
