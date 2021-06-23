@@ -2145,7 +2145,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 
 	if params['apply_to_all']['pbcor']['backup_caltables'] == True:
-		append_tar_file(pbcor_table.split('/')[-1],"%s_caltables.tar.gz"%p_c,output_path='./',replace=False)
+		append_tar_file(buf=pbcor_table.split('/')[-1],"%s_caltables.tar.gz"%p_c,output_path='./',replace=True)
 	
 
 def append_tar_file(buf, file_name, output_path, replace=True):
@@ -2158,15 +2158,12 @@ def append_tar_file(buf, file_name, output_path, replace=True):
     with tempfile.TemporaryDirectory() as tempdir:
         tmp_path = os.path.join(tempdir, 'tmp.tar.gz')
 
-        with tarfile.open(output_path, "r:bz2") as tar:
+        with tarfile.open(output_path, "r:gz") as tar:
             if not replace:
                 if file_name in (member.name for member in tar):
                     return
 
-            if isinstance(buf, str):
-                buf = buf.encode("utf-8")
-
-            fileobj = BytesIO(buf)
+            fileobj = buf
             tarinfo = tarfile.TarInfo(file_name)
             tarinfo.size = len(fileobj.getvalue())
 
