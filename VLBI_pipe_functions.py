@@ -33,6 +33,7 @@ except:
 	from applycal_cli import applycal_cli as applycal
 	from split_cli import split_cli as split
 	from gencal_cli import gencal_cli as gencal
+	from partition_cli import partition_cli as partition
 	casa6=False
 	
 
@@ -2046,7 +2047,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 	
 	tb.done()
 
-def apply_to_all(prefix,files,tar,params,casa6):
+def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	func_name = inspect.stack()[0][3]
 
 	cwd = params['global']['cwd']
@@ -2069,6 +2070,13 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
+
+	if parallel == True:
+		msfile2='%s/%s_presplit2.ms'%(params['global']['cwd'],i)
+		os.system('mv %s %s'%(msfile,msfile2))
+		partition(vis=msfile2,\
+				  outputvis=msfile)
+		rmdirs([msfile2])
 	
 	if params['apriori_cal']["do_observatory_flg"] == True:
 		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
