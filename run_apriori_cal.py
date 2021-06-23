@@ -19,6 +19,7 @@ except:
 	from taskinit import casalog
 	casa6=False
 
+casalog.origin('vp_apriori_cal')
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
@@ -96,15 +97,16 @@ if casa6 == True:
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsysfiltered_vs_time.pdf'%p_c)
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsysfiltered_vs_freq.pdf'%p_c)
 
-rmdirs(['%s/%s.gcal'%(cwd,p_c)])
-gencal(vis=msfile,\
-       caltype='gc',\
-       spw='',\
-       antenna='',\
-       caltable='%s/%s.gcal'%(cwd,p_c),\
-       infile='%s/%s.gc'%(cwd,p_c))
+if params['apriori_cal']["make_gaincurve"] == True:
+	rmdirs(['%s/%s.gcal'%(cwd,p_c)])
+	gencal(vis=msfile,\
+	       caltype='gc',\
+	       spw='',\
+	       antenna='',\
+	       caltable='%s/%s.gcal'%(cwd,p_c),\
+	       infile='%s/%s.gc'%(cwd,p_c))
 
-gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
+	gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
 if params['apriori_cal']['ionex_options']['run'] == True:
 	rmdirs(['%s/%s.tecim'%(cwd,p_c),

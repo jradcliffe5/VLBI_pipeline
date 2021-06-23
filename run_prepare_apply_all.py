@@ -19,7 +19,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-casalog.origin('vp_apply_to_all')
+casalog.origin('vp_prepare_apply_all')
 
 try:
 	if casa6 == True:
@@ -33,13 +33,6 @@ try:
 	cmd = []
 except:
 	parallel=False
-
-## Import arguments
-try:
-	i = sys.argv.index("-c") + 2
-except:
-	i = 1
-	pass
 
 
 inputs = load_json('vp_inputs.json')
@@ -56,14 +49,13 @@ if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global'][
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 
-target_files = {}
-prefix = sys.argv[i+2]
-tar = sys.argv[i+1]
-target_files[prefix] = sys.argv[i+3:]
+target_path = params['prepare_apply_all']['target_path']
 
+target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NAME'],project_code=params['global']['project_code'],idifiles=[])
 
-if sys.argv[i] == '0':
-	apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6)
-if sys.argv[i] == '1':
-	apply_tar_output(prefix=prefix,params=params)
+tar = str(target_files['tar'])
+with open('target_files.txt', 'w') as f:
+	for i in target_files.keys():
+		if i != 'tar':
+			f.write(tar+" "+i+" "+" ".join(target_files[i])+'\n')
 

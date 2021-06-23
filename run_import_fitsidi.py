@@ -16,6 +16,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
+casalog.origin('vp_import_fitsidi')
 
 ## Load params
 inputs = load_json('vp_inputs.json')

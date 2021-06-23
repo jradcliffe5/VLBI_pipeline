@@ -21,7 +21,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-
+casalog.origin('vp_prepare_data')
 
 try:
 	if casa6 == True:	

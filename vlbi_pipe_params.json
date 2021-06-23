@@ -76,6 +76,7 @@
             "interp"        : "linear"
         },
         "do_observatory_flg": true,
+        "make_gaincurve"    : true,
         "tsys_options":{
             "interp_flags"  :  true,
             "smooth"        :  true,
@@ -103,11 +104,15 @@
             "run"           :  true,
             "edge_chan_flag":  "5%"
         },
-        "autocorrelations"  :  false,
+        "flag_autocorrs"    :  false,
         "quack_data":{
             "run"           :  true,
             "quack_time"    :  {"3C345":30.0,"DA193":30.0,"*":10.0},
             "quack_mode"    :  "beg"
+        },
+        "manual_flagging":{
+            "run"           :  false,
+            "flag_file"     :  ""
         },
         "hpc_options":{
             "partition"     :  "default",
@@ -210,12 +215,24 @@
             "nodetype"      :  "default"
         }
     },
+    "prepare_apply_all":{
+        "target_path"       : "./target_files/",
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default"
+        }
+    },
     "apply_to_all":{  
-        "target_path"       : "./target_files/",      
+        "target_outpath"    : "./target_output",
+        "tar_output"        : true,      
         "pbcor":{
             "run"           : true,
-            "implementation": "IDG",
-            "vex_file"      : "",
+            "implementation": "uvcorr",
+            "vex_file"      : "eg078b.vex",
             "diff_corr"     : true
         },
         "image":{
@@ -228,7 +245,8 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
-            "nodetype"      :  "default"
+            "nodetype"      :  "default",
+            "max_jobs"      : 24
         }
     }
 }

@@ -19,6 +19,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
+casalog.origin('vp_run_vlbi_pipe')
 
 ## Imports input_file
 try:
@@ -45,6 +46,8 @@ casalog.post(priority='INFO',origin=filename,message='Initialising VLBI pipeline
 
 if os.path.exists('%s/%s'%(params['global']['cwd'],'vp_steps_run.json')) == False:
 	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating step logger')
+	rmdirs(['%s/%s'%(params['global']['cwd'],'logs')])
+	os.system('mkdir %s/%s'%(params['global']['cwd'],'logs'))
 	init_pipe_run(steps)
 	steps_run=load_json('vp_steps_run.json')
 else:
@@ -56,6 +59,7 @@ else:
 if inputs['make_scripts'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
+			casalog.post(priority='INFO',origin=filename,message='Writing script for step: %s'%i)
 			write_hpc_headers(step=i,params=params)
 			if i in ['import_fitsidi']:
 				parallel=False
@@ -67,9 +71,10 @@ if inputs['make_scripts'] == 'True':
 				parallel=False
 			if i=='init_flag':
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
+			elif i == 'apply_to_all':
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
 			else:
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
-			print(i,parallel)
 
 
 if inputs['run_jobs'] == 'True':
@@ -77,4 +82,5 @@ if inputs['run_jobs'] == 'True':
 	for i in steps.keys():
 		if steps[i]==1:
 			jobs_to_run.append(i)
+	casalog.post(priority='INFO',origin=filename,message='Writing runfile script for steps: %s'%", ".join(jobs_to_run))
 	write_job_script(steps=jobs_to_run,job_manager=params['global']['job_manager'])
