@@ -2054,7 +2054,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
 	target_dir = params['prepare_apply_all']['target_path']
-
+	
 	if tar == 'True':
 		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
@@ -2133,7 +2133,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-
+	
 def apply_tar_output(prefix,params):
 	i = prefix
 	cwd = params['global']['cwd']
@@ -2147,27 +2147,10 @@ def apply_tar_output(prefix,params):
 		if params['apply_to_all']['target_outpath'] !='':
 			os.system('mv %s %s/'%(msfile,params['apply_to_all']['target_outpath']))
 
-def angsep(ra1hms,dec1dms,ra2rad,dec2rad):
-	ra = re.split('h|m|s',ra1hms)
-	dec = re.split('d|\'|"',dec1dms)
-
-	ra1hh=(float(ra[0]))*15.
-	ra1mm=(float(ra[1])/60.)*15.
-	ra1ss=(float(ra[2])/3600.)*15.
-
-	ra1deg=ra1hh+ra1mm+ra1ss
-	ra1rad=ra1deg*math.pi/180.
-
-	dec1hh=abs(float(dec[0]))
-	dec1mm=float(dec[1])/60
-	dec1ss=float(dec[2])/3600
-
-	if float(dec[0]) < 0:
-		dec1deg=-1*(dec1hh+dec1mm+dec1ss)
-	else:
-		dec1deg=dec1hh+dec1mm+dec1ss
-
-	dec1rad=dec1deg*math.pi/180
+def angsep(ra1,dec1,ra2rad,dec2rad):
+	qa = casatools.quanta()
+	ra1rad=qa.convert(qa.quantity(ra1),'rad')['value']
+	dec1rad=qa.convert(qa.quantity(dec1),'rad')['value']
 
 
 	x=math.cos(ra1rad)*math.cos(dec1rad)*math.cos(ra2rad)*math.cos(dec2rad)
@@ -2196,6 +2179,7 @@ def primary_beam_correction(msfile,prefix,params):
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
 	nants = len(msinfo['ANTENNAS']['anttoID'])
+	calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
 
 	tb.open(msfile+'/ANTENNA')
 	ant_name = tb.getcol('NAME')
@@ -2216,23 +2200,19 @@ def primary_beam_correction(msfile,prefix,params):
 		sys.exit()
 	elif params['apply_to_all']['pbcor']['implementation'] == 'uvcorr':
 		rmdirs(['%s.pbcor'%(prefix)])
-		cb.open(msfile,False,False,False)
-		cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', True)
-		cb.close()
 
 		if params['apply_to_all']['pbcor']['vex_file'] == '':
 			tbnrows = nspw*nants
+			run_vex = False
 		else:
+			run_vex = True
 			if os.path.exists(params['apply_to_all']['pbcor']['vex_file']) == False:
-				vex_t = False
 				casalog.post(origin=func_name,message='Vex file %s does not exist, please correct'%params['apply_to_all']['pbcor']['vex_file'],priority='SEVERE')
 				sys.exit()
 			else:
-				vex_t = True
 				vex_params = vex.Vex(params['apply_to_all']['pbcor']['vex_file'])
 				scans = vex_params.sched
 				source = vex_params.source
-				calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
 				re_sched = []
 				for i in range(len(scans)):
 					if scans[i]['source'] not in calibrators:
@@ -2240,7 +2220,6 @@ def primary_beam_correction(msfile,prefix,params):
 					else:
 						pass
 				tbnrows = nspw*nants*len(re_sched)
-
 
 		targets=[]
 		for i in msinfo['FIELD']['fieldtoID'].keys():
@@ -2253,25 +2232,41 @@ def primary_beam_correction(msfile,prefix,params):
 		target = {}
 		for i in targets:
 			target[i] = radec[np.where(fie==i)[0][0]].squeeze()
-
-
-		TIME = np.empty(tbnrows)
-		FIELD_ID = np.zeros(tbnrows)
-		SPECTRAL_WINDOW_ID = np.empty(tbnrows)
-		ANTENNA1 = np.empty(tbnrows)
-		ANTENNA2 = np.zeros(tbnrows)
-		INTERVAL = np.zeros(tbnrows)
-		OBSERVATION_ID = np.zeros(tbnrows)
-		CPARAM = np.empty((npol,1,tbnrows),dtype=complex)
-		PARAMERR = np.ones((npol,1,tbnrows))
-		FLAG = np.zeros((npol,1,tbnrows))
-		SNR =  np.ones((npol,1,tbnrows))
-		WEIGHT = np.empty(tbnrows)
-
-		if vex_t == False:
-			casalog.post(origin=func_name,message='Non-vex implementation not written yet',priority='SEVERE')
-			sys.exit()
+		if len(target) == 1:
+				radec_target = target[list(msinfo['FIELD']['IDtofield'].values())[0]]
 		else:
+			casalog.post(origin=func_name,message='Multiple targets .. it will mess up at the moment',priority='SEVERE')
+			sys.exit()
+
+
+		if run_vex == False:
+			casalog.post(origin=func_name,message='Non-vex implementation not written yet',priority='SEVERE')
+			IDtoant = msinfo['ANTENNAS']['IDtoant']
+			offset = angsep(params['apply_to_all']['pbcor']['pointing_centre'][0],params['apply_to_all']['pbcor']['pointing_centre'][1],radec_target[0],radec_target[1])
+			antenna_list = list(msinfo['ANTENNAS']['anttoID'].values())
+			for k in range(msinfo['SPECTRAL_WINDOW']['nspws']):
+				atten = []
+				for j in antenna_list:
+					obs_freq = msinfo['SPECTRAL_WINDOW']['freq_range'][0] + ((float(k)+1.0)-0.5)*msinfo['SPECTRAL_WINDOW']['spw_bw']
+					attenuation = pb_model_uvcorr(parameters=pb_parameters[IDtoant[str(j)]]['params'],model=pb_parameters[IDtoant[str(j)]]['model'], obs_freq=obs_freq,angsep=offset)
+					atten.append(attenuation)
+				gencal(vis=msfile, caltable='%s.pbcor'%(prefix), caltype='amp', antenna=','.join(str(e) for e in antenna_list), spw='%d'%k, parameter=atten)
+		else:
+			cb.open(msfile,False,False,False)
+			cb.createcaltable('%s.pbcor'%(prefix), 'Complex', 'G Jones', True)
+			cb.close()
+			TIME = np.empty(tbnrows)
+			FIELD_ID = np.zeros(tbnrows)
+			SPECTRAL_WINDOW_ID = np.empty(tbnrows)
+			ANTENNA1 = np.empty(tbnrows)
+			ANTENNA2 = np.zeros(tbnrows)
+			INTERVAL = np.zeros(tbnrows)
+			OBSERVATION_ID = np.zeros(tbnrows)
+			CPARAM = np.empty((npol,1,tbnrows),dtype=complex)
+			PARAMERR = np.ones((npol,1,tbnrows))
+			FLAG = np.zeros((npol,1,tbnrows))
+			SNR =  np.ones((npol,1,tbnrows))
+			WEIGHT = np.empty(tbnrows)
 			runc=0
 			for i in range(len(re_sched)):
 				## get scan lengths and times
@@ -2283,12 +2278,6 @@ def primary_beam_correction(msfile,prefix,params):
 				q = qa.quantity('%s d'%time)
 				time = qa.convert(q,'s')['value']
 
-				## get ang separation
-				if len(target) == 1:
-					radec_target = target[list(msinfo['FIELD']['IDtofield'].values())[0]]
-				else:
-					casalog.post(origin=func_name,message='Multiple targets .. it will mess up at the moment',priority='SEVERE')
-					sys.exit()
 				radec_teles = source[re_sched[i]['source']]
 				offset = angsep(radec_teles['ra'],radec_teles['dec'],radec_target[0],radec_target[1])
 

@@ -232,7 +232,8 @@
         "pbcor":{
             "run"           : true,
             "implementation": "uvcorr",
-            "vex_file"      : "eg078b.vex",
+            "vex_file"      : "",
+            "pointing_centre"  : ["12h36m42s","62d12m45s"],
             "diff_corr"     : true
         },
         "image":{
