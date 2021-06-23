@@ -2037,44 +2037,7 @@ def apply_to_all(prefix,files,tar,params,casa6):
 				     quackmode=quack_mode)
 				     
 				     
-	flagdata(vis=msfile, mode='list', inpfile='manual.flags')
-	###gencal(%s/%s.pbcor)
-	inputs = load_json('vp_inputs.json')
-	params = load_json(inputs['parameter_file'])
-	steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
-	gaintables = load_gaintables(params, casa6=casa6)
-	cwd = params['global']['cwd']
-	p_c=params['global']['project_code']
-	refant = find_refants(params['global']['refant'],msinfo)
-	tb = casatools.table()
-	ms = casatools.ms()
-	## field and dish diameter information
-	tb.open('%s/ANTENNA'%msfile)
-	D = tb.getcol('DISH_DIAMETER')
-	ANTENNAS = tb.getcol('STATION')
-	tb.close()
-	tb.open('%s/FIELD'%msfile)
-	pc = tb.getcol('PHASE_DIR')###PHASE CENTRE IN radians
-	tb.close()
-	RA = pc[0]
-	DEC = pc[1]
-	ra = 4.072935249
-	dec = 0.5098298731		
-	A = np.sin(dec)*np.sin(DEC)+np.cos(dec)*np.cos(DEC)*np.cos(ra-RA)
-	sep = np.arccos(A)
-	Sample_size = len(D)
-	d=0
-	rmdirs(['%s/%s.pbcor'%(cwd,p_c)])
-	gaintab = []
-	gaintab=gaintables['gaintable']
-	#flagmanager(vis=msfile,mode='save',versionname='pbcor')
-	pbcorr=[]
-	for ii in range(Sample_size):
-		pbcorr.append(np.sqrt((np.e**(- 85.57*D[ii]**2*sep[0]**2)))[0])
-		d+1      
-	gencal(vis=msfile, caltable='%s/%s.pbcor'%(cwd,p_c), caltype='amp', antenna='JB, WB, EF, MC, NT, O8, T6, UR, TR, HH, SV, ZC, BD, IR, SR, PI, DA, KN, DE, CM', parameter=pbcorr)
-	#flagmanager(vis=msfile,mode='restore',versionname='pbcor')
-	gaintables = append_gaintable(gaintables,['%s/%s.pbcor'%(cwd,p_c),'',[],'linear'])
+	
 
 
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
