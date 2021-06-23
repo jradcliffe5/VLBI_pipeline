@@ -345,7 +345,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		else:
 			mpicasapath = ''
 		if params['global']['singularity'] == True:
-			singularity='/usr/local/bin/singularity exec'
+			singularity='singularity exec'
 		else:
 			singularity=''
 		if (params['global']['job_manager'] == 'pbs'):
