@@ -44,6 +44,11 @@ applycal(vis='%s/%s'%(cwd,msfile),
 		 spwmap=gaintables['spwmap'],
 		 parang=gaintables['parang'])
 
+if steps_run['make_mms'] == 1:
+	parallel=True
+else:
+	parallel = False
+
 for i in params['global']['targets']:
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
 	
@@ -70,6 +75,7 @@ for i in params['global']['targets']:
 	tclean(vis='%s/%s_calibrated.ms'%(cwd,i),
 		   imagename='%s-initimage'%i,
 		   field='%s'%i,
+		   datacolumn='data',
 		   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][i]/1000.),
 		   imsize=[1024,1024],
 		   deconvolver='clarkstokes',
@@ -78,8 +84,8 @@ for i in params['global']['targets']:
 		   nsigma=1.2,
 		   usemask='auto-multithresh',
 		   noisethreshold=4.0,
-		   sidelobethreshold=1.0
-		   )
+		   sidelobethreshold=1.0,
+		   parallel=parallel)
 	
 	#rmfiles(['%s/%s.tar.gz'%(cwd,i)])
 	#make_tarfile(output_filename='%s_calibrated.tar.gz'%i, source_dir='%s/%s_calibrated.ms'%(cwd,i))
