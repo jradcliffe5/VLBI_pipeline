@@ -762,6 +762,7 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 	tb.done()
 
 def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
+	func_name = inspect.stack()[0][3]
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -774,12 +775,10 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
 	#print(dd)
 	npol=gain.shape[0]
+	casalog.post(priority="INFO",origin=func_name,message='Editing and smoothing the tsys table')
 	for k in range(npol):
-		print('npol=%s'%k)
 		for i in np.unique(ant):
-			print('nant=%s'%i)
 			for j in np.unique(dd):
-				print('nspw=%s'%j)
 				flg_temp=flg[k,0,((ant==i)&(dd==j))]
 				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
 				gain_uflg = gain_uflg2[flg_temp==0]
@@ -1273,9 +1272,9 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
-						print('no data for antenna %s'%i)
+						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s, field %s, spw %s, pol %s'%(i,calibrators[h],j,k))
 						autocorrs[k,:] = 1 + 0j
-						FLAG[k,:,runc] = 1	
+						FLAG[k,:,runc] = 1
 				TIME[runc] = t_cal
 				FIELD_ID[runc] = calibrators[h]
 				SPECTRAL_WINDOW_ID[runc] = j
