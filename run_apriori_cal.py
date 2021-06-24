@@ -140,7 +140,8 @@ applycal(vis=msfile,
 	     interp=gaintables['interp'],
 	     gainfield=gaintables['gainfield'],
 	     spwmap=gaintables['spwmap'],
-	     parang=gaintables['parang'])
+	     parang=gaintables['parang'],
+	     calwt=params['apriori_cal']['cal_weights'])
 
 rmfiles(['%s/%s.listobs.txt'%(cwd,p_c)])
 listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))

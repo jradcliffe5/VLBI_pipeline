@@ -166,7 +166,8 @@ for i in range(len(fields)):
 				 gainfield=gaintables['gainfield'],
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'])
+				 parang=gaintables['parang'],
+				 calwt=params['phase_referencing']['cal_weights'])
 		if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
 			applycal(vis=msfile,
 			     field=','.join(fields[i+1]),
@@ -174,7 +175,8 @@ for i in range(len(fields)):
 				 gainfield=gaintables['gainfield'],
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'])
+				 parang=gaintables['parang'],
+				 calwt=params['phase_referencing']['cal_weights'])
 		
 		## Establish image parameters
 		imsize = [1024,1024]

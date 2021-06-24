@@ -69,6 +69,7 @@
     },
     "apriori_cal":{
         "correlator"        :  "default",
+        "cal_weights"       :  false,
         "accor_options":{
             "solint"        :  "inf",
             "smooth"        :  true,
@@ -180,6 +181,7 @@
         "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true],[ true, true, true, true, true, true, true]],
         "pass_ants"         : [["JB"],[]],
         "do_disp_delays"    : true,
+        "cal_weights"       : false,
         "imager"            :  "tclean",
         "fringe_niter"      :  300,
         "min_snr"           :  5.0,

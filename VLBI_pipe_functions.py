@@ -2216,7 +2216,7 @@ def primary_beam_correction(msfile,prefix,params):
 		casalog.post(priority="SEVERE",origin=func_name,message='IDG differential not implemented just yet')
 		sys.exit()
 	elif params['apply_to_all']['pbcor']['implementation'] == 'uvcorr':
-		rmdirs(['%s.pbcor'%(prefix)])
+		rmdirs(['%s/%s.pbcor'%(cwd,prefix)])
 
 		if params['apply_to_all']['pbcor']['vex_file'] == '':
 			tbnrows = nspw*nants
