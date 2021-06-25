@@ -283,7 +283,7 @@ for i in range(len(fields)):
 				   nterms=deconvolver_tclean[1],
 				   model=model,
 				   usescratch=True)
-				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
+				if (j == (len(cal_type[i])-1)) and (i<=(len(fields)-1)):
 					for m in range(len(fields[i+1])):
 						delims = []
 						for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
@@ -291,8 +291,8 @@ for i in range(len(fields)):
 						rmdirs(delims)
 						if params['phase_referencing']['pass_ants'][i] != []:
 							antennas = ''
-							for k in params['phase_referencing']['pass_ants'][i]:
-								antennas = antennas+'!%s;'%k
+							for l in params['phase_referencing']['pass_ants'][i]:
+								antennas = antennas+'!%s;'%l
 							if antennas.endswith(';'):
 								antennas = antennas[:-1]
 						if params['phase_referencing']['masking'] == 'peak':
