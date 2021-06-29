@@ -307,9 +307,9 @@ for i in range(len(fields)):
 							       weighting=weight,
 							       parallel=parallel
 							   )
-							peak = imstat(imagename='%s-%s%s.image'%(fields[i+1][m], cal_type[i][j], j))
+							peak = imstat(imagename='%s-initmodel.image'%(fields[i+1][m]))
 							peak = peak['maxpos'][:2]
-							beam = imhead(imagename='%s-%s%s.image'%(fields[i+1][m], cal_type[i][j], j))
+							beam = imhead(imagename='%s-initmodel.image'%(fields[i+1][m]))
 							beam = np.ceil(1.2*(beam['restoringbeam']['major']['value']/7.2e3/(np.abs(beam['incr'][1])*(180/np.pi)))).astype(int)
 							masking=['user','circle[[%spix, %spix], %spix]'%(peak[0],peak[1],beam),4.0,1.0]
 						elif params['phase_referencing']['masking'] == 'auto':
