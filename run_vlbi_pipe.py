@@ -34,21 +34,21 @@ inputs = headless(sys.argv[i])
 
 steps = copy.deepcopy(inputs)
 for i in inputs:
-	if i in ['parameter_file','make_scripts','run_jobs']:
+	if i in ['parameter_file_path','make_scripts','run_jobs']:
 		del steps[i]
 
 ## Load parameters
-params=load_json(inputs['parameter_file'])
+params=load_json(inputs['parameter_file_path'])
 
 save_json(filename='%s/vp_inputs.json'%(params['global']['cwd']),array=inputs,append=False)
 
 casalog.post(priority='INFO',origin=filename,message='Initialising VLBI pipeline run')
 
 if os.path.exists('%s/%s'%(params['global']['cwd'],'vp_steps_run.json')) == False:
-	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating step logger')
+	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating logger')
 	rmdirs(['%s/%s'%(params['global']['cwd'],'logs')])
 	os.system('mkdir %s/%s'%(params['global']['cwd'],'logs'))
-	init_pipe_run(steps)
+	init_pipe_run(steps,params)
 	steps_run=load_json('vp_steps_run.json')
 else:
 	casalog.post(priority='INFO',origin=filename,message='A previous run has been detected')
@@ -56,31 +56,35 @@ else:
 	steps_run=load_json('vp_steps_run.json')
 
 ## Time to build all scripts
-if inputs['make_scripts'] == 'True':
-	for i in steps.keys():
-		if steps[i]==1:
-			casalog.post(priority='INFO',origin=filename,message='Writing script for step: %s'%i)
-			write_hpc_headers(step=i,params=params)
-			if i in ['import_fitsidi']:
-				parallel=False
-			elif ((steps['make_mms'] == 1)|(steps_run['make_mms']==1)):
-				parallel=True
-			elif i in ['prepare_data']:
-				parallel=True
-			else:
-				parallel=False
-			if i=='init_flag':
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
-			elif i == 'apply_to_all':
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
-			else:
-				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
+for j,i in enumerate(steps.keys()):
+	if steps[i]==1:
+		casalog.post(priority='INFO',origin=filename,message='Writing script for step: %s'%i)
+		write_hpc_headers(step=i,params=params)
+		if i in ['import_fitsidi']:
+			parallel=False
+		elif ((steps['make_mms'] == 1)|(steps_run['make_mms']==1)):
+			parallel=True
+		elif i in ['prepare_data']:
+			parallel=True
+		else:
+			parallel=False
+		if i=='init_flag':
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
+		elif i == 'apply_to_all':
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
+		else:
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
+		high_step = j
+
+for j,i in enumerate(steps_run.keys()):
+	if steps_run[i]==1:
+		if (steps[i]==1) or (j>high_step):
+			remove_gaintable(i,params,casa6)
 
 
-if inputs['run_jobs'] == 'True':
-	jobs_to_run = []
-	for i in steps.keys():
-		if steps[i]==1:
-			jobs_to_run.append(i)
-	casalog.post(priority='INFO',origin=filename,message='Writing runfile script for steps: %s'%", ".join(jobs_to_run))
-	write_job_script(steps=jobs_to_run,job_manager=params['global']['job_manager'])
+jobs_to_run = []
+for i in steps.keys():
+	if steps[i]==1:
+		jobs_to_run.append(i)
+casalog.post(priority='INFO',origin=filename,message='Writing runfile script for steps: %s'%", ".join(jobs_to_run))
+write_job_script(steps=jobs_to_run,job_manager=params['global']['job_manager'])

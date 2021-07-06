@@ -21,9 +21,11 @@ except:
 casalog.origin('vp_apply_target')
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_gaintables(params, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['apply_target'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -34,6 +36,11 @@ if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global'][
 	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+
+if steps_run['apply_target'] == 1:
+	flagmanager(vis=msfile,mode='restore',versionname='vp_apply_target')
+else:
+	flagmanager(vis=msfile,mode='save',versionname='vp_apply_target')
 
 ## Apply to standard files
 applycal(vis='%s/%s'%(cwd,msfile),
@@ -98,6 +105,7 @@ if params['apply_target']["backup_caltables"] == True:
 		archive.add(i, arcname=i.split('/')[-1])
 	archive.close()
 
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apply_target'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

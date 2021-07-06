@@ -20,9 +20,11 @@ except:
 casalog.origin('vp_phase_referencing')
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
-gaintables = load_gaintables(params, casa6=casa6)
+gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -44,6 +46,11 @@ else:
 
 
 cal_type = params['phase_referencing']["cal_type"]
+
+if steps_run['phase_referencing'] == 1:
+	flagmanager(vis=msfile,mode='restore',versionname='vp_phase_referencing')
+else:
+	flagmanager(vis=msfile,mode='save',versionname='vp_phase_referencing')
 
 
 for i in range(len(fields)):
@@ -159,6 +166,7 @@ for i in range(len(fields)):
 		else:
 			spwmap=[]
 		gaintables = append_gaintable(gaintables,[caltable,'',spwmap,'linear'])
+		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],[caltable,'',spwmap,'linear'])
 
 		applycal(vis=msfile,
 			     field=','.join(fields[i]),
@@ -226,7 +234,7 @@ for i in range(len(fields)):
 			if params['phase_referencing']['imager'] == 'tclean':
 				delims = []
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
-					delims.append('%s-%s%s%s*'%(fields[i][k], cal_type[i][j], j,z))
+					delims.append('%s-%s%s%s'%(fields[i][k], cal_type[i][j], j,z))
 				rmdirs(delims)
 				if steps_run['make_mms'] == 1:
 					parallel=True
@@ -283,11 +291,11 @@ for i in range(len(fields)):
 				   nterms=deconvolver_tclean[1],
 				   model=model,
 				   usescratch=True)
-				if (j == (len(cal_type[i])-1)) and (i<=(len(fields)-1)):
+				if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
 					for m in range(len(fields[i+1])):
 						delims = []
 						for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
-							delims.append('%s-initmodel%s*'%(fields[i+1][m],z))
+							delims.append('%s-initmodel%s'%(fields[i+1][m],z))
 						rmdirs(delims)
 						if params['phase_referencing']['pass_ants'][i] != []:
 							antennas = ''
@@ -349,7 +357,7 @@ for i in range(len(fields)):
 						   usescratch=True)
 
 
-
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['phase_referencing'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

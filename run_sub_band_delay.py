@@ -20,9 +20,11 @@ except:
 casalog.origin('vp_sub_band_delay')
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_gaintables(params, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['sub_band_delay'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -109,6 +111,7 @@ if params['sub_band_delay']['modify_sbd']['run'] == True:
 	#	               spw_pass=params['sub_band_delay']['modify_sbd']['spw_passmark'],
 	#	               bad_soln_clip=params['sub_band_delay']['modify_sbd']['clip_badtimes'],
 	#	               plot=False)
+	interpgain(caltable='%s/%s.sbd'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
 	interpgain(caltable='%s/%s.sbd'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
 if casa6 == True:
@@ -117,7 +120,9 @@ if casa6 == True:
 			plotcaltable(caltable='%s/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-sbd_%s_vs_%s.pdf'%(p_c,i,j))
 
 gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
+gt_r['sub_band_delay'] = append_gaintable(gt_r['sub_band_delay'],['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
 
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['sub_band_delay'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

@@ -21,13 +21,20 @@ except:
 
 casalog.origin('vp_apriori_cal')
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
-gaintables = load_gaintables(params, casa6=casa6)
+gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['apriori_cal'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
+
+if steps_run['apriori_cal'] == 1:
+	flagmanager(vis=msfile,mode='restore',versionname='vp_apriori_cal')
+else:
+	flagmanager(vis=msfile,mode='save',versionname='vp_apriori_cal')
 
 if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 	msinfo = get_ms_info(msfile)
@@ -49,16 +56,17 @@ else:
 
 if doaccor==True:
 	## DiFX correlator sampling corrections
-	rmdirs(['rm -r %s/%s.accor'%(cwd,p_c)])
+	rmdirs(['%s/%s.accor'%(cwd,p_c)])
 	accor(vis=msfile,
 	      caltable='%s/%s.accor'%(cwd,p_c),
 	      solint=params['apriori_cal']['accor_options']['solint'])
-	append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
+	gaintables = append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
+	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
 	if params['apriori_cal']['accor_options']['smooth'] == True:
 		smoothcal(vis=msfile,
 		          tablein='%s/%s.accor'%(cwd,p_c),
 		          caltable='%s/%s.accor'%(cwd,p_c),
-			      smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
+			   smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
 
 ### Run prior-cals
 if params['apriori_cal']["do_observatory_flg"] == True:
@@ -81,6 +89,7 @@ if casa6 == True:
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_freq.pdf'%p_c)
 
 gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
+gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
 
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
@@ -107,6 +116,7 @@ if params['apriori_cal']["make_gaincurve"] == True:
 	       infile='%s/%s.gc'%(cwd,p_c))
 
 	gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
+	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
 if params['apriori_cal']['ionex_options']['run'] == True:
 	rmdirs(['%s/%s.tecim'%(cwd,p_c),
@@ -133,6 +143,7 @@ if params['apriori_cal']['ionex_options']['run'] == True:
 	       infile=tec_image+'/',
 	       uniform=False)
 	gaintables = append_gaintable(gaintables,['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
+	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
 applycal(vis=msfile,
 	     field='',
@@ -146,6 +157,7 @@ applycal(vis=msfile,
 rmfiles(['%s/%s.listobs.txt'%(cwd,p_c)])
 listobs(vis=msfile,listfile='%s/%s.listobs.txt'%(cwd,p_c))
 
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['apriori_cal'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

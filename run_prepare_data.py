@@ -8,7 +8,6 @@ from casavlbitools.casa import convert_gaincurve
 from VLBI_pipe_functions import *
 
 mpipath = os.path.dirname(os.path.realpath(filename))
-print(mpipath)
 
 try:
 	# CASA 6
@@ -45,8 +44,9 @@ casalog.origin('prepare_data')
 casalog.post("")
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles
@@ -168,6 +168,11 @@ if params["prepare_data"]["flag_file"] != "none":
 			casalog.post(origin=filename,message='Flag file - %s - does not exist, please correct ... exiting'%flagfile,priority='SEVERE')
 			sys.exit()
 	convert_flags(infile=flagfile, idifiles=idifiles, outfp=sys.stdout, outfile='%s_casa.flags'%params['global']['project_code'])
+
+gt_r['prepare_data'] = {}
+for k in ['gaintable','gainfield','spwmap','interp']:
+	gt_r['prepare_data'][k] = []
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 
 steps_run['prepare_data'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

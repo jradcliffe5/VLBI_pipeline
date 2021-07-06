@@ -217,15 +217,18 @@ def rmdirs(dirs):
 			casalog.post(priority="INFO",origin=func_name,message='No file found - %s'% i)
 	return
 
-def init_pipe_run(inputs):
+def init_pipe_run(inputs,params):
 	inputs2=OrderedDict({})
 	for a,b in zip(inputs.keys(),inputs.values()):
 		inputs2[a]=b
-	#for i in ['parameter_file','make_scripts','run_jobs']:
-	#	del inputs2[i]
 	for i in inputs2.keys():
 		inputs2[i] = 0
-	save_json(filename='vp_steps_run.json',array=inputs2,append=False)
+	save_json(filename='%s/vp_steps_run.json'%params['global']['cwd'],array=inputs2,append=False)
+	gaintables=OrderedDict({})
+	for a,b in zip(('gaintable','gainfield','spwmap','interp','parang'), ([],[],[],[],params['global']['do_parang'])):
+		gaintables[a]=b
+	save_json(filename='%s/vp_gaintables.json'%params['global']['cwd'],array=gaintables,append=False)
+	save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=OrderedDict({}), append=False)
 
 def find_fitsidi(idifilepath="",cwd="",project_code=""):
 	func_name = inspect.stack()[0][3]
@@ -1955,8 +1958,6 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 	#    Changelog - 08-09-2020 (Jack Radcliffe)
 	#    * uses scipy interp1d to provide multiple interpolation methods
 	#    * added support for fringe tables
-	
-	casalog.origin('interpgain')
 
 	kind = interp
 	if field == '*':
@@ -2051,19 +2052,21 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 
 	cwd = params['global']['cwd']
 	p_c=params['global']['project_code']
+	calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
 	i = prefix
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
 	target_dir = params['prepare_apply_all']['target_path']
+
 	
 	if tar == 'True':
 		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 	importfitsidi(fitsidifile=files,
-		          vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
-		          constobsid=params['import_fitsidi']["const_obs_id"],
-		          scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+				  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
+				  constobsid=params['import_fitsidi']["const_obs_id"],
+				  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 	if tar == 'True':
 		rmfiles(files)
 	
@@ -2076,10 +2079,24 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 				  outputvis=msfile)
 		rmdirs([msfile2])
 
+	if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],i))==False:
+		msinfo_target = get_ms_info(msfile)
+		
+	else:
+		msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+
+	msinfo_target = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],i))
+	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],i), array=msinfo_target, append=False)
+	
+	targets=[]
+	for k in msinfo_target['FIELD']['fieldtoID'].keys():
+		if k not in calibrators:
+			targets.append(k)
+
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	
 	if params['apply_to_all']['pbcor']['run'] == True:
-		pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params)
+		pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params,msinfo=msinfo_target)
 		gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'nearest'])
 		if params['apply_to_all']['pbcor']['backup_caltables'] == True:
 			archive = tarfile.open("%s_caltables.tar"%p_c, "a")
@@ -2087,8 +2104,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 			archive.close()
 	
 	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
-			 field='*',
-		     gaintable=gaintables['gaintable'],
+			 field=",".join(targets),
+			 gaintable=gaintables['gaintable'],
 			 gainfield=gaintables['gainfield'],
 			 interp=gaintables['interp'],
 			 spwmap=gaintables['spwmap'],
@@ -2111,16 +2128,16 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	if params['init_flag']['flag_autocorrs'] == True:
 		if steps_run['init_flag'] == 1:
 			flagmanager(vis=msfile,
-					    mode='restore',
-					    versionname='autocorrelations')
+						mode='restore',
+						versionname='autocorrelations')
 		else:
 			flagmanager(vis=msfile,
-				        mode='save',
-				        versionname='autocorrelations')
+						mode='save',
+						versionname='autocorrelations')
 		flagdata(vis=msfile,
-			     mode='manual',
-			     datacolumn='corrected',
-			     autocorr=True)
+				 mode='manual',
+				 datacolumn='corrected',
+				 autocorr=True)
 
 	if params['init_flag']['quack_data']['run'] == True:
 		quack_ints = params['init_flag']['quack_data']['quack_time']
@@ -2129,17 +2146,17 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 			for j in quack_ints.keys():
 				if j == '*':
 					flagdata(vis=msfile,
-						     field=j,
-						     mode='quack',
-						     datacolumn='corrected',
-						     quackinterval=quack_ints[j],
-						     quackmode=quack_mode)
+							 field=j,
+							 mode='quack',
+							 datacolumn='corrected',
+							 quackinterval=quack_ints[j],
+							 quackmode=quack_mode)
 		elif type(quack_ints)==float:
 			flagdata(vis=msfile,
-				     mode='quack',
-				     datacolumn='corrected',
-				     quackinterval=quack_ints,
-				     quackmode=quack_mode)
+					 mode='quack',
+					 datacolumn='corrected',
+					 quackinterval=quack_ints,
+					 quackmode=quack_mode)
 
 	if params['init_flag']['manual_flagging']['run'] == True:
 		flagdata(vis=msfile,
@@ -2148,9 +2165,55 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 
 	rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
-			  outputvis='%s/%s.ms'%(cwd,i))
+		  field=",".join(targets),
+		  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 	
+	for j in targets:
+		tclean(vis='%s/%s.ms'%(cwd,i),
+			   field='%s'%j,
+			   imagename='%s_inital'%(str(j)),
+			   datacolumn='data',
+			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][msinfo_target["FIELD"]["IDtofield"][str(j)]]/1000.),
+			   imsize=[1024,1024],
+			   deconvolver='clarkstokes',
+			   niter=int(1e5),
+			   weighting='natural',
+			   nsigma=1.2,
+			   usemask='auto-multithresh',
+			   noisethreshold=4.0,
+			   sidelobethreshold=1.0,
+			   parallel=parallel)
+	
+def image_targets(prefix,params,parallel):
+	func_name = inspect.stack()[0][3]
+
+	cwd = params['global']['cwd']
+	p_c = params['global']['project_code']
+	calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
+	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+	msinfo_target = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
+
+	targets=[]
+	for k in msinfo_target['FIELD']['fieldtoID'].keys():
+		if k not in calibrators:
+			targets.append(k)
+
+	for j in targets:
+		tclean(vis='%s/%s.ms'%(cwd,prefix),
+			   field='%s'%j,
+			   imagename='%s_inital'%(str(j)),
+			   datacolumn='data',
+			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][str(j)]/1000.),
+			   imsize=[1024,1024],
+			   deconvolver='clarkstokes',
+			   niter=int(1e5),
+			   weighting='natural',
+			   nsigma=1.2,
+			   usemask='auto-multithresh',
+			   noisethreshold=4.0,
+			   sidelobethreshold=1.0,
+			   parallel=parallel)
 
 def apply_tar_output(prefix,params):
 	i = prefix
@@ -2179,12 +2242,12 @@ def angsep(ra1,dec1,ra2rad,dec2rad):
 
 	# use Pythargoras approximation if rad < 1 arcsec
 	if rad<0.000004848:
-	    rad=math.sqrt((math.cos(dec1rad)*(ra1rad-ra2rad))**2+(dec1rad-dec2rad)**2)
-	    
+		rad=math.sqrt((math.cos(dec1rad)*(ra1rad-ra2rad))**2+(dec1rad-dec2rad)**2)
+		
 	# Angular separation
 	return rad
 	
-def primary_beam_correction(msfile,prefix,params):
+def primary_beam_correction(msfile,prefix,params,msinfo):
 	func_name = inspect.stack()[0][3]
 	import vex
 	cb = casatools.calibrater()
@@ -2194,11 +2257,11 @@ def primary_beam_correction(msfile,prefix,params):
 
 	#save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],prefix), array=get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix)), append=False)
 	#msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
-	msinfo = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],prefix))
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
 	nants = len(msinfo['ANTENNAS']['anttoID'])
 	calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
+
 
 	tb.open(msfile+'/ANTENNA')
 	ant_name = tb.getcol('NAME')
@@ -2334,4 +2397,22 @@ def pb_model_uvcorr(parameters,model,obs_freq,angsep):
 	elif model == 'B':
 		print('hi')
 	return np.sqrt(attenuation)
+
+def remove_gaintable(step,params,casa6):
+	cwd = params['global']['cwd']
+	gt = load_json('%s/vp_gaintables.json'%(params['global']['cwd']), Odict=True, casa6=casa6)
+	gt_r = load_json('%s/vp_gaintables.last.json'%(params['global']['cwd']), Odict=True, casa6=casa6)
+
+	idx=[]
+	for b,a in enumerate(gt['gaintable']):
+		for p in gt_r[step]['gaintable']:
+			if a == p:
+				idx.append(b)
+	for k in ['gaintable','spwmap','gainfield','interp']:
+		g = gt[k]
+		for index in sorted(idx, reverse=True):
+			del g[index]
+		gt[k] = g
+	save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gt, append=False)
+
 

@@ -20,9 +20,11 @@ except:
 casalog.origin('vp_initial_flagging')
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_gaintables(params, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['init_flag'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -110,7 +112,7 @@ if params['init_flag']['manual_flagging']['run'] == True:
 		casalog.post(priority='SEVERE',origin=filename,message='flag file %s/%s does not exist'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		sys.exit()
 
-
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['init_flag'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

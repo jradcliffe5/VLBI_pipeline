@@ -1,4 +1,4 @@
-import inspect, os, sys, json
+import inspect, os, sys, json, tarfile
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
@@ -20,9 +20,10 @@ casalog.origin('vp_import_fitsidi')
 
 ## Load params
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
-
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['import_fitsidi'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 ## Set location of fitsidifiles
@@ -63,11 +64,12 @@ if steps_run['prepare_data'] == 0:
 					casalog.post(origin=filename,message='Could not move files with rsync or cp ... exiting',priority='SEVERE')
 					sys.exit()
 			idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])
-else: 
+else:
 	for j,i in enumerate(idifiles):
 		idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])
 
 rmdirs(['%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])])
+casalog.post(origin=filename,message='Importing fits into measurement set: %s.ms'%(params['global']['project_code']),priority='INFO')
 importfitsidi(fitsidifile=idifiles,\
 	          vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
 	          constobsid=params['import_fitsidi']["const_obs_id"],\
@@ -80,11 +82,17 @@ if params['import_fitsidi']['remove_idi'] == True:
 	rmfiles(idifiles)
 
 if params['import_fitsidi']['make_backup'] == True:
+	casalog.post(origin=filename,message='Creating backup: %s_backup.tar.gz'%(params['global']['project_code']),priority='INFO')
 	rmfiles(["%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global']['project_code'])])
-	os.system("tar -cvzf %s/%s_backup.tar.gz %s/%s.ms"%(params['global']['cwd'],params['global']['project_code'],params['global']['cwd'],params['global']['project_code']))
+	source_dir = "%s/%s.ms"%(params['global']['cwd'],params['global']['project_code'])
+	with tarfile.open('%s/%s_backup.tar.gz'%(params['global']['cwd'],params['global']['project_code']),"w:gz") as tar:
+		tar.add(source_dir, arcname=os.path.basename(source_dir))
+	#os.system("tar -cvzf %s/%s_backup.tar.gz %s/%s.ms"%(params['global']['cwd'],params['global']['project_code'],params['global']['cwd'],params['global']['project_code']))
 
 
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 
+
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 steps_run['import_fitsidi'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
