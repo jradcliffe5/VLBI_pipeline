@@ -19,8 +19,10 @@ except:
 casalog.origin('vp_make_mms')
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['make_mms'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 rmdirs(['%s/%s.ms.flagversions'%(params['global']['cwd'],params['global']['project_code'])])
 mmsfile='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])
@@ -35,6 +37,7 @@ partition(vis=msfile,\
      	  numsubms= params['make_mms']['numsubms'])
 rmdirs([msfile])
 
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 steps_run['make_mms'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
 
