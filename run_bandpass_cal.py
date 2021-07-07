@@ -20,7 +20,7 @@ except:
 casalog.origin('vp_bandpass_cal')
 
 inputs = load_json('vp_inputs.json')
-params = load_json(inputs['parameter_file'])
+params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_gaintables(params, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
