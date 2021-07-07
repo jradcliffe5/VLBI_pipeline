@@ -34,6 +34,7 @@ except:
 	from split_cli import split_cli as split
 	from gencal_cli import gencal_cli as gencal
 	from partition_cli import partition_cli as partition
+	from tclean_cli import tclean_cli as tclean
 	casa6=False
 	
 
@@ -2160,7 +2161,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
 		  field=",".join(targets),
 		  outputvis='%s/%s.ms'%(cwd,i))
-	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+	#rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 
 def image_targets(prefix,params,parallel):
 	func_name = inspect.stack()[0][3]

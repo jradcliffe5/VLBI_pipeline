@@ -12,7 +12,7 @@
         "default_mpiprocs"  :    24,
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "",
+        "mpicasapath"       :  "mpirun -q -n 5",
         "casapath"          :  "python",
         "singularity"       :  false,
         "AOflag_command"    : ["/Users/jackradcliffe/Documents/anaconda3/envs/aoflag/bin/aoflagger"],
@@ -69,7 +69,7 @@
     },
     "apriori_cal":{
         "correlator"        :  "default",
-        "cal_weights"       :  false,
+        "cal_weights"       :  true,
         "accor_options":{
             "solint"        :  "inf",
             "smooth"        :  true,
@@ -181,7 +181,7 @@
         "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true],[ true, true, true, true, true, true, true]],
         "pass_ants"         : [["JB"],[]],
         "do_disp_delays"    : true,
-        "cal_weights"       : false,
+        "cal_weights"       : true,
         "imager"            :  "tclean",
         "fringe_niter"      :  300,
         "min_snr"           :  5.0,

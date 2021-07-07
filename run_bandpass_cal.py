@@ -135,7 +135,7 @@ if casa6 == True:
 		for j in ['freq','time']:
 			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
 
-#flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
+flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
 
 gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
 gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
