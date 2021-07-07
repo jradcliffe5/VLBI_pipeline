@@ -2079,12 +2079,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 				  outputvis=msfile)
 		rmdirs([msfile2])
 
-	if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],i))==False:
-		msinfo_target = get_ms_info(msfile)
-		
-	else:
-		msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-
 	msinfo_target = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],i))
 	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],i), array=msinfo_target, append=False)
 	
@@ -2092,6 +2086,49 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	for k in msinfo_target['FIELD']['fieldtoID'].keys():
 		if k not in calibrators:
 			targets.append(k)
+
+		if params['apriori_cal']["do_observatory_flg"] == True:
+		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
+			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
+	if params['init_flag']['flag_edge_chans']['run'] == True:
+
+		ec=calc_edge_channels(value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
+							  nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
+							  nchan=msinfo['SPECTRAL_WINDOW']['nchan'])
+
+		flagdata(vis=msfile,
+				 mode='manual',
+				 spw=ec)
+
+	if params['init_flag']['flag_autocorrs'] == True:
+		if steps_run['init_flag'] == 1:
+			flagmanager(vis=msfile,
+						mode='restore',
+						versionname='autocorrelations')
+		else:
+			flagmanager(vis=msfile,
+						mode='save',
+						versionname='autocorrelations')
+		flagdata(vis=msfile,
+				 mode='manual',
+				 autocorr=True)
+
+	if params['init_flag']['quack_data']['run'] == True:
+		quack_ints = params['init_flag']['quack_data']['quack_time']
+		quack_mode = params['init_flag']['quack_data']['quack_mode']
+		if type(quack_ints)==dict:
+			for j in quack_ints.keys():
+				if j == '*':
+					flagdata(vis=msfile,
+							 field=j,
+							 mode='quack',
+							 quackinterval=quack_ints[j],
+							 quackmode=quack_mode)
+		elif type(quack_ints)==float:
+			flagdata(vis=msfile,
+					 mode='quack',
+					 quackinterval=quack_ints,
+					 quackmode=quack_mode)
 
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	
@@ -2110,53 +2147,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 			 interp=gaintables['interp'],
 			 spwmap=gaintables['spwmap'],
 			 parang=gaintables['parang'])
-
-	if params['apriori_cal']["do_observatory_flg"] == True:
-		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
-			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
-	if params['init_flag']['flag_edge_chans']['run'] == True:
-
-		ec=calc_edge_channels(value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
-							  nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
-							  nchan=msinfo['SPECTRAL_WINDOW']['nchan'])
-
-		flagdata(vis=msfile,
-				 mode='manual',
-				 datacolumn='corrected',
-				 spw=ec)
-
-	if params['init_flag']['flag_autocorrs'] == True:
-		if steps_run['init_flag'] == 1:
-			flagmanager(vis=msfile,
-						mode='restore',
-						versionname='autocorrelations')
-		else:
-			flagmanager(vis=msfile,
-						mode='save',
-						versionname='autocorrelations')
-		flagdata(vis=msfile,
-				 mode='manual',
-				 datacolumn='corrected',
-				 autocorr=True)
-
-	if params['init_flag']['quack_data']['run'] == True:
-		quack_ints = params['init_flag']['quack_data']['quack_time']
-		quack_mode = params['init_flag']['quack_data']['quack_mode']
-		if type(quack_ints)==dict:
-			for j in quack_ints.keys():
-				if j == '*':
-					flagdata(vis=msfile,
-							 field=j,
-							 mode='quack',
-							 datacolumn='corrected',
-							 quackinterval=quack_ints[j],
-							 quackmode=quack_mode)
-		elif type(quack_ints)==float:
-			flagdata(vis=msfile,
-					 mode='quack',
-					 datacolumn='corrected',
-					 quackinterval=quack_ints,
-					 quackmode=quack_mode)
 
 	if params['init_flag']['manual_flagging']['run'] == True:
 		flagdata(vis=msfile,
