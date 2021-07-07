@@ -2168,22 +2168,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 		  field=",".join(targets),
 		  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-	
-	for j in targets:
-		tclean(vis='%s/%s.ms'%(cwd,i),
-			   field='%s'%j,
-			   imagename='%s_inital'%(str(j)),
-			   datacolumn='data',
-			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][msinfo_target["FIELD"]["IDtofield"][str(j)]]/1000.),
-			   imsize=[1024,1024],
-			   deconvolver='clarkstokes',
-			   niter=int(1e5),
-			   weighting='natural',
-			   nsigma=1.2,
-			   usemask='auto-multithresh',
-			   noisethreshold=4.0,
-			   sidelobethreshold=1.0,
-			   parallel=parallel)
+
 	
 def image_targets(prefix,params,parallel):
 	func_name = inspect.stack()[0][3]
@@ -2202,7 +2187,7 @@ def image_targets(prefix,params,parallel):
 	for j in targets:
 		tclean(vis='%s/%s.ms'%(cwd,prefix),
 			   field='%s'%j,
-			   imagename='%s_inital'%(str(j)),
+			   imagename='%s_initial'%(str(j)),
 			   datacolumn='data',
 			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][str(j)]/1000.),
 			   imsize=[1024,1024],
@@ -2214,6 +2199,7 @@ def image_targets(prefix,params,parallel):
 			   noisethreshold=4.0,
 			   sidelobethreshold=1.0,
 			   parallel=parallel)
+	rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
 
 def apply_tar_output(prefix,params):
 	i = prefix

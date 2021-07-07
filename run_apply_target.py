@@ -52,7 +52,7 @@ applycal(vis='%s/%s'%(cwd,msfile),
 		 parang=gaintables['parang'])
 
 if steps_run['make_mms'] == 1:
-	parallel=True
+	parallel = True
 else:
 	parallel = False
 

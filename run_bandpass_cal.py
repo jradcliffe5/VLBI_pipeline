@@ -23,6 +23,8 @@ inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_gaintables(params, casa6=casa6)
+gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
+gt_r['bandpass_cal'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
@@ -94,6 +96,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 spwmap=gaintables['spwmap'],
 			 parang=gaintables['parang'])
 
+interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=False,fringecal=False)
 interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 
 
@@ -132,10 +135,12 @@ if casa6 == True:
 		for j in ['freq','time']:
 			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
 
-flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
+#flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
 
 gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
 
+save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['bandpass_cal'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
