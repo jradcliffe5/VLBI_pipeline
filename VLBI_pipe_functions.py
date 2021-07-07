@@ -1736,9 +1736,12 @@ def clip_model(model, im, snr):
 
 def make_tarfile(output_filename, source_dir):
 	func_name = inspect.stack()[0][3]
-	casalog.post(priority='INFO',origin=func_name,message='Tarring %s to form %s' % (source_dir,output_filename))
+	if not isinstance(source_dir, list):
+		source_dir = list(source_dir)
+	casalog.post(priority='INFO',origin=func_name,message='Tarring %s to form %s' % (", ".join(source_dir),output_filename))
 	with tarfile.open(output_filename, "w:gz") as tar:
-		tar.add(source_dir, arcname=os.path.basename(source_dir))
+		for k in source_dir:
+			tar.add(k, arcname=os.path.basename(k))
   
 def extract_tarfile(tar_file,cwd,delete_tar):
 	func_name = inspect.stack()[0][3]
@@ -2087,7 +2090,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 		if k not in calibrators:
 			targets.append(k)
 
-		if params['apriori_cal']["do_observatory_flg"] == True:
+	if params['apriori_cal']["do_observatory_flg"] == True:
 		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
 			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
 	if params['init_flag']['flag_edge_chans']['run'] == True:
@@ -2159,7 +2162,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 		  outputvis='%s/%s.ms'%(cwd,i))
 	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 
-	
 def image_targets(prefix,params,parallel):
 	func_name = inspect.stack()[0][3]
 
@@ -2190,19 +2192,31 @@ def image_targets(prefix,params,parallel):
 			   sidelobethreshold=1.0,
 			   parallel=parallel)
 	rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
+	return targets
 
-def apply_tar_output(prefix,params):
+def apply_tar_output(prefix,params,targets):
 	i = prefix
 	cwd = params['global']['cwd']
 	msfile ='%s/%s.ms'%(cwd,i)
 	if params['apply_to_all']['tar_output'] == True:
-		make_tarfile(output_filename=msfile+'.tar.gz', source_dir='%s'%(msfile))
+		if params["apply_to_all"]["image_target"]["run"] == True:
+			source_dir=['%s'%(msfile)]
+			for k in targets:
+				for j in ['image','psf','model','residual','sumwt','mask','pb']:
+					source_dir.append('%s/%s_initial.%s'%(cwd,k,j))
+			make_tarfile(output_filename=msfile+'.tar.gz', source_dir=source_dir)
+		else:
+			make_tarfile(output_filename=msfile+'.tar.gz', source_dir='%s'%(msfile))
 		rmdirs([msfile])
 		if params['apply_to_all']['target_outpath'] !='':
 			os.system('mv %s.tar.gz %s/'%(msfile,params['apply_to_all']['target_outpath']))
 	else:
 		if params['apply_to_all']['target_outpath'] !='':
 			os.system('mv %s %s/'%(msfile,params['apply_to_all']['target_outpath']))
+			if params["apply_to_all"]["image_target"]["run"] == True:
+				for k in targets:
+					for j in ['image','psf','model','residual','sumwt','mask','pb']:
+						os.system('mv %s/%s_initial.%s %s/'%(cwd,k,j,params['apply_to_all']['target_outpath']))
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
 	qa = casatools.quanta()
