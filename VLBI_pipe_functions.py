@@ -2062,7 +2062,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	gaintables = load_gaintables(params, casa6=casa6)
 	target_dir = params['prepare_apply_all']['target_path']
 
-	
 	if tar == 'True':
 		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 	
@@ -2073,9 +2072,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 				  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 	if tar == 'True':
 		rmfiles(files)
-	
 	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
-
+	
 	if parallel == True:
 		msfile2='%s/%s_presplit2.ms'%(params['global']['cwd'],i)
 		os.system('mv %s %s'%(msfile,msfile2))
@@ -2133,7 +2131,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 					 mode='quack',
 					 quackinterval=quack_ints,
 					 quackmode=quack_mode)
-
+	
 	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
 	
 	if params['apply_to_all']['pbcor']['run'] == True:
@@ -2158,11 +2156,17 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 				 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 
 	rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
+	if len(targets)> 1:
+		fd = ",".join(targets)
+	else:
+		fd = targets[0]
 	split(vis='%s/%s_presplit.ms'%(cwd,i),
-		  field=",".join(targets),
+		  field=fd,
+		  keepmms=False,
+		  datacolumn='corrected',
 		  outputvis='%s/%s.ms'%(cwd,i))
-	#rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-
+	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+		
 def image_targets(prefix,params,parallel):
 	func_name = inspect.stack()[0][3]
 
@@ -2221,6 +2225,7 @@ def apply_tar_output(prefix,params,targets):
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
 	qa = casatools.quanta()
+	dec1 = dec1.replace('\'','m').replace('\"','s')
 	ra1rad=qa.convert(qa.quantity(ra1),'rad')['value']
 	dec1rad=qa.convert(qa.quantity(dec1),'rad')['value']
 
