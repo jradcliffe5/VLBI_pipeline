@@ -1509,7 +1509,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 	for i in msinfo['SPECTRAL_WINDOW']['spw_pols']:
 		if i[0] == i[1]:
 			pol_names.append(i)
-	polrange = len(msinfo['SPECTRAL_WINDOW']['spw_pols'])
+	polrange = len(pol_names)
 
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
