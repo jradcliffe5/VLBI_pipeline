@@ -69,9 +69,10 @@ else:
 	parallel = False
 
 if sys.argv[i] == '0':
-	apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel)
+	apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=0)
 if sys.argv[i] == '1':
 	if params["apply_to_all"]["image_target"]["run"] == True:
+		apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=1)
 		targets = image_targets(prefix=prefix,params=params,parallel=parallel)
 	else:
 		targets = []

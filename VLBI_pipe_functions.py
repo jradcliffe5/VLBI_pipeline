@@ -464,7 +464,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
-		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}.ms'%(params['init_flag']['AO_flag_strategy'])
+		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'])
 
 		if casa6 == False:
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
@@ -2087,7 +2087,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 	
 	tb.done()
 
-def apply_to_all(prefix,files,tar,params,casa6,parallel):
+def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 	func_name = inspect.stack()[0][3]
 
 	cwd = params['global']['cwd']
@@ -2098,110 +2098,119 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel):
 	gaintables = load_gaintables(params, casa6=casa6)
 	target_dir = params['prepare_apply_all']['target_path']
 
-	if tar == 'True':
-		files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
-	
-	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-	importfitsidi(fitsidifile=files,
-				  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
-				  constobsid=params['import_fitsidi']["const_obs_id"],
-				  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
-	if tar == 'True':
-		rmfiles(files)
-	msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
-	
-	if parallel == True:
-		msfile2='%s/%s_presplit2.ms'%(params['global']['cwd'],i)
-		os.system('mv %s %s'%(msfile,msfile2))
-		partition(vis=msfile2,\
-				  outputvis=msfile)
-		rmdirs([msfile2])
+	if part==0:
 
-	msinfo_target = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],i))
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],i), array=msinfo_target, append=False)
-	
-	targets=[]
-	for k in msinfo_target['FIELD']['fieldtoID'].keys():
-		if k not in calibrators:
-			targets.append(k)
+		if tar == 'True':
+			files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
+		
+		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+		importfitsidi(fitsidifile=files,
+					  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
+					  constobsid=params['import_fitsidi']["const_obs_id"],
+					  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+		if tar == 'True':
+			rmfiles(files)
+		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
+		
+		if parallel == True:
+			msfile2='%s/%s_presplit2.ms'%(params['global']['cwd'],i)
+			os.system('mv %s %s'%(msfile,msfile2))
+			partition(vis=msfile2,\
+					  outputvis=msfile)
+			rmdirs([msfile2])
 
-	if params['apriori_cal']["do_observatory_flg"] == True:
-		if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
-			flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
-	if params['init_flag']['flag_edge_chans']['run'] == True:
+		msinfo_target = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],i))
+		save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],i), array=msinfo_target, append=False)
+		
+		targets=[]
+		for k in msinfo_target['FIELD']['fieldtoID'].keys():
+			if k not in calibrators:
+				targets.append(k)
 
-		ec=calc_edge_channels(value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
-							  nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
-							  nchan=msinfo['SPECTRAL_WINDOW']['nchan'])
+		if params['apriori_cal']["do_observatory_flg"] == True:
+			if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
+				flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
+		if params['init_flag']['flag_edge_chans']['run'] == True:
 
-		flagdata(vis=msfile,
-				 mode='manual',
-				 spw=ec)
+			ec=calc_edge_channels(value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
+								  nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
+								  nchan=msinfo['SPECTRAL_WINDOW']['nchan'])
 
-	if params['init_flag']['flag_autocorrs'] == True:
-		if steps_run['init_flag'] == 1:
-			flagmanager(vis=msfile,
-						mode='restore',
-						versionname='autocorrelations')
-		else:
-			flagmanager(vis=msfile,
-						mode='save',
-						versionname='autocorrelations')
-		flagdata(vis=msfile,
-				 mode='manual',
-				 autocorr=True)
-
-	if params['init_flag']['quack_data']['run'] == True:
-		quack_ints = params['init_flag']['quack_data']['quack_time']
-		quack_mode = params['init_flag']['quack_data']['quack_mode']
-		if type(quack_ints)==dict:
-			for j in quack_ints.keys():
-				if j == '*':
-					flagdata(vis=msfile,
-							 field=j,
-							 mode='quack',
-							 quackinterval=quack_ints[j],
-							 quackmode=quack_mode)
-		elif type(quack_ints)==float:
 			flagdata(vis=msfile,
-					 mode='quack',
-					 quackinterval=quack_ints,
-					 quackmode=quack_mode)
-	
-	append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
-	
-	if params['apply_to_all']['pbcor']['run'] == True:
-		pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params,msinfo=msinfo_target)
-		gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'nearest'])
-		if params['apply_to_all']['pbcor']['backup_caltables'] == True:
-			archive = tarfile.open("%s_caltables.tar"%p_c, "a")
-			archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
-			archive.close()
-	
-	applycal(vis='%s/%s_presplit.ms'%(cwd,i),
-			 field=",".join(targets),
-			 gaintable=gaintables['gaintable'],
-			 gainfield=gaintables['gainfield'],
-			 interp=gaintables['interp'],
-			 spwmap=gaintables['spwmap'],
-			 parang=gaintables['parang'])
+					 mode='manual',
+					 spw=ec)
 
-	if params['init_flag']['manual_flagging']['run'] == True:
-		flagdata(vis=msfile,
-				 mode='list',
-				 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
+		if params['init_flag']['flag_autocorrs'] == True:
+			if steps_run['init_flag'] == 1:
+				flagmanager(vis=msfile,
+							mode='restore',
+							versionname='autocorrelations')
+			else:
+				flagmanager(vis=msfile,
+							mode='save',
+							versionname='autocorrelations')
+			flagdata(vis=msfile,
+					 mode='manual',
+					 autocorr=True)
 
-	rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
-	if len(targets)> 1:
-		fd = ",".join(targets)
+		if params['init_flag']['quack_data']['run'] == True:
+			quack_ints = params['init_flag']['quack_data']['quack_time']
+			quack_mode = params['init_flag']['quack_data']['quack_mode']
+			if type(quack_ints)==dict:
+				for j in quack_ints.keys():
+					if j == '*':
+						flagdata(vis=msfile,
+								 field=j,
+								 mode='quack',
+								 quackinterval=quack_ints[j],
+								 quackmode=quack_mode)
+			elif type(quack_ints)==float:
+				flagdata(vis=msfile,
+						 mode='quack',
+						 quackinterval=quack_ints,
+						 quackmode=quack_mode)
+		
+		append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
+
 	else:
-		fd = targets[0]
-	split(vis='%s/%s_presplit.ms'%(cwd,i),
-		  field=fd,
-		  keepmms=False,
-		  datacolumn='corrected',
-		  outputvis='%s/%s.ms'%(cwd,i))
-	rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
+		msinfo_target = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],i))
+		targets=[]
+		for k in msinfo_target['FIELD']['fieldtoID'].keys():
+			if k not in calibrators:
+				targets.append(k)
+		if params['apply_to_all']['pbcor']['run'] == True:
+			pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params,msinfo=msinfo_target)
+			gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'linear'])
+			if params['apply_to_all']['pbcor']['backup_caltables'] == True:
+				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
+				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
+				archive.close()
+		
+		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
+				 field=",".join(targets),
+				 gaintable=gaintables['gaintable'],
+				 gainfield=gaintables['gainfield'],
+				 interp=gaintables['interp'],
+				 spwmap=gaintables['spwmap'],
+				 parang=gaintables['parang'])
+
+		if params['init_flag']['manual_flagging']['run'] == True:
+			flagdata(vis=msfile,
+					 mode='list',
+					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
+
+		rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
+		if len(targets)> 1:
+			fd = ",".join(targets)
+		else:
+			fd = targets[0]
+		split(vis='%s/%s_presplit.ms'%(cwd,i),
+			  field=fd,
+			  keepmms=False,
+			  datacolumn='corrected',
+			  outputvis='%s/%s.ms'%(cwd,i))
+		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 		
 def image_targets(prefix,params,parallel):
 	func_name = inspect.stack()[0][3]
@@ -2246,9 +2255,10 @@ def apply_tar_output(prefix,params,targets):
 				for j in ['image','psf','model','residual','sumwt','mask','pb']:
 					source_dir.append('%s/%s_initial.%s'%(cwd,k,j))
 			make_tarfile(output_filename=msfile+'.tar.gz', source_dir=source_dir)
+			rmdirs(source_dir)
 		else:
 			make_tarfile(output_filename=msfile+'.tar.gz', source_dir='%s'%(msfile))
-		rmdirs([msfile])
+			rmdirs([msfile])
 		if params['apply_to_all']['target_outpath'] !='':
 			os.system('mv %s.tar.gz %s/'%(msfile,params['apply_to_all']['target_outpath']))
 	else:
@@ -2258,6 +2268,7 @@ def apply_tar_output(prefix,params,targets):
 				for k in targets:
 					for j in ['image','psf','model','residual','sumwt','mask','pb']:
 						os.system('mv %s/%s_initial.%s %s/'%(cwd,k,j,params['apply_to_all']['target_outpath']))
+
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
 	qa = casatools.quanta()
