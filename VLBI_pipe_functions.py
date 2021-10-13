@@ -17,6 +17,7 @@ from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
 import tempfile
+from scipy.special import j1
 try:
 	# CASA 6
 	import casatools
@@ -430,10 +431,15 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	elif aoflag=='apply_to_all':
 		if (params['global']['job_manager'] == 'pbs'):
 			commands.append('cd %s'%params['global']['cwd'])
+			variable='${array[$a]}'
 		elif (params['global']['job_manager'] == 'slurm'):
 			commands.append('a=$SLURM_ARRAY_TASK_ID')
+			variable='${array[$a]}'
 		commands.append('readarray array < %s/target_files.txt'%params['global']['cwd'])
-
+		if (params['global']['job_manager'] == 'bash'):
+			commands.append('for a in \"${array[@]}\"')
+			commands.append('do')
+			variable='$a'
 		if parallel == True:
 			mpicasapath = params['global']['mpicasapath']
 		else:
@@ -451,19 +457,21 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			job_commands=''
 		
 		if casa6 == False:
-			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
-			commands.append('%s %s %s %s %s/run_%s.py 0 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 
-		commands.append("IFS=' ' read -r -a arrays <<< \"${array[$a]}\"")
+		commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
 		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}.ms'%(params['init_flag']['AO_flag_strategy'])
 
 		if casa6 == False:
-			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
-			commands.append('%s %s %s %s %s/run_%s.py 1 ${array[$a]}'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+			commands.append('%s %s %s %s %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
+		if (params['global']['job_manager'] == 'bash'):
+			commands.append('done')
 	else:
 		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
 		sys.exit()
@@ -1327,7 +1335,7 @@ def append_pbcor_info(vis, params):
 	cfreq = np.average(freq_range)/1e9
 	tb.close()
 
-	freq_bands =  {'L':[1.35,1.75], 
+	freq_bands =  {'L':[1.,2.], 
 				   'S':[2.15,2.35], 
 				   'C':[3.9,7.9], 
 				   'X':[8.0,8.8], 
@@ -1466,6 +1474,7 @@ def correct_phases(x,units):
 
 def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile='temp.pdf'):
 	func_name = inspect.stack()[0][3]
+	plt.clf()
 	tb=casatools.table()
 	tb.open(caltable)
 	if 'CPARAM' in tb.colnames():
@@ -1778,6 +1787,33 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 				for i in os.listdir('%s'%target_dir):
 					files.append(i)
 					check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
+				if np.all(check_arr) == True:
+					tar=True
+					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
+					for k in unique_files:
+						idifiles[k] = glob.glob('%s/%s*'%(target_dir,k))
+				else:
+					casalog.post(priority='SEVERE',origin=func_name,message='Target files must all be .tar.gz or .idi files')
+					sys.exit()
+			else:
+				sys.exit()
+		if telescope == 'VLBA':
+			check_arr = []
+			files = []
+			for i in os.listdir('%s'%target_dir):
+				files.append(i)
+				check_arr.append((project_code in i)&(i.endswith('.idifits')))
+			if np.all(check_arr) == True:
+				tar=False
+				unique_files = np.unique([i.split('.idifits')[0] for i in files])
+				for k in unique_files:
+					idifiles[k] = glob.glob('%s/%s*'%(target_dir,k))
+			elif np.all(check_arr) == False:
+				check_arr = []
+				files = []
+				for i in os.listdir('%s'%target_dir):
+					files.append(i)
+					check_arr.append((project_code in i)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
 					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
@@ -2234,7 +2270,11 @@ def angsep(ra1,dec1,ra2rad,dec2rad):
 	y=math.sin(ra1rad)*math.cos(dec1rad)*math.sin(ra2rad)*math.cos(dec2rad)
 	z=math.sin(dec1rad)*math.sin(dec2rad)
 
-	rad=math.acos(x+y+z)
+	try:
+		rad=math.acos(x+y+z)
+	except:
+		print(x,y,z)
+		rad=0
 
 	# use Pythargoras approximation if rad < 1 arcsec
 	if rad<0.000004848:
@@ -2311,7 +2351,7 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 		for i in targets:
 			target[i] = radec[np.where(fie==i)[0][0]].squeeze()
 		if len(target) == 1:
-				radec_target = target[list(msinfo['FIELD']['IDtofield'].values())[0]]
+				radec_target = target[targets[0]]
 		else:
 			casalog.post(origin=func_name,message='Multiple targets .. it will mess up at the moment',priority='SEVERE')
 			sys.exit()
@@ -2391,8 +2431,13 @@ def pb_model_uvcorr(parameters,model,obs_freq,angsep):
 		P = 1
 		attenuation = P*np.e**(-1*((angsep**2)*4*np.log(2)*(parameters[0]**2))/((c.c/obs_freq)**2))
 	elif model == 'B':
-		print('hi')
+		attenuation = Bessel_pb(parameters[0],(c.c/obs_freq),angsep)
 	return np.sqrt(attenuation)
+
+def Bessel_pb(D,wl,sep):
+	insert = ((D*np.pi)/wl)*np.sin(sep)
+	I = ((2*j1(insert))/insert)**2
+	return I
 
 def remove_gaintable(step,params,casa6):
 	cwd = params['global']['cwd']

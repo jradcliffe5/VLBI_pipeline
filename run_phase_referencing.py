@@ -191,10 +191,12 @@ for i in range(len(fields)):
 		weight = 'natural'
 		if msinfo['SPECTRAL_WINDOW']['bwidth']/msinfo['SPECTRAL_WINDOW']['cfreq'] > 0.1:
 			deconvolver_tclean = ['mtmfs',2]
-			mtmfs_wsclean = '-join-channels -channels-out %d -fit-spectral-pol 2 -deconvolution-channels %d'%(params['SPECTRAL_WINDOW']['nchan']/4,params['SPECTRAL_WINDOW']['nchan']/8)
+			mtmfs_wsclean = '-join-channels -channels-out %d -fit-spectral-pol 2 -deconvolution-channels %d'%(msinfo['SPECTRAL_WINDOW']['nchan']/4,msinfo['SPECTRAL_WINDOW']['nchan']/8)
+			mtmfs=True
 		else:
-			deconvolver_tclean = ['clarkstokes',1]
+			deconvolver_tclean = ['clark',1]
 			mtmfs_wsclean = ''
+			mtmfs=False
 
 		for k in range(len(fields[i])):
 			if params['phase_referencing']["imager"] == 'wsclean':
@@ -233,11 +235,11 @@ for i in range(len(fields)):
 						os.system('%s -name %s-initmodel -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1][m],msinfo['FIELD']['fieldtoID'][fields[i+1][m]],msfile))
 			if params['phase_referencing']['imager'] == 'tclean':
 				delims = []
-				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
+				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
 					delims.append('%s-%s%s%s'%(fields[i][k], cal_type[i][j], j,z))
 				rmdirs(delims)
 				if steps_run['make_mms'] == 1:
-					parallel=True
+					parallel=False
 				else:
 					parallel = False
 				if params['phase_referencing']['masking'] == 'peak':
@@ -252,13 +254,48 @@ for i in range(len(fields)):
 					   weighting=weight,
 					   parallel=parallel
 					   )
-					peak = imstat(imagename='%s-%s%s.image'%(fields[i][k], cal_type[i][j], j))
+					imname='%s-%s%s.image'%(fields[i][k], cal_type[i][j], j)
+					if mtmfs == True:
+						imname = imname+'.tt0'
+					peak = imstat(imagename=imname)
 					peak = peak['maxpos'][:2]
-					beam = imhead(imagename='%s-%s%s.image'%(fields[i][k], cal_type[i][j], j))
+					beam = imhead(imagename=imname)
 					beam = np.ceil(1.2*(beam['restoringbeam']['major']['value']/7.2e3/(np.abs(beam['incr'][1])*(180/np.pi)))).astype(int)
 					masking=['user','circle[[%spix, %spix], %spix]'%(peak[0],peak[1],beam),4.0,1.0]
+					for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
+						delims.append('%s-%s%s%s'%(fields[i][k], cal_type[i][j], j,z))
+					rmdirs(delims)
 				elif params['phase_referencing']['masking'] == 'auto':
 					masking = ['auto-multithresh','',4.0,1.0]
+
+				if params['phase_referencing']['thresholding'] == 'offset':
+					field_id = msinfo["FIELD"]['fieldtoID'][fields[i][k]]
+					tb = casatools.table()
+					tb.open(msfile+'/FIELD')
+					direction = tb.getcol('PHASE_DIR')[:,:,field_id].squeeze()
+					tb.close()
+					shift=2.0
+					phasecenter = "J2000 %srad %srad"%(direction[0],direction[1]+((shift/3600.)*(np.pi/180.)))
+					tclean(vis=msfile,
+					   imagename='%s-%s%s_rms'%(fields[i][k], cal_type[i][j], j),
+					   field='%s'%fields[i][k],
+					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
+					   imsize=imsize,
+					   deconvolver='%s'%deconvolver_tclean[0],
+					   phasecenter=phasecenter,
+					   nterms=deconvolver_tclean[1],
+					   niter = 0,
+					   weighting=weight,
+					   parallel=parallel
+					   )
+					imname='%s-%s%s_rms.image'%(fields[i][k], cal_type[i][j], j)
+					if mtmfs == True:
+						imname = imname+'.tt0'
+					threshold = imstat(imagename=imname)['rms'][0] 
+					nsigma=0.0
+				else:
+					nsigma=1.2
+					threshold = 0.0
 				tclean(vis=msfile,
 					   imagename='%s-%s%s'%(fields[i][k], cal_type[i][j], j),
 					   field='%s'%fields[i][k],
@@ -268,7 +305,8 @@ for i in range(len(fields)):
 					   nterms=deconvolver_tclean[1],
 					   niter = int(1e5),
 					   weighting=weight,
-					   nsigma=1.2,
+					   nsigma=nsigma,
+					   threshold=threshold,
 					   usemask=masking[0],
 					   mask=masking[1],
 					   noisethreshold=masking[2],
@@ -283,9 +321,10 @@ for i in range(len(fields)):
 				else:
 					model = '%s-%s%s.model'%(fields[i][k], cal_type[i][j], j)
 					image = '%s-%s%s.image'%(fields[i][k], cal_type[i][j], j)
-				clip_model(model=model, 
-					          im=image,
-					          snr=10.0)
+				if deconvolver_tclean[1]==1:
+					clip_model(model=model, 
+						          im=image,
+						          snr=7.0)
 				ft(vis=msfile,
 				   field='%s'%fields[i][k],
 				   nterms=deconvolver_tclean[1],
@@ -315,13 +354,44 @@ for i in range(len(fields)):
 							       weighting=weight,
 							       parallel=parallel
 							   )
-							peak = imstat(imagename='%s-initmodel.image'%(fields[i+1][m]))
+							imname = '%s-initmodel.image'%(fields[i+1][m])
+							if mtmfs == True:
+								imname = imname+'.tt0'
+							peak = imstat(imagename=imname)
 							peak = peak['maxpos'][:2]
-							beam = imhead(imagename='%s-initmodel.image'%(fields[i+1][m]))
+							beam = imhead(imagename=imname)
 							beam = np.ceil(1.2*(beam['restoringbeam']['major']['value']/7.2e3/(np.abs(beam['incr'][1])*(180/np.pi)))).astype(int)
 							masking=['user','circle[[%spix, %spix], %spix]'%(peak[0],peak[1],beam),4.0,1.0]
 						elif params['phase_referencing']['masking'] == 'auto':
 							masking = ['auto-multithresh','',4.0,1.0]
+						if params['phase_referencing']['thresholding'] == 'offset':
+							field_id = msinfo["FIELD"]['fieldtoID'][fields[i+1][m]]
+							tb = casatools.table()
+							tb.open(msfile+'/FIELD')
+							direction = tb.getcol('PHASE_DIR')[:,:,field_id].squeeze()
+							tb.close()
+							shift=2.0
+							phasecenter = "J2000 %srad %srad"%(direction[0],direction[1]+((shift/3600.)*(np.pi/180.)))
+							tclean(vis=msfile,
+							       imagename='%s-initmodel'%(fields[i+1][m]),
+								   field='%s'%fields[i+1][m],
+							       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
+							       imsize=imsize,
+							       phasecenter=phasecenter,
+							       deconvolver='%s'%deconvolver_tclean[0],
+							       nterms=deconvolver_tclean[1],
+							       niter = 0,
+							       weighting=weight,
+							       parallel=parallel
+							   )
+							imname='%s-%s%s_rms.image'%(fields[i+1][m], cal_type[i][j], j)
+							if mtmfs == True:
+								imname = imname+'.tt0'
+							threshold = imstat(imagename=imname)['rms'][0] 
+							nsigma=0.0
+						else:
+							nsigma=1.2
+							threshold = 0.0
 						tclean(vis=msfile,
 							   imagename='%s-initmodel'%(fields[i+1][m]),
 							   field='%s'%fields[i+1][m],
@@ -331,7 +401,8 @@ for i in range(len(fields)):
 							   nterms=deconvolver_tclean[1],
 							   niter = int(1e5),
 							   weighting=weight,
-							   nsigma=1.2,
+							   nsigma=nsigma,
+							   threshold=threshold,
 							   usemask=masking[0],
 							   mask=masking[1],
 							   noisethreshold=masking[2],
@@ -347,9 +418,10 @@ for i in range(len(fields)):
 						else:
 							model = '%s-initmodel.model'%(fields[i+1][m])
 							image = '%s-initmodel.image'%(fields[i+1][m])
-						clip_model(model=model, 
-						          im=image,
-						          snr=10.0)
+						if deconvolver_tclean[1]==1:
+							clip_model(model=model, 
+								          im=image,
+								          snr=7.0)
 						ft(vis=msfile,
 						   field='%s'%fields[i+1][m],
 						   nterms=deconvolver_tclean[1],
