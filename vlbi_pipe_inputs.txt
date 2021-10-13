@@ -1,7 +1,7 @@
 ### Inputs for the VLBI pipeline ###
 ## Extra parameters to be set in vlbi_pipe_params.json
 
-parameter_file_path = VLBI_pipeline/vlbi_pipe_params.json
+parameter_file_path = vlbi_pipe_params.json
 
 ## Steps to run ##
 prepare_data = 0
@@ -16,7 +16,7 @@ phase_referencing = 0
 apply_target = 0
 ## Wide-field steps ##
 prepare_apply_all = 0
-apply_to_all = 0
+apply_to_all = 1
 mssc = 0
 
 

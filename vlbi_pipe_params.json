@@ -1,7 +1,7 @@
 {
     "global":{
-        "project_code"      :  "eg078b",
-        "cwd"               :  "/Users/jackradcliffe/Documents/EG078B",
+        "project_code"      :  "bd228a",
+        "cwd"               :  "/Users/jackradcliffe/Documents/VLBA_COSMOS",
         "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "ASTR1313",
@@ -12,17 +12,17 @@
         "default_mpiprocs"  :    24,
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "mpirun -q -n 5",
+        "mpicasapath"       :  "mpirun -q -n 4",
         "casapath"          :  "python",
         "singularity"       :  false,
         "AOflag_command"    : ["/Users/jackradcliffe/Documents/anaconda3/envs/aoflag/bin/aoflagger"],
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["EF","ON","TR","SV","ZC","BD","UR","NT","JB","CM","DA"],
-        "fringe_finders"    : ["3C345","DA193"],
-        "phase_calibrators" : ["J1241+602","J1234+619"],
-        "targets"           : ["HDFC0155"],
+        "refant"            : ["OV","KP","HN","BR","MK","LA","NL","SC","FD"],
+        "fringe_finders"    : ["4C39.25"],
+        "phase_calibrators" : ["J1011+0106"],
+        "targets"           : ["COSMOS-POINT"],
         "do_parang"         :  true
     },
     "prepare_data":{
@@ -86,8 +86,8 @@
             "interp"        : "linear,linear"
         },
         "ionex_options":{
-        	"run"           :  false,
-            "ionex_type"    : "rapid"
+        	"run"           :  true,
+            "ionex_type"    : "final"
         },
         "hpc_options":{
             "partition"     :  "default",
@@ -100,7 +100,7 @@
     },
     "init_flag":{
         "AO_flag_strategy"  :  "VLBI_pipeline/aoflag_strategies/faint_sources.rfis",
-        "AO_flag_fields"    : ["J1234+619","HDFC0155"],
+        "AO_flag_fields"    : ["COSMOS-POINT"],
         "flag_edge_chans":{
             "run"           :  true,
             "edge_chan_flag":  "5%"
@@ -108,7 +108,7 @@
         "flag_autocorrs"    :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"3C345":30.0,"DA193":30.0,"*":10.0},
+            "quack_time"    :  {"*":10.0},
             "quack_mode"    :  "beg"
         },
         "manual_flagging":{
@@ -125,7 +125,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["J1241+602","3C345","DA193"],
+        "select_calibrators": ["4C39.25","J1011+0106"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -137,10 +137,10 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"],["J1241+602"]], 
-        "time_range"        : ["",""],
+        "select_calibrators": [["default"],["J1011+0106"]], 
+        "time_range"        : ["","2020/10/30/17:10:23.0~17:11:11.0"],
         "sol_interval"      : ["60s","inf"],
-        "min_snr"           : [20.0,5.0],
+        "min_snr"           : [5.0,5.0],
         "fringe_niter"      :  300,
         "do_disp_delays"    :  true,
         "extensive_search"  :  false,
@@ -160,8 +160,8 @@
     },
     "bandpass_cal":{
         "same_as_sbd_cal"   :  false,
-        "select_calibrators": [["default"],["J1241+602"]], 
-        "time_range"        : ["",""],
+        "select_calibrators": [["4C39.25"]], 
+        "time_range"        : [""],
         "sol_interval"      :  "inf",
         "min_snr"           :  3.0,
         "hpc_options":{
@@ -174,12 +174,12 @@
         }
     },
     "phase_referencing":{        
-        "select_calibrators":  [["J1241+602"],["J1234+619"]],
-        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap",   "p"],["f" ,   "f",  "p",  "p",   "p", "p", "p"]],   
-        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","1min"],["inf","inf","inf","inf",  "inf","inf","inf"]],
-        "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw",    ""],["spw","spw","spw","spw",  ""   ,""   ,""]],
-        "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true],[ true, true, true, true, true, true, true]],
-        "pass_ants"         : [["JB"],[]],
+        "select_calibrators":  [["J1011+0106"]],
+        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap",   "p"]],   
+        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","1min"]],
+        "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw",    ""]],
+        "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true]],
+        "pass_ants"         : [[]],
         "do_disp_delays"    : true,
         "cal_weights"       : true,
         "imager"            :  "tclean",
@@ -187,6 +187,7 @@
         "min_snr"           :  5.0,
         "imaging_params"    :  "auto",
         "masking"           :  "peak",
+        "thresholding"      :  "offset",
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -219,7 +220,7 @@
         }
     },
     "prepare_apply_all":{
-        "target_path"       : "./target_files/",
+        "target_path"       : "./target_files",
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -230,13 +231,13 @@
         }
     },
     "apply_to_all":{  
-        "target_outpath"    : "./target_output",
+        "target_outpath"    : "/Users/jackradcliffe/Astro/VLBA_COSMOS/BD228A/JFR_calibrated",
         "tar_output"        : true,      
         "pbcor":{
             "run"           : true,
             "implementation": "uvcorr",
-            "vex_file"      : "eg078b.vex",
-            "pointing_centre"  : ["12h36m42s","62d12m45s"],
+            "vex_file"      : "",
+            "pointing_centre"  : ["10h01m22.8651s","02d19m28.333s"],
             "backup_caltables"  : true
         },
         "image_target":{
