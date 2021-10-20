@@ -112,6 +112,18 @@ if params['init_flag']['manual_flagging']['run'] == True:
 		casalog.post(priority='SEVERE',origin=filename,message='flag file %s/%s does not exist'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		sys.exit()
 
+if params['global']['phasecal_aips'] == True:
+	applycal(vis=msfile,
+		     gaintable=gaintables['gaintable'],
+			 gainfield=gaintables['gainfield'],
+			 interp=gaintables['interp'],
+			 spwmap=gaintables['spwmap'],
+			 parang=gaintables['parang'],
+			 calwt=False)
+	rmfiles([msfile+'.uvfits'])
+	exportuvfits(vis=msfile,
+		         fitsfile=msfile+'.uvfits')
+
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['init_flag'] = 1

@@ -68,12 +68,16 @@ for j,i in enumerate(steps.keys()):
 			parallel=True
 		else:
 			parallel=False
-		if i=='init_flag':
-			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
-		elif i == 'apply_to_all':
-			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
+		if (params['global']["phasecal_aips"] == True) & (i in ['fit_autocorrs','sub_band_delay','bandpass_cal','phase_referencing']):
+			aips=True
 		else:
-			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
+			aips=False
+		if i=='init_flag':
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6,aips=aips)
+		elif i == 'apply_to_all':
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6,aips=aips)
+		else:
+			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6,aips=aips)
 		high_step = j
 
 for j,i in enumerate(steps_run.keys()):

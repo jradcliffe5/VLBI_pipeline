@@ -36,7 +36,6 @@ except:
 	from partition_cli import partition_cli as partition
 	from tclean_cli import tclean_cli as tclean
 	casa6=False
-	
 
 class NpEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -348,11 +347,12 @@ def write_hpc_headers(step,params):
 		for listitem in hpc_header:
 			filehandle.write('%s\n' % listitem)
 
-def write_commands(step,inputs,params,parallel,aoflag,casa6):
+def write_commands(step,inputs,params,parallel,aoflag,casa6,aips):
 	func_name = inspect.stack()[0][3]
 	commands=[]
 	casapath=params['global']['casapath']
 	vlbipipepath=params['global']["vlbipipe_path"]
+	parseltonguepath = params['global']['Parseltonguepath']
 	if aoflag==False:
 		if parallel == True:
 			mpicasapath = params['global']['mpicasapath']
@@ -369,10 +369,13 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 				job_commands='--map-by node -hostfile $PBS_NODEFILE'
 		else:
 			job_commands=''
-		if casa6 == False:
-			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		if aips == True:
+			commands.append('%s %s %s %s/run_%s_AIPS.py'%(job_commands,singularity,parseltonguepath,vlbipipepath,step))
 		else:
-			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+			if casa6 == False:
+				commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+			else:
+				commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	elif aoflag=='both':
 		for i in params['global']['AOflag_command']:
 			commands.append(i)

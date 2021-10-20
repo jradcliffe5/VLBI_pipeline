@@ -17,6 +17,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
+
 casalog.origin('vp_sub_band_delay')
 
 inputs = load_json('vp_inputs.json')
@@ -77,7 +78,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 				  parang=gaintables['parang'])
 
 	elif params['sub_band_delay']['extensive_search'] == True:
-		'''
+		
 		if i == 0:
 			if os.path.exists('%s.sbd_eb'%p_c):
 				rmdirs(['%s.sbd_eb'%p_c])
@@ -94,7 +95,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 						msinfo=msinfo,
 						gaintable_dict=gaintables,
 						casa6=casa6)
-		'''
+		
 		print('run sbd')
 	else:
 		casalog.post(origin=filename,message='Wrong parameter for extensive baseline (true/false)',priority='SEVERE')
