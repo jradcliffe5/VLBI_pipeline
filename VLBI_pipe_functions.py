@@ -2443,6 +2443,8 @@ def pb_model_uvcorr(parameters,model,obs_freq,angsep):
 		attenuation = P*np.e**(-1*((angsep**2)*4*np.log(2)*(parameters[0]**2))/((c.c/obs_freq)**2))
 	elif model == 'B':
 		attenuation = Bessel_pb(parameters[0],(c.c/obs_freq),angsep)
+	else:
+		attenuation = 1
 	return np.sqrt(attenuation)
 
 def Bessel_pb(D,wl,sep):
