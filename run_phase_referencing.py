@@ -384,7 +384,7 @@ for i in range(len(fields)):
 							       weighting=weight,
 							       parallel=parallel
 							   )
-							imname='%s-%s%s_rms.image'%(fields[i+1][m], cal_type[i][j], j)
+							imname='%s-initmodel.image'%(fields[i+1][m])
 							if mtmfs == True:
 								imname = imname+'.tt0'
 							threshold = imstat(imagename=imname)['rms'][0] 
