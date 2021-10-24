@@ -29,6 +29,7 @@ except:
 try:
 	i = sys.argv[i]
 except:
+	inputs = load_json('vp_inputs.json')
 	params = load_json(inputs['parameter_file_path'])
 	i = params['global']['cwd']
 if i.endswith('/'):
