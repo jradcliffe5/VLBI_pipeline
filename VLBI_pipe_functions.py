@@ -2250,10 +2250,13 @@ def apply_tar_output(prefix,params,targets):
 	msfile ='%s/%s.ms'%(cwd,i)
 	if params['apply_to_all']['tar_output'] == True:
 		if params["apply_to_all"]["image_target"]["run"] == True:
-			source_dir=['%s'%(msfile)]
+			source_dir=['%s'%(msfile)] 
 			for k in targets:
 				for j in ['image','psf','model','residual','sumwt','mask','pb']:
-					source_dir.append('%s/%s_initial.%s'%(cwd,k,j))
+					if params['apply_to_all']['tar_ms_only'] == False:
+						source_dir.append('%s/%s_initial.%s'%(cwd,k,j))
+					else:
+						os.system('mv %s/%s_initial.%s %s/'%(cwd,k,j,params['apply_to_all']['target_outpath']))
 			make_tarfile(output_filename=msfile+'.tar.gz', source_dir=source_dir)
 			rmdirs(source_dir)
 		else:

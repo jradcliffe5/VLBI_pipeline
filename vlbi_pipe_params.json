@@ -1,28 +1,28 @@
 {
     "global":{
-        "project_code"      :  "bd228a",
-        "cwd"               :  "/Users/jackradcliffe/Documents/VLBA_COSMOS",
+        "project_code"      :  "er047a",
+        "cwd"               :  "/users/jradcliffe5/scratch3/ER047/A",
         "vlbipipe_path"     :  "VLBI_pipeline",
-        "job_manager"       :  "bash",
-        "HPC_project_code"  :  "ASTR1313",
-        "default_partition" :  "normal",
+        "job_manager"       :  "slurm",
+        "HPC_project_code"  :  "",
+        "default_partition" :  "Main",
         "default_walltime"  :  "10:00:00",
-        "default_nodes"     :     2,
+        "default_nodes"     :     1,
         "default_cpus"      :    24,
         "default_mpiprocs"  :    24,
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "mpirun -q -n 4",
-        "casapath"          :  "python",
-        "singularity"       :  false,
-        "AOflag_command"    : ["/Users/jackradcliffe/Documents/anaconda3/envs/aoflag/bin/aoflagger"],
+        "mpicasapath"       :  "/data/exp_soft/pipelines/casa-prerelease-5.3.0-115.el7/bin/mpicasa",
+        "casapath"          :  "/idia/software/containers/casa-stable-5.7.2-4.simg casa",
+        "singularity"       :  true,
+        "AOflag_command"    : ["/usr/local/bin/singularity exec /idia/software/containers/kern5-dev.simg aoflagger"],
         "wsclean_command"   : ["/Volumes/HD-LXU3/anaconda2/anaconda2/bin/wsclean"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["OV","KP","HN","BR","MK","LA","NL","SC","FD"],
-        "fringe_finders"    : ["4C39.25"],
+        "refant"            : ["EF","SR","O8","WB","T6","IR","TR","SV","BD","JB","ZC","DA","PI","KN","JM","UR","DE","CM","HH"],
+        "fringe_finders"    : ["J0956+2515"],
         "phase_calibrators" : ["J1011+0106"],
-        "targets"           : ["COSMOS-POINT"],
+        "targets"           : ["ER047628"],
         "do_parang"         :  true
     },
     "prepare_data":{
@@ -86,7 +86,7 @@
             "interp"        : "linear,linear"
         },
         "ionex_options":{
-        	"run"           :  true,
+        	"run"           :  false,
             "ionex_type"    : "final"
         },
         "hpc_options":{
@@ -100,7 +100,7 @@
     },
     "init_flag":{
         "AO_flag_strategy"  :  "VLBI_pipeline/aoflag_strategies/faint_sources.rfis",
-        "AO_flag_fields"    : ["COSMOS-POINT"],
+        "AO_flag_fields"    : ["ER047628","J0959+0243"],
         "flag_edge_chans":{
             "run"           :  true,
             "edge_chan_flag":  "5%"
@@ -108,12 +108,12 @@
         "flag_autocorrs"    :  false,
         "quack_data":{
             "run"           :  true,
-            "quack_time"    :  {"*":10.0},
+            "quack_time"    :  {"*":5.0},
             "quack_mode"    :  "beg"
         },
         "manual_flagging":{
-            "run"           :  false,
-            "flag_file"     :  ""
+            "run"           :  true,
+            "flag_file"     :  "er047a_manualflags.txt"
         },
         "hpc_options":{
             "partition"     :  "default",
@@ -125,7 +125,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["4C39.25","J1011+0106"],
+        "select_calibrators": ["J0956+2515"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -137,10 +137,10 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"],["J1011+0106"]], 
-        "time_range"        : ["","2020/10/30/17:10:23.0~17:11:11.0"],
-        "sol_interval"      : ["60s","inf"],
-        "min_snr"           : [5.0,5.0],
+        "select_calibrators": [["J0956+2515"]], 
+        "time_range"        : [""],
+        "sol_interval"      : ["60s"],
+        "min_snr"           : [5.0],
         "fringe_niter"      :  300,
         "do_disp_delays"    :  true,
         "extensive_search"  :  false,
@@ -160,7 +160,7 @@
     },
     "bandpass_cal":{
         "same_as_sbd_cal"   :  false,
-        "select_calibrators": [["4C39.25"]], 
+        "select_calibrators": [["J0956+2515"]], 
         "time_range"        : [""],
         "sol_interval"      :  "inf",
         "min_snr"           :  3.0,
@@ -174,12 +174,12 @@
         }
     },
     "phase_referencing":{        
-        "select_calibrators":  [["J1011+0106"]],
-        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap",   "p"]],   
-        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","1min"]],
-        "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw",    ""]],
-        "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true]],
-        "pass_ants"         : [[]],
+        "select_calibrators":  [["J1011+0106"],["J0959+0243"]],
+        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap",   "p"],[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap",   "p"]],   
+        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","1min"],["inf","inf","inf","inf","inf","inf","inf","inf","inf","inf"]],
+        "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw",    ""],["spw","spw",   "",   "",    "spw","spw",   "spw",   "spw", "spw",    "spw"]],
+        "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true],[ true, true, true, true,  true, true, true, true,  true,  true]],
+        "pass_ants"         : [[],["JB"]],
         "do_disp_delays"    : true,
         "cal_weights"       : true,
         "imager"            :  "tclean",
@@ -220,7 +220,7 @@
         }
     },
     "prepare_apply_all":{
-        "target_path"       : "./target_files",
+        "target_path"       : "/users/jradcliffe5/vlbi/wide-field_VLBI/ER047/A/raw_UV/",
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -231,13 +231,14 @@
         }
     },
     "apply_to_all":{  
-        "target_outpath"    : "/Users/jackradcliffe/Astro/VLBA_COSMOS/BD228A/JFR_calibrated",
-        "tar_output"        : true,      
+        "target_outpath"    : "/users/jradcliffe5/vlbi/wide-field_VLBI/ER047/A/calibrated_v1",
+        "tar_output"        : true,
+        "tar_ms_only"       : true,
         "pbcor":{
             "run"           : true,
             "implementation": "uvcorr",
             "vex_file"      : "",
-            "pointing_centre"  : ["10h01m22.8651s","02d19m28.333s"],
+            "pointing_centre"  : ["10h00m25.0000000s","+2d33m00.000000s"],
             "backup_caltables"  : true
         },
         "image_target":{
