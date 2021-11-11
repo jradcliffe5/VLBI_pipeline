@@ -17,6 +17,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
+
 casalog.origin('vp_phase_referencing')
 
 inputs = load_json('vp_inputs.json')
@@ -64,7 +65,7 @@ for i in range(len(fields)):
 				paramactive = [True,True,True]
 			else:
 				paramactive = [True,True,False]
-			if i > 0:
+			if j > 0:
 				delaywindow=[-20,20]
 				ratewindow=[-20,20]
 			else:
@@ -90,7 +91,7 @@ for i in range(len(fields)):
 					  parang=gaintables['parang'])
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
 				interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-				interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+				#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 			if params['phase_referencing']['pass_ants'][i] != []:
 				pass_ants = []
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
@@ -132,10 +133,10 @@ for i in range(len(fields)):
 			if params['phase_referencing']["interp_flagged"][i][j] == True:
 				if cal_type[i][j] == 'k':
 					interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-					interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+					#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 				else:
 					interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=False)
-					interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
+					#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 			if params['phase_referencing']['pass_ants'][i] != []:
 				pass_ants = []
 				for l in range(len(params['phase_referencing']['pass_ants'][i])):
@@ -185,6 +186,7 @@ for i in range(len(fields)):
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'],
 				 calwt=params['phase_referencing']['cal_weights'])
+		save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 		
 		## Establish image parameters
 		imsize = [1024,1024]
@@ -246,6 +248,7 @@ for i in range(len(fields)):
 					tclean(vis=msfile,
 					   imagename='%s-%s%s'%(fields[i][k], cal_type[i][j], j),
 					   field='%s'%fields[i][k],
+					   stokes='pseudoI',
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
 					   imsize=imsize,
 					   deconvolver='%s'%deconvolver_tclean[0],
@@ -279,6 +282,7 @@ for i in range(len(fields)):
 					tclean(vis=msfile,
 					   imagename='%s-%s%s_rms'%(fields[i][k], cal_type[i][j], j),
 					   field='%s'%fields[i][k],
+					   stokes='pseudoI',
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
 					   imsize=imsize,
 					   deconvolver='%s'%deconvolver_tclean[0],
@@ -301,6 +305,7 @@ for i in range(len(fields)):
 					   field='%s'%fields[i][k],
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
 					   imsize=imsize,
+					   stokes='pseudoI',
 					   deconvolver='%s'%deconvolver_tclean[0],
 					   nterms=deconvolver_tclean[1],
 					   niter = int(1e5),
@@ -346,6 +351,7 @@ for i in range(len(fields)):
 							tclean(vis=msfile,
 							       imagename='%s-initmodel'%(fields[i+1][m]),
 								   field='%s'%fields[i+1][m],
+					   		       stokes='pseudoI',
 							       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
 							       imsize=imsize,
 							       deconvolver='%s'%deconvolver_tclean[0],
@@ -375,6 +381,7 @@ for i in range(len(fields)):
 							tclean(vis=msfile,
 							       imagename='%s-initmodel'%(fields[i+1][m]),
 								   field='%s'%fields[i+1][m],
+								   stokes='pseudoI',
 							       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
 							       imsize=imsize,
 							       phasecenter=phasecenter,
@@ -395,6 +402,7 @@ for i in range(len(fields)):
 						tclean(vis=msfile,
 							   imagename='%s-initmodel'%(fields[i+1][m]),
 							   field='%s'%fields[i+1][m],
+							   stokes='pseudoI',
 							   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
 							   imsize=imsize,
 							   deconvolver='%s'%deconvolver_tclean[0],
@@ -427,6 +435,7 @@ for i in range(len(fields)):
 						   nterms=deconvolver_tclean[1],
 						   model=model,
 						   usescratch=True)
+
 
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
