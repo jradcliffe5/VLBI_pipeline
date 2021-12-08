@@ -6,6 +6,23 @@ As of 19-06-2020, it will only calibrate continuum data-sets, but spectral line 
 
 This README includes installation instructions and simple usage, but we advise that you read the Wiki before running or using the pipeline.
 
+## Citing the pipeline
+
+If you use this pipeline, please make sure that you cite this repository using the bibtex or zenodo code below
+
+```
+@software{jack_radcliffe_2021_4776805,
+  author       = {Jack Radcliffe},
+  title        = {jradcliffe5/VLBI\_pipeline: v0.9},
+  month        = may,
+  year         = 2021,
+  publisher    = {Zenodo},
+  version      = {v0l.9},
+  doi          = {10.5281/zenodo.4776805},
+  url          = {https://doi.org/10.5281/zenodo.4776805}
+}
+```
+
 ## Installation Instructions
 ### For CASA 5
 1. Install CASA from <https://casa.nrao.edu> and ensure that it is v 5.5+. Any earlier versions do not include the fringe-fitting capabilities.
