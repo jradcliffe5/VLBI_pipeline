@@ -42,7 +42,7 @@ gaintables = load_gaintables(params, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['prepare_apply_all'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
-cwd = params['global']['cwd']
+cwd = os.path.join(params['global']['cwd'],"")
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
@@ -51,7 +51,7 @@ if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global'][
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 
-target_path = params['prepare_apply_all']['target_path']
+target_path = os.path.join(params['prepare_apply_all']['target_path'],"")
 
 target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NAME'],project_code=params['global']['project_code'],idifiles=[])
 

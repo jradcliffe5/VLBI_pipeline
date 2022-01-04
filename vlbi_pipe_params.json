@@ -254,5 +254,23 @@
             "nodetype"      :  "default",
             "max_jobs"      : 24
         }
+    },
+    "mssc":{  
+        "source_finder"     : "pybdsf",
+        "detection_thresh"  : 5,
+        "cal_type"          : [ "p",   "p",  "p"],   
+        "sol_interval"      : ["inf","inf","inf"],
+        "combine"           : ["spw","spw",   ""],
+        "interp_flagged"    : [ true, true, true],
+        "weigh_by_rms" : true,
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "nodetype"      :  "default",
+            "max_jobs"      : 24
+        }
     }
 }
