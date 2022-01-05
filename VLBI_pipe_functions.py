@@ -2186,7 +2186,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
-				os.system('rm -r %s'pbcor_table)
+				os.system('rm -r %s'%pbcor_table)
 		
 		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 				 field=",".join(targets),

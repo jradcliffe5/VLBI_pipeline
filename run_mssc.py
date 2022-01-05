@@ -43,6 +43,7 @@ gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['apply_to_all'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = os.path.join(params['global']['cwd'],"")
+target_outpath = os.path.join(params['apply_to_all']['target_outpath'],"")
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
@@ -61,15 +62,24 @@ target_files = list(reader)
 ## First step is to convert to fits
 for i in len(target_files):
 	if params["apply_to_all"]["tar_ms_only"] == True:
-		os.system("cp -r %s*_initial.image %s"%(target_files[i][1],cwd))
+		os.system("cp -r %s%s*_initial.image %s"%(target_outpath,target_files[i][1],cwd))
 		image = glob.glob('%s%s*image'%(cwd,target_files[i][1]))
 		for j in len(image):
 			exportfits(imagename=image[j], fitsimage='%s%s_premssc_%d.fits'%(cwd,target_files[i][1],j),overwrite=True)
-			os.system('rm -r %s'%image[j])
+		rmdirs(image)
 	else:
-		os.system("cp -r %s.ms.tar.gz %s"%(target_files[i][1],cwd))
+		files = extract_tarfile(tar_file='%s%s.ms.tar.gz'%(target_outpath,target_files[i][1]), cwd=cwd,delete_tar=False)
+		image = glob.glob('%s%s*image'%(cwd,target_files[i][1]))
+		for j in len(image):
+			exportfits(imagename=image[j], fitsimage='%s%s_premssc_%d.fits'%(cwd,target_files[i][1],j),overwrite=True)
+		rmdirs(image)
+		rmdirs(files)
 
 ## Then catalogue
+if params['mssc']['source_finder'] == "pybdsf":
+	run_cataloger_pybdsf(sn_ratio=params['mssc']['detection_thresh'],postfix='premssc')
+else:
+	sys.exit()
 
 ## Then to image all of the data sets and uvsub the uv data
 
