@@ -2186,7 +2186,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
-				os.system('rm -r %s'%pbcor_table)
 		
 		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 				 field=",".join(targets),
@@ -2212,6 +2211,10 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 			  datacolumn='corrected',
 			  outputvis='%s/%s.ms'%(cwd,i))
 		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+
+		
+		if (params['apply_to_all']['pbcor']['backup_caltables'] == True) & (params['apply_to_all']['pbcor']['run'] == True):
+			os.system('rm -r %s'%pbcor_table)
 		
 def image_targets(prefix,params,parallel):
 	func_name = inspect.stack()[0][3]
