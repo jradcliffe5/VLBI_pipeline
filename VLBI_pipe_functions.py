@@ -2250,7 +2250,7 @@ def image_targets(prefix,params,parallel):
 
 def apply_tar_output(prefix,params,targets):
 	i = prefix
-	cwd = params['global']['cwd']
+	cwd = os.path.join(params['global']['cwd'],"")
 	msfile ='%s/%s.ms'%(cwd,i)
 	if params['apply_to_all']['tar_output'] == True:
 		if params["apply_to_all"]["image_target"]["run"] == True:
@@ -2258,9 +2258,9 @@ def apply_tar_output(prefix,params,targets):
 			for k in targets:
 				for j in ['image','psf','model','residual','sumwt','mask','pb']:
 					if params['apply_to_all']['tar_ms_only'] == False:
-						source_dir.append('%s/%s_initial.%s'%(cwd,k,j))
+						source_dir.append('%s%s_%s_initial.%s'%(cwd,i,k,j))
 					else:
-						os.system('mv %s/%s_initial.%s %s/'%(cwd,k,j,params['apply_to_all']['target_outpath']))
+						os.system('mv %s%s_%s_initial.%s %s/'%(cwd,i,k,j,params['apply_to_all']['target_outpath']))
 			make_tarfile(output_filename=msfile+'.tar.gz', source_dir=source_dir)
 			rmdirs(source_dir)
 		else:
@@ -2274,7 +2274,7 @@ def apply_tar_output(prefix,params,targets):
 			if params["apply_to_all"]["image_target"]["run"] == True:
 				for k in targets:
 					for j in ['image','psf','model','residual','sumwt','mask','pb']:
-						os.system('mv %s/%s_initial.%s %s/'%(cwd,k,j,params['apply_to_all']['target_outpath']))
+						os.system('mv %s%s_%s_initial.%s %s/'%(cwd,i,k,j,params['apply_to_all']['target_outpath']))
 
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
