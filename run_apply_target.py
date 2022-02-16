@@ -31,11 +31,11 @@ cwd = os.path.join(params['global']['cwd'],"")
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
-if os.path.exists('%s%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+if os.path.exists('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))==False:
 	msinfo = get_ms_info(msfile)
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+	save_json(filename='%s/%s_msinfo.json'%(cwd,params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(cwd,params['global']['project_code'])), append=False)
 else:
-	msinfo = load_json('%s%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+	msinfo = load_json('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))
 
 if steps_run['apply_target'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_apply_target')
@@ -79,7 +79,7 @@ for i in params['global']['targets']:
 		delims.append('%s-initimage%s'%(i,z))
 	rmdirs(delims)
 	
-	tclean(vis='%s%s_calibrated.ms'%(cwd,i),
+	tclean(vis='%s/%s_calibrated.ms'%(cwd,i),
 		   imagename='%s-initimage'%i,
 		   field='%s'%i,
 		   datacolumn='data',
@@ -105,7 +105,7 @@ if params['apply_target']["backup_caltables"] == True:
 		archive.add(i, arcname=i.split('/')[-1])
 	archive.close()
 
-save_json(filename='%svp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
-save_json(filename='%svp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
+save_json(filename='%s/vp_gaintables.last.json'%(cwd), array=gt_r, append=False)
+save_json(filename='%s/vp_gaintables.json'%(cwd), array=gaintables, append=False)
 steps_run['apply_target'] = 1
-save_json(filename='%svp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
+save_json(filename='%s/vp_steps_run.json'%(cwd), array=steps_run, append=False)
