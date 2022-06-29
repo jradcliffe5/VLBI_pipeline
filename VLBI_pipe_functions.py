@@ -375,20 +375,29 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	elif aoflag=='both':
-		for i in params['global']['AOflag_command']:
-			commands.append(i)
-		msfile='%s.ms'%params['global']['project_code']
+		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
+		#print(fields)
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 			msinfo = get_ms_info(msfile)
 			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 		else:
 			msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-		ids = []
-		for i in fields:
-			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
-		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
-		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'],msfile)
+		for i in range(len(fields)):
+			if (params['global']['job_manager'] == 'pbs'):
+				commands.append('cd %s'%params['global']['cwd'])
+			for k in params['global']['AOflag_command']:
+				commands.append(k)
+			msfile='%s.ms'%params['global']['project_code']
+			ids = []
+			#print(fields)
+			print(i)
+			for j in fields[i]:
+				ids.append(str(msinfo['FIELD']['fieldtoID'][j]))
+			commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
+			commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'][i],msfile)
+		msfile='%s.ms'%params['global']['project_code']
+
 		if parallel == True:
 			mpicasapath = params['global']['mpicasapath']
 		else:
@@ -411,22 +420,27 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 
 	elif aoflag==True:
-		if (params['global']['job_manager'] == 'pbs'):
-			commands.append('cd %s'%params['global']['cwd'])
-		for i in params['global']['AOflag_command']:
-			commands.append(i)
-		msfile='%s.ms'%params['global']['project_code']
-		fields=params[step]['flag_fields']
+		strategies = params[step]['AO_flag_strategy']
+		fields=params[step]['AO_flag_fields']
+		#print(fields)
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 			msinfo = get_ms_info(msfile)
 			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 		else:
 			msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-		ids = []
-		for i in fields:
-			ids.append(str(msinfo['FIELD']['fieldtoID'][i]))
-		commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
-		commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'],msfile)
+		for i in range(len(fields)):
+			if (params['global']['job_manager'] == 'pbs'):
+				commands.append('cd %s'%params['global']['cwd'])
+			for k in params['global']['AOflag_command']:
+				commands.append(k)
+			msfile='%s.ms'%params['global']['project_code']
+			ids = []
+			#print(fields)
+			print(i)
+			for j in fields[i]:
+				ids.append(str(msinfo['FIELD']['fieldtoID'][j]))
+			commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
+			commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'][i],msfile)
 
 	elif aoflag=='apply_to_all':
 		if (params['global']['job_manager'] == 'pbs'):
@@ -464,7 +478,8 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
 		for i in params['global']['AOflag_command']:
 			commands.append(i)
-		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'])
+		tar_idx = find_nestlist(params['init_flag']['AO_flag_fields'], params['global']['targets'][0])[0]
+		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'][tar_idx])
 
 		if casa6 == False:
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
@@ -481,6 +496,12 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	with open('job_%s.%s'%(step,job_m), 'a') as filehandle:
 		for listitem in commands:
 			filehandle.write('%s\n' % listitem)
+
+def find_nestlist(mylist, char):
+	for sub_list in mylist:
+		if char in sub_list:
+			return (mylist.index(sub_list), sub_list.index(char))
+	raise ValueError("'{char}' is not in list".format(char = char))
 
 def write_job_script(steps,job_manager):
 	func_name = inspect.stack()[0][3]
@@ -2235,6 +2256,7 @@ def image_targets(prefix,params,parallel):
 			   field='%s'%j,
 			   imagename='%s_%s_initial'%(prefix,str(j)),
 			   datacolumn='data',
+			   stokes='pseudoI',
 			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][str(j)]/1000.),
 			   imsize=[1024,1024],
 			   deconvolver='clarkstokes',

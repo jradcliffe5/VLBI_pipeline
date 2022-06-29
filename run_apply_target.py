@@ -83,6 +83,7 @@ for i in params['global']['targets']:
 		   imagename='%s-initimage'%i,
 		   field='%s'%i,
 		   datacolumn='data',
+		   stokes='pseudoI',
 		   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][i]/1000.),
 		   imsize=[1024,1024],
 		   deconvolver='clarkstokes',
