@@ -59,7 +59,24 @@ else:
 for j,i in enumerate(steps.keys()):
 	if steps[i]==1:
 		casalog.post(priority='INFO',origin=filename,message='Writing script for step: %s'%i)
-		write_hpc_headers(step=i,params=params)
+		if i == 'apply_to_all':
+			if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+				save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+			else:
+				msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+
+			target_path = os.path.join(params['apply_to_all']['target_path'],"")
+
+			target_files = get_target_files(target_dir=target_path,telescope=msinfo['TELE_NAME'],project_code=params['global']['project_code'],idifiles=[])
+
+			tar = str(target_files['tar'])
+			with open('target_files.txt', 'w') as f:
+				for k in target_files.keys():
+					if k != 'tar':
+						f.write(tar+" "+k+" "+" ".join(target_files[k])+'\n')
+			write_hpc_headers(step=i,params=params)
+		else:
+			write_hpc_headers(step=i,params=params)
 		if i in ['import_fitsidi']:
 			parallel=False
 		elif ((steps['make_mms'] == 1)|(steps_run['make_mms']==1)):

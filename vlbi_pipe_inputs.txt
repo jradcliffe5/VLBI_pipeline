@@ -15,7 +15,6 @@ bandpass_cal = 0
 phase_referencing = 0
 apply_target = 0
 ## Wide-field steps ##
-prepare_apply_all = 0
 apply_to_all = 0
 mssc = 0
 

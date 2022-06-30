@@ -2117,7 +2117,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 	i = prefix
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 	gaintables = load_gaintables(params, casa6=casa6)
-	target_dir = params['prepare_apply_all']['target_path']
+	target_dir = params['apply_to_all']['target_path']
 
 	if part==0:
 
