@@ -69,7 +69,7 @@ if params['global']['job_manager'] == 'bash':
 		tar.append(listWords[0])
 		target_files[listWords[1]] = listWords[2:]
 	for j in range(len(prefix)):
-		if parallel == True:
+		if (params['apply_to_all']["mppc_parallel"] == True)&(parallel=True):
 			if int(sys.argv[i]) == 1:
 				if params["apply_to_all"]["image_target"]["run"] == True:
 					cmd1 = "import inspect, os, sys; sys.path.append('%s'); inputs = load_json('%s/vp_inputs.json'); params = load_json(inputs['parameter_file_path']);apply_to_all(prefix='%s',files=%s,tar=%s,params=params,casa6=%s,parallel=False,part=%s);targets = image_targets(prefix='%s',params=params,parallel=False);apply_tar_output(prefix='%s',params=params,targets=targets)"%(mpipath,cwd,prefix[j],target_files[prefix[j]],tar[j],casa6,int(sys.argv[i]),prefix[j],prefix[j])

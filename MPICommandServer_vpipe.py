@@ -11,7 +11,7 @@ import sys
     
 # Import CASA environment: Service thread stack ends at the level where it is launched,
 # so we need to import the CASA tasks and various functions and  definitions here.
-
+vpipe_path = '/Users/jackradcliffe/Documents/BD228L/VLBI_pipeline'
 # Import casalog and casa dictionary
 # confusingly, much of taskinit is actually about initing the casa tools
 try:
@@ -22,7 +22,7 @@ try:
 
     # analog to the old importing of all tasks from taskinit in CASA 5
     # But: this has a high risk of producing circular imports.
-    sys.path.append('/Users/jackradcliffe/Documents/BD228L/VLBI_pipeline')
+    sys.path.append(vpipe_path)
     from VLBI_pipe_functions_MPI import *
     from casatasks import *
 
@@ -36,7 +36,7 @@ except ImportError:
     from taskinit import *    
     # Import all tasks from the auto-generated tasks.py
     from tasks import *
-    sys.path.append('/Users/jackradcliffe/Documents/BD228L/VLBI_pipeline')
+    sys.path.append(vpipe_path)
     from VLBI_pipe_functions_MPI import *    
     # stuff needed in the task code generated from the casa2pycli xslt template
     from init_tasks import update_params, saveinputs

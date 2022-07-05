@@ -226,6 +226,7 @@
         "target_outpath"    : "/Users/jackradcliffe/Documents/BD228L/calibrated",
         "tar_output"        : true,
         "tar_ms_only"       : true,
+        "mppc_parallel"     : false,
         "pbcor":{
             "run"           : true,
             "implementation": "uvcorr",
