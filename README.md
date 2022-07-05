@@ -4,7 +4,7 @@ This is a generic VLBI pipeline for use on clusters (with job managers SLURM & P
 
 As of 19-06-2020, it will only calibrate continuum data-sets, but spectral line data-sets are planned to be implemented. The pipeline is still under development.
 
-This README includes installation instructions and simple usage, but we advise that you read the Wiki before running or using the pipeline.
+This README includes installation instructions and simple usage, but we advise that you read the [Wiki](../../wiki) before running or using the pipeline.
 
 ## Citing the pipeline
 
