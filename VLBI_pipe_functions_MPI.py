@@ -1784,7 +1784,7 @@ def extract_tarfile(tar_file,cwd,delete_tar):
 	if delete_tar == True:
 		rmdirs(["%s"%tar_file])
 	for i in range(len(files)):
-		files[i] = cwd+files[i]
+		files[i] = cwd+"/"+files[i]
 	return files
 
 def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
