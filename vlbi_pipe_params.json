@@ -72,7 +72,7 @@
         "cal_weights"       :  true,
         "accor_options":{
             "solint"        :  "inf",
-            "smooth"        :  true,
+            "smooth"        :  false,
             "smoothtime"    : 180.0,
             "interp"        : "linear"
         },
@@ -125,7 +125,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["4C39.25","J1011+0106"],
+        "select_calibrators": ["default"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -137,9 +137,9 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"],["J1011+0106"]],
-        "time_range"        : ["","2021/01/14/12:07:04.0~12:07:52.0"],
-        "sol_interval"      : ["60s","inf"],
+        "select_calibrators": [["default"]],
+        "time_range"        : [""],
+        "sol_interval"      : ["inf"],
         "min_snr"           : [5.0,5.0],
         "fringe_niter"      :  300,
         "do_disp_delays"    :  true,
@@ -159,7 +159,7 @@
         }
     },
     "bandpass_cal":{
-        "same_as_sbd_cal"   :  false,
+        "same_as_sbd_cal"   :  true,
         "select_calibrators": [["4C39.25"]], 
         "time_range"        : [""],
         "sol_interval"      :  "inf",
@@ -182,11 +182,9 @@
         "pass_ants"         : [[]],
         "do_disp_delays"    : true,
         "cal_weights"       : true,
-        "do_disp_delays"    : true,
-        "cal_weights"       : true,
-        "imager"            :  "tclean",
         "fringe_niter"      :  300,
         "min_snr"           :  5.0,
+        "imager"            :  "tclean",
         "imaging_params"    :  "auto",
         "masking"           :  "peak",
         "thresholding"      :  "offset",
