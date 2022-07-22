@@ -24,12 +24,12 @@ If you use this pipeline, please make sure that you cite this repository using t
 ```
 
 ## Installation Instructions
-### For CASA 5
+### For self-contained CASA
 1. Install CASA from <https://casa.nrao.edu> and ensure that it is v 5.5+. Any earlier versions do not include the fringe-fitting capabilities.
 2. Clone this repository in any directory desired. 
 
-### For CASA 6
-1. Install CASA 6 following the instructions in <https://casa.nrao.edu/casadocs/casa-5.6.0/introduction/casa6-installation-and-usage>
+### For modular CASA
+1. Install CASA following the instructions in <https://casadocs.readthedocs.io/en/stable/notebooks/introduction.html#Modular-Packages>
 2. Install astropy and/or pyfits using `pip install pyfits astropy`
 3. Clone this repository in any directory required.
 
