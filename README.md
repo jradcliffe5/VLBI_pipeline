@@ -1,8 +1,8 @@
 # Generic VLBI pipeline
 
-This is a generic VLBI pipeline for use on clusters (with job managers SLURM & PBS) but can also be used on your home machine. The pipeline is CASA-based and has been tested on the European VLBI Network (EVN) and Very Long Baseline Array (VLBA) data sets. Both CASA 5.5+ and CASA 6 versions are supported and has been tested on CASA versions 5.6.1 and 6.1.0.
+This is a generic VLBI pipeline for use on clusters (with job managers SLURM & PBS) but can also be used on your home machine. The pipeline is CASA-based and has been tested on the European VLBI Network (EVN) and Very Long Baseline Array (VLBA) data sets. Both CASA 5.5+ and CASA 6 versions are supported and has been tested on CASA versions 5.8.0 and 6.5.0.
 
-As of 19-06-2020, it will only calibrate continuum data-sets, but spectral line data-sets are planned to be implemented. The pipeline is still under development.
+As of 22-07-2022, it will only calibrate continuum data-sets, but spectral line data-sets are planned to be implemented. The pipeline is still under development.
 
 This README includes installation instructions and simple usage, but we advise that you read the [Wiki](../../wiki) before running or using the pipeline.
 
