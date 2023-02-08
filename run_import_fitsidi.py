@@ -78,6 +78,11 @@ importfitsidi(fitsidifile=idifiles,\
 append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 	              params=params)
 
+if os.path.exists('%s/%s_casa.flags'%(params['global']['cwd'],params['global']['project_code'])) == True:
+	casalog.post(origin=filename,message='Applying observatory flags',priority='INFO')
+	flagdata(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),mode='list',
+				 inpfile='%s/%s_casa.flags'%(params['global']['cwd'],params['global']['project_code']))
+
 if params['import_fitsidi']['remove_idi'] == True:
 	rmfiles(idifiles)
 
@@ -87,7 +92,6 @@ if params['import_fitsidi']['make_backup'] == True:
 	source_dir = "%s/%s.ms"%(params['global']['cwd'],params['global']['project_code'])
 	with tarfile.open('%s/%s_backup.tar.gz'%(params['global']['cwd'],params['global']['project_code']),"w:gz") as tar:
 		tar.add(source_dir, arcname=os.path.basename(source_dir))
-	#os.system("tar -cvzf %s/%s_backup.tar.gz %s/%s.ms"%(params['global']['cwd'],params['global']['project_code'],params['global']['cwd'],params['global']['project_code']))
 
 
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
