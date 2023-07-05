@@ -62,6 +62,7 @@ for j,i in enumerate(steps.keys()):
 		if i == 'apply_to_all':
 			if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 				save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+				msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))			
 			else:
 				msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
 
