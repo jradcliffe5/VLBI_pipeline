@@ -38,6 +38,12 @@ except:
 	from tclean_cli import tclean_cli as tclean
 	casa6=False
 
+
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
 class NpEncoder(json.JSONEncoder):
 	def default(self, obj):
 		if isinstance(obj, np.integer):
