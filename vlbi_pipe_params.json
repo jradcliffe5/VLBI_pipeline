@@ -10,6 +10,7 @@
         "default_nodes"     :     1,
         "default_cpus"      :    12,
         "default_mpiprocs"  :    12,
+        "default_mem"       :   "50G",
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
         "mpicasapath"       :  "",
@@ -38,6 +39,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -64,6 +66,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -95,6 +98,7 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -121,6 +125,7 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -133,6 +138,7 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -155,6 +161,7 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
+            "mem"           :   -1,
             "nodetype"      :  "default"
         }
     },
@@ -170,6 +177,7 @@
             "nodes"         :  -1,
             "cpus"          :  -1,
             "mpiprocs"      :  -1,
+            "mem"           :   -1,
             "nodetype"      :  "default"
         }
     },
@@ -194,6 +202,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -242,6 +251,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default",
             "max_jobs"      : 24
         }
@@ -260,6 +270,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default",
             "max_jobs"      : 24
         }

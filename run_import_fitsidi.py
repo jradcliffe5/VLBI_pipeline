@@ -79,10 +79,12 @@ importfitsidi(fitsidifile=idifiles,\
 append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 	              params=params)
 
+'''
 if os.path.exists('%s/%s_casa.flags'%(params['global']['cwd'],params['global']['project_code'])) == True:
 	casalog.post(origin=filename,message='Applying observatory flags',priority='INFO')
 	flagdata(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),mode='list',
 				 inpfile='%s/%s_casa.flags'%(params['global']['cwd'],params['global']['project_code']))
+'''
 
 if params['import_fitsidi']['remove_idi'] == True:
 	rmfiles(idifiles)

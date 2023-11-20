@@ -278,7 +278,7 @@ def write_hpc_headers(step,params):
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
 			hpc_opts[i] = params[step]["hpc_options"][i]
-	for i in ['nodes','cpus','mpiprocs']:
+	for i in ['nodes','cpus','mpiprocs','mem']:
 		if params[step]["hpc_options"][i] == -1:
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
@@ -294,6 +294,7 @@ def write_hpc_headers(step,params):
 					 'walltime'      :'#SBATCH --time=%s'%hpc_opts['walltime'],
 					 'job_name'      :'#SBATCH -J %s'%hpc_opts['job_name'],
 					 'hpc_account'   :'#SBATCH --account %s'%hpc_opts['hpc_account'],
+					 'mem'           :'#SBATCH --mem=%s'%hpc_opts['mem'],
 					 'email_progress':'#SBATCH --mail-type=BEGIN,END,FAIL\n#SBATCH --mail-user=%s'%hpc_opts['email_progress'],
 					 'error':'#SBATCH -o logs/%s.sh.stdout.log\n#SBATCH -e logs/%s.sh.stderr.log'%(hpc_opts['error'],hpc_opts['error'])
 					},
@@ -303,6 +304,7 @@ def write_hpc_headers(step,params):
 					 'cpus'          :'#PBS -l select=%s:ncpus=%s:mpiprocs=%s:nodetype=%s'%(hpc_opts['nodes'],hpc_opts['cpus'],hpc_opts['mpiprocs'],hpc_opts['nodetype']), 
 					 'nodes'         :'',
 					 'mpiprocs'      :'', 
+					 'mem'           :'',
 					 'walltime'      :'#PBS -l walltime=%s'%hpc_opts['walltime'],
 					 'job_name'      :'#PBS -N %s'%hpc_opts['job_name'],
 					 'hpc_account'   :'#PBS -P %s'%hpc_opts['hpc_account'],
@@ -318,12 +320,13 @@ def write_hpc_headers(step,params):
 					 'walltime'      :'',
 					 'job_name'      :'',
 					 'hpc_account'   :'',
+					 'mem'           :'',
 					 'email_progress':'',
 					 'error':''
 					}
 				}
 
-	hpc_header= ['#!/bin/bash']
+	hpc_header= ['#!/bin/bash', 'set -e']
 
 	if step == 'apply_to_all':
 		file = open("%s/target_files.txt"%params['global']['cwd'], "r")
