@@ -103,7 +103,7 @@ for i in range(len(fields)):
 					xax = ['freq','time']
 				else:
 					xax = ['time']
-				for k in ['delay','phase','rate','disp']:
+				for k in ['delay','phase','rate']:
 					for l in xax:
 						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
 
