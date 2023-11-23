@@ -115,7 +115,7 @@ if params['sub_band_delay']['modify_sbd']['run'] == True:
 	interpgain(caltable='%s/%s.sbd'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
 if casa6 == True:
-	for i in ['delay','phase','disp']:
+	for i in ['delay','phase']:
 		for j in ['freq','time']:
 			plotcaltable(caltable='%s/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-sbd_%s_vs_%s.pdf'%(p_c,i,j))
 

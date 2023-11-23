@@ -326,7 +326,7 @@ def write_hpc_headers(step,params):
 					}
 				}
 
-	hpc_header= ['#!/bin/bash', 'set -e']
+	hpc_header= ['#!/bin/bash']
 
 	if step == 'apply_to_all':
 		file = open("%s/target_files.txt"%params['global']['cwd'], "r")
@@ -513,8 +513,7 @@ def find_nestlist(mylist, char):
 	raise ValueError("'{char}' is not in list".format(char = char))
 
 def write_job_script(steps,job_manager):
-	func_name = inspect.stack()[0][3]
-	commands=['#!/bin/bash']
+	commands=['#!/bin/bash', 'set -e']
 	for i,j in enumerate(steps):
 		if i==0:
 			depend=''
