@@ -97,6 +97,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 parang=gaintables['parang'])
 
 #interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=False,fringecal=False)
+remove_flagged_scans('%s/%s.bpass'%(cwd,p_c))
 interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 
 

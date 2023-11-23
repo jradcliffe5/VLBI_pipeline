@@ -1,4 +1,4 @@
-import re, os, json, inspect, sys, copy, glob, tarfile, random, math
+import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil
 import collections
 from collections import OrderedDict
 ## Numerical routines
@@ -37,12 +37,6 @@ except:
 	from partition_cli import partition_cli as partition
 	from tclean_cli import tclean_cli as tclean
 	casa6=False
-
-
-def natural_sort(l): 
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
-    return sorted(l, key=alphanum_key)
 
 class NpEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -2563,3 +2557,29 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 	else:
 		for i in catalog_list:
 			combine_pybdsf(shorthand=shorthand,postfix=i.split('.srl')[0],catalog_list=[i])
+
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
+def backup_table(caltable):
+    try:
+        shutil.rmtree(caltable+'_backup_missing')
+    except OSError:
+        pass
+    shutil.copytree(caltable, caltable+'_backup_missing')
+    casalog.post(priority="INFO",message='Backup of table {0} to {1}'.format(caltable, caltable+'_backup_missing'))
+
+def remove_flagged_scans(caltable):
+	# Backup original table
+	backup_table(caltable)
+	tb = casatools.table()
+	tb.open(caltable,nomodify=False)
+	flags = tb.getcol('FLAG')
+	index = []
+	for i in range(tb.nrows()):
+		if np.all((flags[:,:,i]==True)==True):
+			index.append(i)
+	tb.removerows(index)
+	tb.close()
