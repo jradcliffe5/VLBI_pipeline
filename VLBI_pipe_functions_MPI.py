@@ -1,4 +1,4 @@
-import re, os, json, inspect, sys, copy, glob, tarfile, random, math
+import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil
 import collections
 from collections import OrderedDict
 ## Numerical routines
@@ -272,7 +272,7 @@ def write_hpc_headers(step,params):
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
 			hpc_opts[i] = params[step]["hpc_options"][i]
-	for i in ['nodes','cpus','mpiprocs']:
+	for i in ['nodes','cpus','mpiprocs','mem']:
 		if params[step]["hpc_options"][i] == -1:
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
@@ -288,6 +288,7 @@ def write_hpc_headers(step,params):
 					 'walltime'      :'#SBATCH --time=%s'%hpc_opts['walltime'],
 					 'job_name'      :'#SBATCH -J %s'%hpc_opts['job_name'],
 					 'hpc_account'   :'#SBATCH --account %s'%hpc_opts['hpc_account'],
+					 'mem'           :'#SBATCH --mem=%s'%hpc_opts['mem'],
 					 'email_progress':'#SBATCH --mail-type=BEGIN,END,FAIL\n#SBATCH --mail-user=%s'%hpc_opts['email_progress'],
 					 'error':'#SBATCH -o logs/%s.sh.stdout.log\n#SBATCH -e logs/%s.sh.stderr.log'%(hpc_opts['error'],hpc_opts['error'])
 					},
@@ -297,6 +298,7 @@ def write_hpc_headers(step,params):
 					 'cpus'          :'#PBS -l select=%s:ncpus=%s:mpiprocs=%s:nodetype=%s'%(hpc_opts['nodes'],hpc_opts['cpus'],hpc_opts['mpiprocs'],hpc_opts['nodetype']), 
 					 'nodes'         :'',
 					 'mpiprocs'      :'', 
+					 'mem'           :'',
 					 'walltime'      :'#PBS -l walltime=%s'%hpc_opts['walltime'],
 					 'job_name'      :'#PBS -N %s'%hpc_opts['job_name'],
 					 'hpc_account'   :'#PBS -P %s'%hpc_opts['hpc_account'],
@@ -312,6 +314,7 @@ def write_hpc_headers(step,params):
 					 'walltime'      :'',
 					 'job_name'      :'',
 					 'hpc_account'   :'',
+					 'mem'           :'',
 					 'email_progress':'',
 					 'error':''
 					}
@@ -504,8 +507,7 @@ def find_nestlist(mylist, char):
 	raise ValueError("'{char}' is not in list".format(char = char))
 
 def write_job_script(steps,job_manager):
-	func_name = inspect.stack()[0][3]
-	commands=['#!/bin/bash']
+	commands=['#!/bin/bash', 'set -e']
 	for i,j in enumerate(steps):
 		if i==0:
 			depend=''
@@ -1544,7 +1546,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
 	with PdfPages('%s'%figfile) as pdf:
-
 		if xaxis == 'time':
 			time=tb.getcol('TIME')
 			min_time = time.min()
@@ -1565,112 +1566,26 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					ax1.set_yticks([])
 					ax1.set_yticklabels([])
 				for s in range(len(spw)):
-					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
-					gain = subt.getcol(gaincol)
-					flag = subt.getcol('FLAG')
-					time = subt.getcol('TIME')
-					min_time = time.min()
-					time = (time - min_time)/3600.
-					ax = fig.add_subplot(gs00[s])
-					if yaxis == 'tec':
-						polrange=1
-						pol_names=['']
-					for pol in range(polrange):
-						#print(polrange)
-						if gaincol == 'FPARAM':
-							if yaxis == 'tsys':
-								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
-								flag_t = flag[pol,col_params[gaincol][yaxis][0],:]
-								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								if plotflag == True:
-									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-							else:
-								if (gain.shape[0] == 2) | (gain.shape[0] == 1):
-									increm = 1
-									col_params[gaincol][yaxis][0] = 0
-								else:
-									increm = 4
-								if yaxis=='tec':
-									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e16)
-								elif yaxis=='disp':
-									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e3)
-								else:
-									gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
-								flag_t = flag[col_params[gaincol][yaxis][0]+int(increm*pol),0,:]
-								if yaxis == 'phase':
-									gain_t = correct_phases(gain_t,units='deg')
-									#ax.set_ylim([-180,180])
-								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								try:
-									if np.max(gain_t[flag_t==0])-np.min(gain_t[flag_t==0])>1e5:
-										ax.set_yscale('symlog')
-								except:
-									pass
-								if plotflag == True:
-									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-						elif gaincol == 'CPARAM':
-							if gain.shape[1] == msinfo['SPECTRAL_WINDOW']['nchan']:
-								gain_t = col_params[gaincol][yaxis][1](gain[pol,:,:]).flatten()
-								flag_t = flag[pol,:,:].flatten()
-								time_t = np.repeat(time,gain.shape[1])
-								if yaxis == 'phase':
-									gain_t = correct_phases(gain_t,units='deg')
-									ax.set_ylim([-180,180])
-								ax.plot(time_t[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								if plotflag == True:
-									ax.plot(time_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-							else:
-								gain_t = col_params[gaincol][yaxis][1](gain[pol,0,:])
-								if yaxis == 'phase':
-									gain_t = correct_phases(gain_t,units='deg')
-									#ax.set_ylim([-180,180])
-								flag_t = flag[pol,0,:]
-								ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								if plotflag == True:
-									ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-					ax.set_xlim(t_range)
-					if s != len(spw)-1:
-						ax.xaxis.set_ticklabels([])
-					if s == 0:
-						handles=[]
-						for i in range(polrange):
-							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%pol_names[i]))
-						ax.legend(handles=handles)
-					else:
-						pass
-				pdf.savefig(bbox_inches='tight')
-				plt.close()
-		elif xaxis == 'freq':
-			for a in range(len(ant)):
-				fig = plt.figure(figsize=(9,9))
-				gs00 = gridspec.GridSpec(nrows=1, ncols=1,hspace=0,figure=fig)
-				ax = fig.add_subplot(gs00[:])
-				ax.set_ylabel('%s'%(col_params[gaincol][yaxis][2]),labelpad=35)
-				ax.set_xlabel('%s'%(row_params[xaxis][0]),labelpad=25)
-				ax.set_title('%s against %s for antenna %s (%d)'%(yaxis, xaxis, msinfo['ANTENNAS']['IDtoant'][str(ant[a])],ant[a]))
-				for s in range(len(spw)):
-					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
-					gain = subt.getcol(gaincol)
-					#print(gain.shape)
-					flag = subt.getcol('FLAG')
-					if gain.shape[1] == 1:
-						ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
-						spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
-						spw_average = (ch0+(spwbw/2.))+(s*spwbw)
-						if len(spw) == 1:
-							spw_average = (msinfo['SPECTRAL_WINDOW']['freq_range'][0]+msinfo['SPECTRAL_WINDOW']['freq_range'][1])/2.
-						freqs = (np.ones(gain.shape[2])*(spw_average))/1.0e9
+					try:
+						subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
+						gain = subt.getcol(gaincol)
+						flag = subt.getcol('FLAG')
+						time = subt.getcol('TIME')
+						min_time = time.min()
+						time = (time - min_time)/3600.
+						ax = fig.add_subplot(gs00[s])
 						if yaxis == 'tec':
 							polrange=1
 							pol_names=['']
 						for pol in range(polrange):
+							#print(polrange)
 							if gaincol == 'FPARAM':
 								if yaxis == 'tsys':
 									gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
 									flag_t = flag[pol,col_params[gaincol][yaxis][0],:]
-									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
 									if plotflag == True:
-										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+										ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
 								else:
 									if (gain.shape[0] == 2) | (gain.shape[0] == 1):
 										increm = 1
@@ -1687,47 +1602,142 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 									if yaxis == 'phase':
 										gain_t = correct_phases(gain_t,units='deg')
 										#ax.set_ylim([-180,180])
-									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
 									try:
 										if np.max(gain_t[flag_t==0])-np.min(gain_t[flag_t==0])>1e5:
 											ax.set_yscale('symlog')
 									except:
 										pass
 									if plotflag == True:
+										ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+							elif gaincol == 'CPARAM':
+								if gain.shape[1] == msinfo['SPECTRAL_WINDOW']['nchan']:
+									gain_t = col_params[gaincol][yaxis][1](gain[pol,:,:]).flatten()
+									flag_t = flag[pol,:,:].flatten()
+									time_t = np.repeat(time,gain.shape[1])
+									if yaxis == 'phase':
+										gain_t = correct_phases(gain_t,units='deg')
+										ax.set_ylim([-180,180])
+									ax.plot(time_t[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
+										ax.plot(time_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+								else:
+									gain_t = col_params[gaincol][yaxis][1](gain[pol,0,:])
+									if yaxis == 'phase':
+										gain_t = correct_phases(gain_t,units='deg')
+										#ax.set_ylim([-180,180])
+									flag_t = flag[pol,0,:]
+									ax.plot(time[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
+										ax.plot(time[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+						ax.set_xlim(t_range)
+					except:
+						pass
+					if s != len(spw)-1:
+						ax.xaxis.set_ticklabels([])
+					if s == 0:
+						handles=[]
+						for i in range(polrange):
+							handles.append(mlines.Line2D([], [], color='%s'%pol_cols[i], marker='%s'%pol_symbols[i], linestyle='None', markersize=10, label='%s'%pol_names[i]))
+						ax.legend(handles=handles)
+					else:
+						pass
+				pdf.savefig(bbox_inches='tight')
+				plt.figure().clear()
+				plt.close()
+				plt.cla()
+				plt.clf()
+		elif xaxis == 'freq':
+			for a in range(len(ant)):
+				fig = plt.figure(figsize=(9,9))
+				gs00 = gridspec.GridSpec(nrows=1, ncols=1,hspace=0,figure=fig)
+				ax = fig.add_subplot(gs00[:])
+				ax.set_ylabel('%s'%(col_params[gaincol][yaxis][2]),labelpad=35)
+				ax.set_xlabel('%s'%(row_params[xaxis][0]),labelpad=25)
+				ax.set_title('%s against %s for antenna %s (%d)'%(yaxis, xaxis, msinfo['ANTENNAS']['IDtoant'][str(ant[a])],ant[a]))
+				for s in range(len(spw)):
+					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
+					gain = subt.getcol(gaincol)
+					#print(gain.shape)
+					flag = subt.getcol('FLAG')
+					try:
+						if gain.shape[1] == 1:
+							ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
+							spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
+							spw_average = (ch0+(spwbw/2.))+(s*spwbw)
+							if len(spw) == 1:
+								spw_average = (msinfo['SPECTRAL_WINDOW']['freq_range'][0]+msinfo['SPECTRAL_WINDOW']['freq_range'][1])/2.
+							freqs = (np.ones(gain.shape[2])*(spw_average))/1.0e9
+							if yaxis == 'tec':
+								polrange=1
+								pol_names=['']
+							for pol in range(polrange):
+								if gaincol == 'FPARAM':
+									if yaxis == 'tsys':
+										gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
+										flag_t = flag[pol,col_params[gaincol][yaxis][0],:]
+										ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+										if plotflag == True:
+											ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+									else:
+										if (gain.shape[0] == 2) | (gain.shape[0] == 1):
+											increm = 1
+											col_params[gaincol][yaxis][0] = 0
+										else:
+											increm = 4
+										if yaxis=='tec':
+											gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e16)
+										elif yaxis=='disp':
+											gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:],1./1.e3)
+										else:
+											gain_t = col_params[gaincol][yaxis][1](gain[col_params[gaincol][yaxis][0]+int(increm*pol),0,:])
+										flag_t = flag[col_params[gaincol][yaxis][0]+int(increm*pol),0,:]
+										if yaxis == 'phase':
+											gain_t = correct_phases(gain_t,units='deg')
+											#ax.set_ylim([-180,180])
+										ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+										try:
+											if np.max(gain_t[flag_t==0])-np.min(gain_t[flag_t==0])>1e5:
+												ax.set_yscale('symlog')
+										except:
+											pass
+										if plotflag == True:
+											ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+								elif gaincol == 'CPARAM':
+									gain_t = col_params[gaincol][yaxis][1](gain[pol,0,:])
+									flag_t = flag[pol,0,:]
+									if yaxis == 'phase':
+										gain_t = correct_phases(gain_t,units='deg')
+										#ax.set_ylim([-180,180])
+									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
 										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-							elif gaincol == 'CPARAM':
-								gain_t = col_params[gaincol][yaxis][1](gain[pol,0,:])
-								flag_t = flag[pol,0,:]
-								if yaxis == 'phase':
-									gain_t = correct_phases(gain_t,units='deg')
-									#ax.set_ylim([-180,180])
-								ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								if plotflag == True:
-									ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-					elif gain.shape[1] == msinfo['SPECTRAL_WINDOW']['nchan']:
-						ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
-						spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
-						chan_width = msinfo['SPECTRAL_WINDOW']['chan_width']
-						freqs = np.arange(ch0+(s*spwbw),ch0+((s+1)*spwbw),chan_width)/1.0e9
-						for pol in range(polrange):
-							if gaincol == 'FPARAM':
-								gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:]).flatten()
-								flag_t = flag[pol,col_params[gaincol][yaxis][0],:].flatten()
-								freqs = np.repeat(freqs,gain_t.shape[2])
-								ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								if plotflag == True:
-									ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
-							elif gaincol == 'CPARAM':
-								gain_t = col_params[gaincol][yaxis][1](gain[pol,:,:])
-								flag_t = flag[pol,:,:].flatten()
-								freqs_t = np.repeat(freqs,gain_t.shape[1])
-								gain_t = gain_t.flatten()
-								if yaxis == 'phase':
-									gain_t = correct_phases(gain_t,units='deg')
-									#ax.set_ylim([-180,180])
-								ax.plot(freqs_t[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
-								if plotflag == True:
-									ax.plot(freqs_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+						elif gain.shape[1] == msinfo['SPECTRAL_WINDOW']['nchan']:
+							ch0 = msinfo['SPECTRAL_WINDOW']['freq_range'][0]
+							spwbw = msinfo['SPECTRAL_WINDOW']['spw_bw']
+							chan_width = msinfo['SPECTRAL_WINDOW']['chan_width']
+							freqs = np.arange(ch0+(s*spwbw),ch0+((s+1)*spwbw),chan_width)/1.0e9
+							for pol in range(polrange):
+								if gaincol == 'FPARAM':
+									gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:]).flatten()
+									flag_t = flag[pol,col_params[gaincol][yaxis][0],:].flatten()
+									freqs = np.repeat(freqs,gain_t.shape[2])
+									ax.plot(freqs[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
+										ax.plot(freqs[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+								elif gaincol == 'CPARAM':
+									gain_t = col_params[gaincol][yaxis][1](gain[pol,:,:])
+									flag_t = flag[pol,:,:].flatten()
+									freqs_t = np.repeat(freqs,gain_t.shape[1])
+									gain_t = gain_t.flatten()
+									if yaxis == 'phase':
+										gain_t = correct_phases(gain_t,units='deg')
+										#ax.set_ylim([-180,180])
+									ax.plot(freqs_t[flag_t==0],gain_t[flag_t==0],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True)
+									if plotflag == True:
+										ax.plot(freqs_t[flag_t==1],gain_t[flag_t==1],'%s%s'%(pol_cols[pol],pol_symbols[pol]),rasterized=True,mfc='none',alpha=0.2)
+					except:
+						pass
 					if s == 0:
 						handles=[]
 						for i in range(polrange):
@@ -1735,11 +1745,13 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						ax.legend(handles=handles)
 				ax.set_xlim(np.array(msinfo['SPECTRAL_WINDOW']['freq_range'])/1e9)
 				pdf.savefig(bbox_inches='tight')
+				plt.figure().clear()
 				plt.close()
+				plt.cla()
+				plt.clf()
 		else:
 			casalog.post(priority='SEVERE',origin=func_name,message='Table cannot be plotted by this function')
 			sys.exit()
-
 		tb.close()
 
 def clip_model(model, im, snr):
@@ -2555,3 +2567,29 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 	else:
 		for i in catalog_list:
 			combine_pybdsf(shorthand=shorthand,postfix=i.split('.srl')[0],catalog_list=[i])
+
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
+def backup_table(caltable):
+    try:
+        shutil.rmtree(caltable+'_backup_missing')
+    except OSError:
+        pass
+    shutil.copytree(caltable, caltable+'_backup_missing')
+    casalog.post(priority="INFO",message='Backup of table {0} to {1}'.format(caltable, caltable+'_backup_missing'))
+
+def remove_flagged_scans(caltable):
+	# Backup original table
+	backup_table(caltable)
+	tb = casatools.table()
+	tb.open(caltable,nomodify=False)
+	flags = tb.getcol('FLAG')
+	index = []
+	for i in range(tb.nrows()):
+		if np.all((flags[:,:,i]==True)==True):
+			index.append(i)
+	tb.removerows(index)
+	tb.close()

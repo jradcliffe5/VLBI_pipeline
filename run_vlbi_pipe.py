@@ -87,7 +87,10 @@ for j,i in enumerate(steps.keys()):
 		else:
 			parallel=False
 		if i=='init_flag':
-			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
+			if params['init_flag']['run_AOflag'] == False:
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
+			else:
+				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
 		elif i == 'apply_to_all':
 			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
 		else:

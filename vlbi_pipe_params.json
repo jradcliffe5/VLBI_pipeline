@@ -54,6 +54,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },
@@ -89,7 +90,7 @@
             "interp"        : "linear,linear"
         },
         "ionex_options":{
-            "run"           :  true,
+            "run"           :  false,
             "ionex_type"    : "final"
         },
         "hpc_options":{
@@ -98,11 +99,12 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
-            "mem"           :    -1,
+            "mem"           :   -1,
             "nodetype"      :  "default"
         }
     },
     "init_flag":{
+        "run_AOflag"        : false,
         "AO_flag_strategy"  :  ["VLBI_pipeline/aoflag_strategies/4C.rfis","VLBI_pipeline/aoflag_strategies/faint_sources.rfis"],
         "AO_flag_fields"    : [["4C39.25","J1011+0106"],["COSMOS-POINT"]],
         "flag_edge_chans":{
@@ -138,7 +140,7 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
-            "mem"           :    -1,
+            "mem"           :   -1,
             "nodetype"      :  "default"
         }
     },
@@ -177,7 +179,7 @@
             "nodes"         :  -1,
             "cpus"          :  -1,
             "mpiprocs"      :  -1,
-            "mem"           :   -1,
+            "mem"           :  -1,
             "nodetype"      :  "default"
         }
     },
@@ -225,6 +227,7 @@
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
+            "mem"           :    -1,
             "nodetype"      :  "default"
         }
     },

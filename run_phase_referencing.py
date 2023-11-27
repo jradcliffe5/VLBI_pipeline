@@ -90,23 +90,17 @@ for i in range(len(fields)):
 					  corrdepflags=True,
 					  parang=gaintables['parang'])
 			remove_flagged_scans(caltable)
-			#if params['phase_referencing']["interp_flagged"][i][j] == True:
-			#	interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-			#	#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
-			#if params['phase_referencing']['pass_ants'][i] != []:
-			#	pass_ants = []
-			#	for l in range(len(params['phase_referencing']['pass_ants'][i])):
-			#		pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
-			#	pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
 			if casa6 == True:
 				if 'spw' not in params['phase_referencing']['combine'][i][j]:
 					xax = ['freq','time']
 				else:
 					xax = ['time']
-				for k in ['delay','phase','rate']:
-					for l in xax:
-						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
-
+				for k in ['delay','phase']:
+					try:
+						for l in xax:
+							plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
+					except:
+						pass
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
 				gaintype='K'
@@ -132,21 +126,6 @@ for i in range(len(fields)):
 					spwmap=gaintables['spwmap'],
 					parang=gaintables['parang'])
 			remove_flagged_scans(caltable)
-			#if params['phase_referencing']["interp_flagged"][i][j] == True:
-			#	if cal_type[i][j] == 'k':
-			#		interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-					#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
-			#	else:
-			#		interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=False)
-					#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
-			#if params['phase_referencing']['pass_ants'][i] != []:
-			#	pass_ants = []
-			#	for l in range(len(params['phase_referencing']['pass_ants'][i])):
-			#		pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
-			#	if cal_type[i][j] == 'k':
-			#		pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
-			#	else: 
-			#		pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
 			if casa6 == True:
 				if 'spw' not in params['phase_referencing']['combine'][i][j]:
 					xax = ['freq','time']
@@ -439,7 +418,29 @@ for i in range(len(fields)):
 						   usescratch=True)
 
 
-
+#if params['phase_referencing']["interp_flagged"][i][j] == True:
+#	if cal_type[i][j] == 'k':
+#		interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+		#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+#	else:
+#		interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=False)
+		#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
+#if params['phase_referencing']['pass_ants'][i] != []:
+#	pass_ants = []
+#	for l in range(len(params['phase_referencing']['pass_ants'][i])):
+#		pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
+#	if cal_type[i][j] == 'k':
+#		pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
+#	else: 
+#		pad_antennas(caltable=caltable,ants=pass_ants,gain=True)
+#if params['phase_referencing']["interp_flagged"][i][j] == True:
+#	interpgain(caltable=caltable,obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+#	#interpgain(caltable=caltable,obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+#if params['phase_referencing']['pass_ants'][i] != []:
+#	pass_ants = []
+#	for l in range(len(params['phase_referencing']['pass_ants'][i])):
+#		pass_ants.append(msinfo['ANTENNAS']['anttoID'][params['phase_referencing']['pass_ants'][i][l]])
+#	pad_antennas(caltable=caltable,ants=pass_ants,gain=False)
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['phase_referencing'] = 1
