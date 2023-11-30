@@ -171,6 +171,7 @@
         "same_as_sbd_cal"   :  true,
         "select_calibrators": [["4C39.25"]], 
         "time_range"        : [""],
+        "bpass_combine"     : "spw",
         "sol_interval"      :  "inf",
         "min_snr"           :  3.0,
         "hpc_options":{

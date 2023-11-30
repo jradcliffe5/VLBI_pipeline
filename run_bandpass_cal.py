@@ -82,7 +82,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 solint=params['bandpass_cal']['sol_interval'],
 			 antenna='',
 			 spw='',
-			 combine='scan,field',
+			 combine=params['bandpass_cal']["bpass_combine"],
 			 solnorm=True,
 			 timerange=params[substep]['time_range'][i],
 			 refant=refant,
