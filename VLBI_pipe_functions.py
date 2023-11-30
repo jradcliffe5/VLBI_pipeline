@@ -16,7 +16,6 @@ from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
-import tempfile
 from scipy.special import j1
 try:
 	# CASA 6
@@ -62,7 +61,6 @@ def json_loads_byteified(json_text):
 	)
 
 def json_load_byteified_dict(file_handle,casa6):
-	#print(casa6)
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
@@ -98,7 +96,6 @@ def convert_temp(data):
 	elif isinstance(data, collections.Mapping):
 		return OrderedDict(map(convert_temp, data.items()))
 	elif isinstance(data, collections.Iterable):
-		#print(data)
 		return type(data)(map(convert_temp, data))
 	else:
 		return data
@@ -379,7 +376,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	elif aoflag=='both':
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
-		#print(fields)
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 			msinfo = get_ms_info(msfile)
 			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
@@ -392,8 +388,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 				commands.append(k)
 			msfile='%s.ms'%params['global']['project_code']
 			ids = []
-			#print(fields)
-			print(i)
 			for j in fields[i]:
 				ids.append(str(msinfo['FIELD']['fieldtoID'][j]))
 			commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
@@ -424,7 +418,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	elif aoflag==True:
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
-		#print(fields)
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 			msinfo = get_ms_info(msfile)
 			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
@@ -437,8 +430,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 				commands.append(k)
 			msfile='%s.ms'%params['global']['project_code']
 			ids = []
-			#print(fields)
-			print(i)
 			for j in fields[i]:
 				ids.append(str(msinfo['FIELD']['fieldtoID'][j]))
 			commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
@@ -618,10 +609,8 @@ def get_ms_info(msfile):
 	ms.close()
 	scan = {}
 	for i in list(scans.keys()):
-		#print(i)
 		fieldid = scans[i]['0']['FieldId']
 		if fieldid not in list(scan.keys()):
-			#print(i)
 			scan[fieldid] = [i]
 		else:
 			vals = scan[fieldid]
@@ -685,7 +674,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 	nchan=len(gain[0,:,0])
 	
 	k=1
-	#print('maxant', maxant)
 	numflag=0.0
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
@@ -693,7 +681,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 					subt=t[(ant==k) & (dd==j)]
 					#subsol=sol[:,:,(ant==k) & (dd==j)]
 					subgain=gain[:,:,(ant==k) & (dd==j)]
-					#print 'subgain', subgain.shape
 					for kk in range(1, len(subt)):
 							for chan in range(nchan):
 									for pol in range(npol):
@@ -711,8 +698,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 					#sol[:,:,(ant==k) & (dd==j)]=subsol
 					gain[:,:,(ant==k) & (dd==j)]=subgain
 
-
-	#print('numflag', numflag)
 	 
 	###
 	tb.putcol('FLAG', flg)
@@ -786,9 +771,6 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 					flg[:,:,(ant==k) & (dd==j)]=subflg
 					#sol[:,:,(ant==k) & (dd==j)]=subsol
 					gain[:,:,(ant==k) & (dd==j)]=subgain
-
-
-	#print('numflag', numflag)
 	 
 	###
 	tb.putcol('FLAG', flg)
@@ -808,7 +790,6 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	gain_edit = copy.deepcopy(gain)*0
 	t=tb.getcol('TIME')
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
-	#print(dd)
 	npol=gain.shape[0]
 	casalog.post(priority="INFO",origin=func_name,message='Editing and smoothing the tsys table')
 	for k in range(npol):
@@ -831,16 +812,13 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 					flg_temp2[ind] = 1
 					flg_temp[flg_temp==0] = flg_temp2
 					flg[k,0,((ant==i)&(dd==j))] = flg_temp
-
 					gain_edit[k,0,((ant==i)&(dd==j))]= gain_uflg2
-
 	tb.putcol('FPARAM',gain_edit)
 	tb.putcol('FLAG',flg)
 	tb.close()
 
 def smooth_series(y, box_pts):
 	box = np.ones(box_pts)/box_pts
-	#print(box_pts)
 	y_smooth = np.convolve(y, box, mode='valid')
 	y_smooth = np.hstack([np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[0],y_smooth])
 	y_smooth = np.hstack([y_smooth,np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[-1]])
@@ -858,14 +836,25 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 	for i in range((window_size),(n - window_size)):
 		x0 = np.median(input_series[1][(i - window_size):(i + window_size)])
 		S0 = k * np.median(np.abs(input_series[1][(i - window_size):(i + window_size)] - x0))
-		if (np.abs(input_series[1][i] - x0) > n_sigmas * S0):
-			new_series[1][i] = x0
-			indices.append(i)
-
+		if i == window_size:
+			for j in range(0,window_size):
+				if (np.abs(input_series[1][j] - x0) > n_sigmas * S0):
+					new_series[1][j] = x0
+					indices.append(j)
+		elif i == ((n - window_size)-1):
+			for j in range(n-window_size,n):
+				if (np.abs(input_series[1][j] - x0) > n_sigmas * S0):
+					new_series[1][j] = x0
+					indices.append(j)
+		else:
+			if (np.abs(input_series[1][i] - x0) > n_sigmas * S0):
+				new_series[1][i] = x0
+				indices.append(i)
+	
 	detected_outliers = np.array(indices)
 	already_tagged=[]
 	for i in range(len(input_series[1])):
-		if i<input_series[0].shape[0]-1:
+		if ((i<input_series[0].shape[0]-1)&(i>0)):
 			if i in detected_outliers:
 				if i not in already_tagged:
 					low=i-1
@@ -873,18 +862,18 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 					while i+1 in detected_outliers:
 						i+=1
 						already_tagged.append(i)
-
-					high=i+1
-					t_high=input_series[0][high]
-					#m=(gain_uflg[high]-gain_uflg[low])/(t_high-t_low)
-					#c=gain_uflg[low]-(m*t_low)
-
-					f = interp1d(x=[t_low,t_high], y=[input_series[1][low],input_series[1][high]])
-					#print(t_temp2[np.arange(low,high,1)])
-					#t_interp=t_temp2[np.arange(low,high,1)]
-					
-					input_series[1][low:high]= f(input_series[0][np.arange(low,high,1)])
-
+					if i < (input_series[0].shape[0]-1):
+						high=i+1
+						t_high=input_series[0][high]
+						f = interp1d(x=[t_low,t_high], y=[input_series[1][low],input_series[1][high]])		
+						input_series[1][low:high]= f(input_series[0][np.arange(low,high,1)])
+	if 0 in detected_outliers:
+		input_series[1][0] = input_series[1][1]
+	if (input_series[0].shape[0]-1) in detected_outliers:
+		i = (input_series[0].shape[0]-1)
+		while i-1 in detected_outliers:
+			i-=1
+		input_series[1][i:input_series[0].shape[0]] = input_series[1][input_series[0].shape[0]-(i-2)]
 	return input_series[1],detected_outliers
 
 def detect_jump_and_smooth(array,jump_pc):
@@ -896,15 +885,11 @@ def detect_jump_and_smooth(array,jump_pc):
 					jump=True
 					low=i
 					if i < len(array)-1:
-						#print(i+1)
 						i+=1
-						#print(i)
 						while ((array[i+1] > (1+jump_pc)*array[i])==False)&((array[i+1]<(1-jump_pc)*array[i])==False):
 							if i > (len(array)-3):
-								#print(i)
 								break
 							else:
-								#print(i)
 								i+=1
 					high=i+1
 					diff=int((high-low)/2.)
@@ -1137,7 +1122,6 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 		solint=float(solint.split('s')[0])
 	elif solint[-1] == 'm' or solint[-3:]=="min":
 		solint=float(solint.split('m')[0])*60.
-	#print(solint)
 
 	os.system('cp -r %s %s_original'%(caltable,caltable))
 
@@ -1341,7 +1325,6 @@ def clip_fitsfile(model,im,snr):
 	model_data = model_hdu['PRIMARY'].data
 	im_hdu = fits.open(im)
 	im_head = im_hdu['PRIMARY'].header
-	print(im_hdu['PRIMARY'].data.squeeze().shape)
 	rms = np.std(im_hdu['PRIMARY'].data.squeeze()[0:int(im_head['NAXIS1']/4.),0:int(im_head['NAXIS2']/4.)])
 	im_hdu.close()
 	model_data[model_data<float(snr)*rms] = 0
@@ -1578,7 +1561,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 							polrange=1
 							pol_names=['']
 						for pol in range(polrange):
-							#print(polrange)
 							if gaincol == 'FPARAM':
 								if yaxis == 'tsys':
 									gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
@@ -1658,7 +1640,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				for s in range(len(spw)):
 					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
 					gain = subt.getcol(gaincol)
-					#print(gain.shape)
 					flag = subt.getcol('FLAG')
 					try:
 						if gain.shape[1] == 1:
@@ -1898,7 +1879,6 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		f_id = msinfo['FIELD']['fieldtoID'][j]
 		scans = scans + msinfo['SCANS'][str(f_id)]
 	scans = np.sort(np.array(scans))
-	print(scans)
 
 
 	
@@ -1934,7 +1914,6 @@ def generate_ff_full_table(msinfo):
 		except:
 			print('no ant %s'%i)
 	times = np.unique(t)
-	#for i in 
 	
 def progressbar(it, prefix="", size=60, file=sys.stdout):
 	count = len(it)
@@ -2324,7 +2303,6 @@ def angsep(ra1,dec1,ra2rad,dec2rad):
 	try:
 		rad=math.acos(x+y+z)
 	except:
-		print(x,y,z)
 		rad=0
 
 	# use Pythargoras approximation if rad < 1 arcsec
@@ -2534,7 +2512,6 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 		img.export_image(outfile=name+'_gaus.model.fits',img_type='gaus_model',clobber=True)
 		img.export_image(outfile=name+'.rms.fits', img_type='rms', clobber=True)
 
-	#write_catalog_pybdsf('HDFA0002_MSSC_FG_NA_IM.fits',detection_threshold)
 
 	def combine_pybdsf(shorthand,postfix,catalog_list):
 		os.system('rm catalogue_PYBDSF_%s.csv' % postfix)
@@ -2551,8 +2528,6 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 				else:
 					names = file+','
 				if len(lines) > 6:
-					#detections = detections + [file]
-					#print names+names.join(lines[6:])
 					text_file.write(names+names.join(lines[6:]))
 				os.system('rm %s' % file)
 	catalog_list = []
@@ -2592,4 +2567,42 @@ def remove_flagged_scans(caltable):
 		if np.all((flags[:,:,i]==True)==True):
 			index.append(i)
 	tb.removerows(index)
+	tb.close()
+
+def filter_smooth_delay(caltable,nsig=[2.5,2.]):
+	func_name = inspect.stack()[0][3]
+	tb=casatools.table()
+	tb.open(caltable, nomodify=False)
+	flg=tb.getcol('FLAG')
+	gaincol='FPARAM'
+	ant=tb.getcol('ANTENNA1')
+	gain=tb.getcol(gaincol)
+	gain_edit = copy.deepcopy(gain)*0
+	t=tb.getcol('TIME')
+	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	npol=2
+	casalog.post(priority="INFO",origin=func_name,message='Editing the delays')
+	increm = 4
+	for k in range(npol):
+		for i in np.unique(ant):
+			for j in np.unique(dd):
+				flg_temp=flg[1+(k*increm),0,((ant==i)&(dd==j))]
+				gain_uflg2=gain[1+(k*increm),0,((ant==i)&(dd==j))]
+				gain_uflg = gain_uflg2[flg_temp==0]
+				if gain_uflg != []:
+					t_temp=t[((ant==i)&(dd==j))][flg_temp==0]
+					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 21 ,n_sigmas=nsig[0])
+					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
+					#gain_uflg, jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
+					#if jump == False:
+					#	gain_uflg = smooth_series(gain_uflg, 21)
+					gain_uflg2[flg_temp==0] = gain_uflg
+					ind = np.where(np.isnan(gain_uflg2[flg_temp==0]))[0]
+					flg_temp2 = flg_temp[flg_temp==0]
+					flg_temp2[ind] = 1
+					flg_temp[flg_temp==0] = flg_temp2
+					flg[1+(k*increm),0,((ant==i)&(dd==j))] = flg_temp
+					gain_edit[1+(k*increm),0,((ant==i)&(dd==j))]= gain_uflg2
+	tb.putcol('FPARAM',gain_edit)
+	tb.putcol('FLAG',flg)
 	tb.close()

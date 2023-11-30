@@ -50,6 +50,7 @@ cal_type = params['phase_referencing']["cal_type"]
 
 if steps_run['phase_referencing'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_phase_referencing')
+	clearcal(vis=msfile)
 else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_phase_referencing')
 
@@ -90,6 +91,9 @@ for i in range(len(fields)):
 					  corrdepflags=True,
 					  parang=gaintables['parang'])
 			remove_flagged_scans(caltable)
+			if i == 1:
+				filter_smooth_delay(caltable,nsig=[2.5,2.])
+				smoothcal(vis=msfile,tablein=caltable, smoothtime=6*60.0)
 			if casa6 == True:
 				if 'spw' not in params['phase_referencing']['combine'][i][j]:
 					xax = ['freq','time']
@@ -184,7 +188,7 @@ for i in range(len(fields)):
 		for k in range(len(fields[i])):
 			if params['phase_referencing']["imager"] == 'wsclean':
 				rmfiles(['%s-%s%s-*'%(fields[i][k],cal_type[i][j],j)])
-				os.system('%s -name %s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+				os.system('%s -name %s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
 						fields[i][k],
 						cal_type[i][j],
