@@ -136,7 +136,6 @@ for line in file:
 				ants.append([temp[1],ncount])
 				for j in temp:
 					if j.startswith('DPFU'):
-						#print(j)
 						data_head['DPFU'] = np.array(j.split("DPFU=")[1].split(",")).astype(float)
 						if data_head['TELESCOPE'] in replace_vals:
 							dpfurepl[data_head['TELESCOPE']] = ncount
@@ -257,7 +256,6 @@ if options['plot'] == True:
 	casalog.post(priority='INFO',origin=filename,message='Plotting Tsys values, will be saved to %s_tsys.pdf'%options['antab_file'])
 	from matplotlib.backends.backend_pdf import PdfPages
 	sorted_tsys, indexes, idxmap = map_index_to_tsys(tsys_pl=tsys_pl,index_pl=index_pl)
-	print(idxmap)
 	pols = []
 	spw = []
 	for i in indexes:
