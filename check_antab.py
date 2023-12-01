@@ -62,17 +62,25 @@ def map_index_to_tsys(tsys_pl,index_pl):
 		temp = index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip()
 		indexes = indexes + re.split(',|\|',temp)
 	indexes = np.unique(indexes)
+	idxes={}
 	for i in tsys_pl.keys():
 		temp = np.array(index_pl[i].replace("\'",'').replace(" ","").split('=')[1].strip().split(','))
+		temp_idx = []
+		temp_tsys = np.array([])
 		for m,k in enumerate(indexes):
-			res = [x for x in temp if re.search(k, x)][0]
-			idx = np.where(res==temp)[0][0]
-			if m == 0:
-				temp_tsys = tsys_pl[i][:,idx]
-			else:
-				temp_tsys = np.vstack([temp_tsys,tsys_pl[i][:,idx]])
+			try:
+				res = [x for x in temp if re.search(k, x)][0]
+				temp_idx.append(k)
+				idx = np.where(res==temp)[0][0]
+				if temp_tsys.size == 0:
+					temp_tsys = tsys_pl[i][:,idx]
+				else:
+					temp_tsys = np.vstack([temp_tsys,tsys_pl[i][:,idx]])
+			except:
+				pass
+		idxes[i] = np.array(temp_idx)
 		sorted_tsys[i] = temp_tsys
-	return sorted_tsys, indexes
+	return sorted_tsys, indexes, idxes
 
 def convert_time(time):
 	conv_time = []
@@ -113,6 +121,13 @@ for line in file:
 		if line !="":
 			data.append(line.replace("/",""))
 		data = list(filter(None, data))
+		if (len(data)>1):
+			if "GAIN" in data[0]:
+				data = [" ".join(data)]
+			else:
+				pass
+		if data !=[]:
+			data[0] = data[0].replace(" = ","=").replace(', ',',')
 		for i in data:
 			temp = i.split(' ')
 			temp = list(filter(None, temp))
@@ -121,7 +136,7 @@ for line in file:
 				ants.append([temp[1],ncount])
 				for j in temp:
 					if j.startswith('DPFU'):
-						print(j)
+						#print(j)
 						data_head['DPFU'] = np.array(j.split("DPFU=")[1].split(",")).astype(float)
 						if data_head['TELESCOPE'] in replace_vals:
 							dpfurepl[data_head['TELESCOPE']] = ncount
@@ -241,7 +256,8 @@ if options['plot'] == True:
 	figfile='%s_tsys.pdf'%options['antab_file']
 	casalog.post(priority='INFO',origin=filename,message='Plotting Tsys values, will be saved to %s_tsys.pdf'%options['antab_file'])
 	from matplotlib.backends.backend_pdf import PdfPages
-	sorted_tsys, indexes = map_index_to_tsys(tsys_pl=tsys_pl,index_pl=index_pl)
+	sorted_tsys, indexes, idxmap = map_index_to_tsys(tsys_pl=tsys_pl,index_pl=index_pl)
+	print(idxmap)
 	pols = []
 	spw = []
 	for i in indexes:
@@ -273,8 +289,11 @@ if options['plot'] == True:
 				ax = fig.add_subplot(gs[s-1])
 				for m,p in enumerate(pols):
 					polar = '%s%s'%(p,s)
-					idx = np.where(polar==indexes)[0][0]
-					ax.plot(time_vals[tsys_vals[idx]>0],tsys_vals[idx][tsys_vals[idx]>0],'%s%s'%(marker_symbol[m],marker_color[m]),label='%s'%p,rasterized=True)
+					try:
+						idx = np.where(polar==idxmap[a])[0][0]
+						ax.plot(time_vals[tsys_vals[idx]>0],tsys_vals[idx][tsys_vals[idx]>0],'%s%s'%(marker_symbol[m],marker_color[m]),label='%s'%p,rasterized=True)
+					except:
+						pass
 				if n == 0:
 					ax.legend()
 				if n < len(spw)-1:
