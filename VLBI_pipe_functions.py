@@ -2288,8 +2288,10 @@ def apply_tar_output(prefix,params,targets):
 			os.system('mv %s %s/'%(msfile,params['apply_to_all']['target_outpath']))
 			if params["apply_to_all"]["image_target"]["run"] == True:
 				for k in targets:
-					for j in ['image','psf','model','residual','sumwt','mask','pb']:
+					for j in ['image','psf','model','residual']:
 						os.system('mv %s%s_%s_initial.%s %s/'%(cwd,i,k,j,params['apply_to_all']['target_outpath']))
+					for j in ['sumwt','mask','pb']:
+						rmfiles(["%s%s_%s_initial.%s"%(cwd,i,k,j)])
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
 	qa = casatools.quanta()
