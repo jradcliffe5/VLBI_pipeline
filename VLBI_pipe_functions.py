@@ -2217,6 +2217,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 			fd = ",".join(targets)
 		else:
 			fd = targets[0]
+		
+		statwt(vis='%s/%s_presplit.ms'%(cwd,i),minsamp=10)
 		split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  field=fd,
 			  keepmms=False,
