@@ -49,6 +49,21 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 		fields=",".join(params['global']['fringe_finders'])
 	else:
 		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
+	
+	flagdata(vis=msfile,
+		 mode='tfcrop',
+		 field=fields,
+		 datacolumn='corrected',
+		 combinescans=False,
+		 winsize=3,
+		 timecutoff=4.5,
+		 freqcutoff=4.5,
+		 maxnpieces=7,
+		 halfwin=1,
+		 extendflags=True,
+		 action='apply',
+		 display='',
+		 flagbackup=False)
 
 	#params['sub_band_delay']['extensive_search'] = False
 	if params['sub_band_delay']['do_disp_delays'] == True:

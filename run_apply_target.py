@@ -1,6 +1,7 @@
 import inspect, os, sys, json, re
 from collections import OrderedDict
 import tarfile
+import numpy as np
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
@@ -37,11 +38,12 @@ if os.path.exists('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))==F
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))
 
+'''
 if steps_run['apply_target'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_apply_target')
 else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_apply_target')
-
+'''
 ## Apply to standard files
 applycal(vis='%s/%s'%(cwd,msfile),
 	     field=",".join(params['global']['targets']),
@@ -59,6 +61,20 @@ else:
 for i in params['global']['targets']:
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
 	
+	flagdata(vis=msfile,
+			mode='tfcrop',
+			field=i,
+			datacolumn='corrected',
+			combinescans=False,
+			winsize=3,
+			timecutoff=4.5,
+			freqcutoff=4.5,
+			maxnpieces=7,
+			halfwin=1,
+			extendflags=False,
+			action='apply',
+			display='',
+			flagbackup=False)
 	split(vis='%s%s'%(cwd,msfile),
 		  field=i,
 		  outputvis='%s/%s_calibrated.ms'%(cwd,i))
@@ -68,8 +84,18 @@ for i in params['global']['targets']:
 			   timebin=params['apply_target']["statistical_reweigh"]["timebin"],
                chanbin=params['apply_target']["statistical_reweigh"]["chanbin"],
                statalg=params['apply_target']["statistical_reweigh"]["statalg"],
-               fitspw= params['apply_target']["statistical_reweigh"]["fitspw"],
+               fitspw=params['apply_target']["statistical_reweigh"]["fitspw"],
+			   minsamp=params['apply_target']["statistical_reweigh"]["minsamp"],
                datacolumn='data')
+		tb = casatools.table()
+		tb.open('%s/%s_calibrated.ms'%(cwd,i)) 
+		weight=tb.getcol('WEIGHT')
+		tb.close()
+		flagdata(vis='%s/%s_calibrated.ms'%(cwd,i),
+		         mode='clip',
+				 datacolumn='WEIGHT',
+				 clipminmax=[0,np.median(weight)+6*np.std(weight)])
+		
 	elif params['apply_target']["weigh_by_ants"]['run'] == True:
 		print('not implemented yet')
 	else:

@@ -38,7 +38,6 @@ else:
 
 refant = find_refants(params['global']['refant'],msinfo)
 
-
 gaintab = []
 '''
 for i in gaintables['gaintable']:
@@ -70,6 +69,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 		append=False
 	else:
 		append=True
+	
 
 	if params[substep]['select_calibrators'][i] == ['default']:
 		fields=",".join(params['global']['fringe_finders'])
@@ -130,6 +130,7 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	tb.putcol('CPARAM',data)
 	tb.putcol('FLAG',flags)
 	tb.close()
+
 
 if casa6 == True:
 	for i in ['amp','phase']:

@@ -96,6 +96,7 @@ if params['import_fitsidi']['make_backup'] == True:
 	with tarfile.open('%s/%s_backup.tar.gz'%(params['global']['cwd'],params['global']['project_code']),"w:gz") as tar:
 		tar.add(source_dir, arcname=os.path.basename(source_dir))
 
+clearcal(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),addmodel=True)
 
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 
