@@ -2184,6 +2184,13 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 						 quackmode=quack_mode)
 		
 		append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
+		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
+				 field=",".join(targets),
+				 gaintable=gaintables['gaintable'],
+				 gainfield=gaintables['gainfield'],
+				 interp=gaintables['interp'],
+				 spwmap=gaintables['spwmap'],
+				 parang=gaintables['parang'])
 
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
@@ -2199,19 +2206,11 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
-		
-		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
-				 field=",".join(targets),
-				 gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'])
 		if params['apply_target']['flag_target'] == True:
 			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
 				mode='tfcrop',
 				field=",".join(targets),
-				datacolumn='corrected',
+				datacolumn='data',
 				combinescans=False,
 				winsize=3,
 				timecutoff=4.5,
@@ -2222,6 +2221,14 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				action='apply',
 				display='',
 				flagbackup=False)
+		
+		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
+				 field=",".join(targets),
+				 gaintable=gaintables['gaintable'],
+				 gainfield=gaintables['gainfield'],
+				 interp=gaintables['interp'],
+				 spwmap=gaintables['spwmap'],
+				 parang=gaintables['parang'])
 
 		if params['init_flag']['manual_flagging']['run'] == True:
 			flagdata(vis=msfile,
@@ -2234,7 +2241,16 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 		else:
 			fd = targets[0]
 		
-		statwt(vis='%s/%s_presplit.ms'%(cwd,i),minsamp=10)
+		if params['apply_target']['statistical_reweigh']['run'] == True: 
+			statwt(vis='%s/%s_presplit.ms'%(cwd,i), minsamp=params['apply_target']["statistical_reweigh"]["minsamp"])
+			tb = casatools.table()
+			tb.open('%s/%s_presplit.ms'%(cwd,i)) 
+			weight=tb.getcol('WEIGHT')
+			tb.close()
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+		         mode='clip',
+				 datacolumn='WEIGHT',
+				 clipminmax=[0,np.median(weight)+6*np.std(weight)])
 		split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  field=fd,
 			  keepmms=False,

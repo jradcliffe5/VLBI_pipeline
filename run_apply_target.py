@@ -81,10 +81,6 @@ for i in params['global']['targets']:
 	
 	if params['apply_target']["statistical_reweigh"]['run'] == True:
 		statwt(vis='%s/%s_calibrated.ms'%(cwd,i),
-			   timebin=params['apply_target']["statistical_reweigh"]["timebin"],
-               chanbin=params['apply_target']["statistical_reweigh"]["chanbin"],
-               statalg=params['apply_target']["statistical_reweigh"]["statalg"],
-               fitspw=params['apply_target']["statistical_reweigh"]["fitspw"],
 			   minsamp=params['apply_target']["statistical_reweigh"]["minsamp"],
                datacolumn='data')
 		tb = casatools.table()
