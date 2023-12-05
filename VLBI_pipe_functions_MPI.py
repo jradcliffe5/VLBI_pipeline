@@ -1630,6 +1630,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				plt.close()
 				plt.cla()
 				plt.clf()
+				plt.close(fig)
+				plt.close('all')
 		elif xaxis == 'freq':
 			for a in range(len(ant)):
 				fig = plt.figure(figsize=(9,9))
@@ -1731,6 +1733,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				plt.close()
 				plt.cla()
 				plt.clf()
+				plt.close(fig)
+				plt.close('all')
 		else:
 			casalog.post(priority='SEVERE',origin=func_name,message='Table cannot be plotted by this function')
 			sys.exit()
