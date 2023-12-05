@@ -60,21 +60,21 @@ else:
 
 for i in params['global']['targets']:
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
-	
-	flagdata(vis=msfile,
-			mode='tfcrop',
-			field=i,
-			datacolumn='corrected',
-			combinescans=False,
-			winsize=3,
-			timecutoff=4.5,
-			freqcutoff=4.5,
-			maxnpieces=7,
-			halfwin=1,
-			extendflags=False,
-			action='apply',
-			display='',
-			flagbackup=False)
+	if params['apply_target']['flag_target'] == True:
+		flagdata(vis=msfile,
+				mode='tfcrop',
+				field=i,
+				datacolumn='corrected',
+				combinescans=False,
+				winsize=3,
+				timecutoff=4.5,
+				freqcutoff=4.5,
+				maxnpieces=7,
+				halfwin=1,
+				extendflags=False,
+				action='apply',
+				display='',
+				flagbackup=False)
 	split(vis='%s%s'%(cwd,msfile),
 		  field=i,
 		  outputvis='%s/%s_calibrated.ms'%(cwd,i))
