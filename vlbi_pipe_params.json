@@ -24,6 +24,7 @@
         "fringe_finders"    : ["4C39.25"],
         "phase_calibrators" : ["J1011+0106"],
         "targets"           : ["COSMOS-POINT"],
+        "use_initial_model" : {},
         "do_parang"         :  true
     },
     "prepare_data":{
@@ -48,6 +49,7 @@
         "scan_gap"          :  15.0,
         "remove_idi"        :  true,
         "make_backup"       :  true,
+        "restart_pipeline"  :  false,
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
