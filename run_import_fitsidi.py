@@ -102,7 +102,7 @@ if params['global']['use_initial_model'] != {}:
 		ft(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 			field=i,
 			nterms=len(params['global']['use_initial_model'][i]),
-			model=params['global']['use_initial_model'][i])
+			model=params['global']['use_initial_model'][i],usescratch=True)
 
 
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
