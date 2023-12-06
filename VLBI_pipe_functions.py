@@ -2195,6 +2195,11 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
+		
+		if params['init_flag']['manual_flagging']['run'] == True:
+			flagdata(vis=msfile,
+					 mode='list',
+					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
@@ -2233,11 +2238,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
-
-		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis=msfile,
-					 mode='list',
-					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 
 		rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 		if len(targets)> 1:
