@@ -2194,11 +2194,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
-		
-		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
-					 mode='list',
-					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
@@ -2214,7 +2209,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
-<<<<<<< HEAD
 		if params['apply_target']['flag_target'] == True:
 			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
 				mode='tfcrop',
@@ -2230,8 +2224,11 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				action='apply',
 				display='',
 				flagbackup=False)
-=======
->>>>>>> parent of 2704681 (added casa based flagging for apply_to_all)
+			
+		if params['init_flag']['manual_flagging']['run'] == True:
+			flagdata(vis=vis='%s/%s_presplit.ms'%(cwd,i),
+					 mode='list',
+					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		
 		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 				 field=",".join(targets),
@@ -2240,14 +2237,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
-<<<<<<< HEAD
-=======
-
-		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis=msfile,
-					 mode='list',
-					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
->>>>>>> parent of 2704681 (added casa based flagging for apply_to_all)
 
 		rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 		if len(targets)> 1:
