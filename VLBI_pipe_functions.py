@@ -2226,7 +2226,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				flagbackup=False)
 			
 		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis=vis='%s/%s_presplit.ms'%(cwd,i),
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
 					 mode='list',
 					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		
