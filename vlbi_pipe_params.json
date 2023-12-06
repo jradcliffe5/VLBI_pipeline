@@ -1,8 +1,8 @@
 {
     "global":{
-        "project_code"      :  "bd228a",
-        "cwd"               :  "/Users/jackradcliffe/Documents/BD228A",
-        "vlbipipe_path"     :  "vlbi_pipeline",
+        "project_code"      :  "bd228l",
+        "cwd"               :  "/Users/jackradcliffe/Documents/BD228L",
+        "vlbipipe_path"     :  "VLBI_pipeline",
         "job_manager"       :  "bash",
         "HPC_project_code"  :  "",
         "default_partition" :  "Main",
@@ -17,10 +17,10 @@
         "casapath"          :  "casa --nologger --log2term -c",
         "singularity"       :  false,
         "AOflag_command"    : ["/Users/jackradcliffe/Documents/anaconda3/envs/aoflag/bin/aoflagger"],
-        "wsclean_command"   : ["/Users/jackradcliffe/Documents/anaconda3/envs/wsclean/bin/wsclean"],
-        "fitsidi_files"     :  ["auto"],
-        "fitsidi_path"      :  "/Users/jackradcliffe/Documents/BD228A/raw_UV",
-        "refant"            : ["LA","OV","MK","HN","NL","OV","SC","KP","FD"],
+        "wsclean_command"   : ["/usr/bin/wsclean"],
+        "fitsidi_files"     : ["VLBA_BD228L_bd228lpass1_BIN0_SRC000_0_210216T230509.idifits"],
+        "fitsidi_path"      :  "raw_UV",
+        "refant"            : ["PT","BR","HN","KP","LA","MK","NL","OV","SC"],
         "fringe_finders"    : ["4C39.25"],
         "phase_calibrators" : ["J1011+0106"],
         "targets"           : ["COSMOS-POINT"],
@@ -78,11 +78,11 @@
         "cal_weights"       :  true,
         "accor_options":{
             "solint"        :  "inf",
-            "smooth"        :  true,
+            "smooth"        :  false,
             "smoothtime"    : 180.0,
             "interp"        : "linear"
         },
-        "do_observatory_flg": false,
+        "do_observatory_flg": true,
         "make_gaincurve"    : true,
         "tsys_options":{
             "interp_flags"  :  true,
@@ -101,16 +101,21 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
-            "mem"           :    -1,
+            "mem"           :   -1,
             "nodetype"      :  "default"
         }
     },
     "init_flag":{
         "run_AOflag"        : false,
+<<<<<<< HEAD
         "AO_flag_strategy"  :  ["vlbi_pipeline/aoflag_strategies/faint_sources.rfis"],
         "AO_flag_fields"    : [["COSMOS-POINT"]],
+=======
+        "AO_flag_strategy"  :  ["VLBI_pipeline/aoflag_strategies/4C.rfis","VLBI_pipeline/aoflag_strategies/faint_sources.rfis"],
+        "AO_flag_fields"    : [["4C39.25","J1011+0106"],["COSMOS-POINT"]],
+>>>>>>> parent of 2704681 (added casa based flagging for apply_to_all)
         "flag_edge_chans":{
-            "run"           :  true,
+            "run"           :  false,
             "edge_chan_flag":  "5%"
         },
         "flag_autocorrs"    :  false,
@@ -134,7 +139,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["J1011+0106"],
+        "select_calibrators": ["default"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -142,15 +147,15 @@
             "nodes"         :   -1,
             "cpus"          :   -1,
             "mpiprocs"      :   -1,
-            "mem"           : -1,
+            "mem"           :   -1,
             "nodetype"      :  "default"
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["4C39.25"]],
+        "select_calibrators": [["default"]],
         "time_range"        : [""],
         "sol_interval"      : ["inf"],
-        "min_snr"           : [50.0,50.0],
+        "min_snr"           : [5.0,5.0],
         "fringe_niter"      :  300,
         "do_disp_delays"    :  true,
         "extensive_search"  :  false,
@@ -171,10 +176,10 @@
     },
     "bandpass_cal":{
         "same_as_sbd_cal"   :  true,
-        "select_calibrators": [["default"]], 
+        "select_calibrators": [["4C39.25"]], 
         "time_range"        : [""],
+        "bpass_combine"     : "spw",
         "sol_interval"      :  "inf",
-        "bpass_combine"     :  "scan",
         "min_snr"           :  3.0,
         "hpc_options":{
             "partition"     :  "default",
@@ -182,18 +187,18 @@
             "nodes"         :  -1,
             "cpus"          :  -1,
             "mpiprocs"      :  -1,
-            "mem"           :    -1,
+            "mem"           :  -1,
             "nodetype"      :  "default"
         }
     },
     "phase_referencing":{        
         "select_calibrators":  [["J1011+0106"]],
-        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap", "f",   "p"]],  
+        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap", "f",   "p"]],   
         "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","inf","1min"]],
         "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw","",    ""]],
         "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true, true]],
-        "pass_ants"         : [[],[]],
-        "do_disp_delays"    : false,
+        "pass_ants"         : [[]],
+        "do_disp_delays"    : true,
         "cal_weights"       : true,
         "fringe_niter"      :  300,
         "min_snr"           :  5.0,
@@ -212,13 +217,11 @@
         }
     },
     "apply_target":{
-        "flag_target": true,
         "statistical_reweigh":{
-                "run": true,
-                "timebin"   :  "1s",
+                "run": false,
+                "timebin"   :  "10s",
                 "chanbin"   :  "spw",
                 "statalg"   :  "classic",
-                "minsamp"   : 10,
                 "fitspw"    :  ""
         },
         "weigh_by_ants":{
@@ -237,8 +240,8 @@
         }
     },
     "apply_to_all":{  
-        "target_path"       : "/Users/jackradcliffe/Documents/BD228A/targets",
-        "target_outpath"    : "/Users/jackradcliffe/Documents/BD228A/targets_out",
+        "target_path"       : "/Users/jackradcliffe/Documents/BD228L/target_files",
+        "target_outpath"    : "/Users/jackradcliffe/Documents/BD228L/calibrated",
         "tar_output"        : true,
         "tar_ms_only"       : true,
         "mppc_parallel"     : false,
