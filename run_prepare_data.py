@@ -62,6 +62,7 @@ casalog.post(origin=filename,message='Fitsidifiles to be located in %s'%params['
 if params['global']['fitsidi_files'] == ["auto"]:
 	idifiles = find_fitsidi(idifilepath=params['global']['fitsidi_path'],\
 		         cwd=params['global']['cwd'])
+	idifiles= natural_sort(idifiles)
 else:
 	casalog.post(origin=filename,message='Using idifiles specified in parameter file')
 	casalog.post(origin=filename,message='Checking whether specified idifiles exist')
