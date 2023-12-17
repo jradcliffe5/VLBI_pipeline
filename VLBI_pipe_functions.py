@@ -1209,14 +1209,10 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	FIELD_ID = np.empty(tbnrows)
 	SPECTRAL_WINDOW_ID = np.empty(tbnrows)
 	ANTENNA1 = np.empty(tbnrows)
-	ANTENNA2 = np.zeros(tbnrows)
-	INTERVAL = np.zeros(tbnrows)
-	OBSERVATION_ID = np.zeros(tbnrows)
 	CPARAM = np.empty((npol,nchan,tbnrows),dtype=complex)
 	PARAMERR = np.ones((npol,nchan,tbnrows))
 	FLAG = np.zeros((npol,nchan,tbnrows))
 	SNR =  np.ones((npol,nchan,tbnrows))
-	WEIGHT = np.empty(tbnrows)
 
 	runc=0
 	tb.open(msfile)
@@ -1291,7 +1287,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
-						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s, field %s, spw %s, pol %s'%(i,calibrators[h],j,k))
+						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s (%s), field %s (%s), spw %s, pol %s'%(i,msinfo['ANTENNAS']['IDtoant'][str(i)],calibrators[h],msinfo['FIELD']['IDtofield'][str(calibrators[h])],j,k))
 						autocorrs[k,:] = 1 + 0j
 						FLAG[k,:,runc] = 1
 				TIME[runc] = t_cal

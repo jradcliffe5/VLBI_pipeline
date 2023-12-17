@@ -49,7 +49,10 @@ for i in gaintables['gaintable']:
 '''
 gaintab=gaintables['gaintable']
 
-flagmanager(vis=msfile,mode='save',versionname='temp_bpass')
+if steps_run['bandpass_cal'] == 1:
+	flagmanager(vis=msfile,mode='restore',versionname='vp_bpass_cal')
+else:
+	flagmanager(vis=msfile,mode='save',versionname='vp_bpass_cal')
 applycal(vis=msfile,
 		 field=",".join(params['global']["fringe_finders"])+','+",".join(params['global']['phase_calibrators']),
 	     gaintable=gaintab,
@@ -136,8 +139,6 @@ if casa6 == True:
 	for i in ['amp','phase']:
 		for j in ['freq','time']:
 			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
-
-flagmanager(vis=msfile,mode='restore',versionname='temp_bpass')
 
 gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
 gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])

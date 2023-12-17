@@ -26,7 +26,7 @@ gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['import_fitsidi'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 rmdirs(['%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])])
-if params['import_fitsidi']['restart_pipeline'] == False:
+if os.path.exists("%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global']['project_code'])) == False:
 	casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 	## Set location of fitsidifiles
 	if params['global']['fitsidi_path'] == "":

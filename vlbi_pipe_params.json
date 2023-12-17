@@ -49,7 +49,6 @@
         "scan_gap"          :  15.0,
         "remove_idi"        :  true,
         "make_backup"       :  true,
-        "restart_pipeline"  :  false,
         "hpc_options":{
             "partition"     :  "default",
             "walltime"      :  "default",
@@ -107,13 +106,8 @@
     },
     "init_flag":{
         "run_AOflag"        : false,
-<<<<<<< HEAD
         "AO_flag_strategy"  :  ["vlbi_pipeline/aoflag_strategies/faint_sources.rfis"],
         "AO_flag_fields"    : [["COSMOS-POINT"]],
-=======
-        "AO_flag_strategy"  :  ["VLBI_pipeline/aoflag_strategies/4C.rfis","VLBI_pipeline/aoflag_strategies/faint_sources.rfis"],
-        "AO_flag_fields"    : [["4C39.25","J1011+0106"],["COSMOS-POINT"]],
->>>>>>> parent of 2704681 (added casa based flagging for apply_to_all)
         "flag_edge_chans":{
             "run"           :  false,
             "edge_chan_flag":  "5%"
@@ -178,7 +172,7 @@
         "same_as_sbd_cal"   :  true,
         "select_calibrators": [["4C39.25"]], 
         "time_range"        : [""],
-        "bpass_combine"     : "spw",
+        "bpass_combine"     : "scan",
         "sol_interval"      :  "inf",
         "min_snr"           :  3.0,
         "hpc_options":{
@@ -218,11 +212,8 @@
     },
     "apply_target":{
         "statistical_reweigh":{
-                "run": false,
-                "timebin"   :  "10s",
-                "chanbin"   :  "spw",
-                "statalg"   :  "classic",
-                "fitspw"    :  ""
+                "run": true,
+                "minsamp"   : 10
         },
         "weigh_by_ants":{
                 "run": false
