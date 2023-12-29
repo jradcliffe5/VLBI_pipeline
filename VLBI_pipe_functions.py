@@ -2205,7 +2205,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				action='apply',
 				display='',
 				flagbackup=False)
-		os.system('cp -r %s/%s_presplit.ms %s/%s_presplit_beforepbcor.ms'%(cwd,i,cwd,i))
+		#os.system('cp -r %s/%s_presplit.ms %s/%s_presplit_beforepbcor.ms'%(cwd,i,cwd,i))
 
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)

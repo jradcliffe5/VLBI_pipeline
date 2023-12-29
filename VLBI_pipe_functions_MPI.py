@@ -4,7 +4,6 @@ from collections import OrderedDict
 ## Numerical routines
 import numpy as np
 ## Plotting routines
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib import gridspec
@@ -12,7 +11,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.lines as mlines
 ## Sci-py dependencies
 from scipy.interpolate import interp1d
-from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
@@ -465,19 +463,19 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
-		if (params['global']['job_manager'] == 'bash'):
-			commands.append('for a in \"${array[@]}\"')
-			commands.append('do')
-			variable="$a"
-		commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
-		if params['init_flag']['run_AOflag'] == True:
+		if params["init_flag"]["run_AOflag"] == True:
+			if (params['global']['job_manager'] == 'bash'):
+				commands.append('for a in \"${array[@]}\"')
+				commands.append('do')
+				variable="$a"
+			commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
 			for i in params['global']['AOflag_command']:
 				commands.append(i)
 			tar_idx = find_nestlist(params['init_flag']['AO_flag_fields'], params['global']['targets'][0])[0]
 			commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'][tar_idx])
-		if (params['global']['job_manager'] == 'bash'):
-			commands.append('done')
-			variable=""
+			if (params['global']['job_manager'] == 'bash'):
+				commands.append('done')
+				variable=""
 		if casa6 == False:
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
@@ -1210,14 +1208,10 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	FIELD_ID = np.empty(tbnrows)
 	SPECTRAL_WINDOW_ID = np.empty(tbnrows)
 	ANTENNA1 = np.empty(tbnrows)
-	ANTENNA2 = np.zeros(tbnrows)
-	INTERVAL = np.zeros(tbnrows)
-	OBSERVATION_ID = np.zeros(tbnrows)
 	CPARAM = np.empty((npol,nchan,tbnrows),dtype=complex)
 	PARAMERR = np.ones((npol,nchan,tbnrows))
 	FLAG = np.zeros((npol,nchan,tbnrows))
 	SNR =  np.ones((npol,nchan,tbnrows))
-	WEIGHT = np.empty(tbnrows)
 
 	runc=0
 	tb.open(msfile)
@@ -1292,7 +1286,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
-						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s, field %s, spw %s, pol %s'%(i,calibrators[h],j,k))
+						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s (%s), field %s (%s), spw %s, pol %s'%(i,msinfo['ANTENNAS']['IDtoant'][str(i)],calibrators[h],msinfo['FIELD']['IDtofield'][str(calibrators[h])],j,k))
 						autocorrs[k,:] = 1 + 0j
 						FLAG[k,:,runc] = 1
 				TIME[runc] = t_cal
@@ -2196,6 +2190,23 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
 
+		if params['apply_target']['flag_target'] == True:
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+				mode='tfcrop',
+				field=",".join(targets),
+				datacolumn='corrected',
+				combinescans=False,
+				winsize=3,
+				timecutoff=4.5,
+				freqcutoff=4.5,
+				maxnpieces=7,
+				halfwin=1,
+				extendflags=False,
+				action='apply',
+				display='',
+				flagbackup=False)
+		#os.system('cp -r %s/%s_presplit.ms %s/%s_presplit_beforepbcor.ms'%(cwd,i,cwd,i))
+
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 		msinfo_target = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],i))
@@ -2210,21 +2221,11 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
-		if params['apply_target']['flag_target'] == True:
+			
+		if params['init_flag']['manual_flagging']['run'] == True:
 			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
-				mode='tfcrop',
-				field=",".join(targets),
-				datacolumn='data',
-				combinescans=False,
-				winsize=3,
-				timecutoff=4.5,
-				freqcutoff=4.5,
-				maxnpieces=7,
-				halfwin=1,
-				extendflags=False,
-				action='apply',
-				display='',
-				flagbackup=False)
+					 mode='list',
+					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		
 		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 				 field=",".join(targets),
@@ -2233,11 +2234,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 interp=gaintables['interp'],
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
-
-		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis=msfile,
-					 mode='list',
-					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 
 		rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 		if len(targets)> 1:
