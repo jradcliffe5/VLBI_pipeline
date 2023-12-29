@@ -463,18 +463,19 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
-		if (params['global']['job_manager'] == 'bash'):
-			commands.append('for a in \"${array[@]}\"')
-			commands.append('do')
-			variable="$a"
-		commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
-		for i in params['global']['AOflag_command']:
-			commands.append(i)
-		tar_idx = find_nestlist(params['init_flag']['AO_flag_fields'], params['global']['targets'][0])[0]
-		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'][tar_idx])
-		if (params['global']['job_manager'] == 'bash'):
-			commands.append('done')
-			variable=""
+		if params["init_flag"]["run_AOflag"] == True:
+			if (params['global']['job_manager'] == 'bash'):
+				commands.append('for a in \"${array[@]}\"')
+				commands.append('do')
+				variable="$a"
+			commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
+			for i in params['global']['AOflag_command']:
+				commands.append(i)
+			tar_idx = find_nestlist(params['init_flag']['AO_flag_fields'], params['global']['targets'][0])[0]
+			commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'][tar_idx])
+			if (params['global']['job_manager'] == 'bash'):
+				commands.append('done')
+				variable=""
 		if casa6 == False:
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
