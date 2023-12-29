@@ -4,7 +4,6 @@ from collections import OrderedDict
 ## Numerical routines
 import numpy as np
 ## Plotting routines
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib import gridspec
@@ -12,7 +11,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.lines as mlines
 ## Sci-py dependencies
 from scipy.interpolate import interp1d
-from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
@@ -2191,6 +2189,23 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
 
+		if params['apply_target']['flag_target'] == True:
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+				mode='tfcrop',
+				field=",".join(targets),
+				datacolumn='corrected',
+				combinescans=False,
+				winsize=3,
+				timecutoff=4.5,
+				freqcutoff=4.5,
+				maxnpieces=7,
+				halfwin=1,
+				extendflags=False,
+				action='apply',
+				display='',
+				flagbackup=False)
+		os.system('cp -r %s/%s_presplit.ms %s/%s_presplit_beforepbcor.ms'%(cwd,i,cwd,i))
+
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
 		msinfo_target = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],i))
@@ -2205,21 +2220,6 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
-		if params['apply_target']['flag_target'] == True:
-			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
-				mode='tfcrop',
-				field=",".join(targets),
-				datacolumn='data',
-				combinescans=False,
-				winsize=3,
-				timecutoff=4.5,
-				freqcutoff=4.5,
-				maxnpieces=7,
-				halfwin=1,
-				extendflags=False,
-				action='apply',
-				display='',
-				flagbackup=False)
 			
 		if params['init_flag']['manual_flagging']['run'] == True:
 			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),

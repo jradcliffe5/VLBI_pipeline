@@ -76,8 +76,8 @@
         "correlator"        :  "default",
         "cal_weights"       :  true,
         "accor_options":{
-            "solint"        :  "inf",
-            "smooth"        :  false,
+            "solint"        :  "30s",
+            "smooth"        :  true,
             "smoothtime"    : 180.0,
             "interp"        : "linear"
         },
@@ -133,7 +133,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["default"],
+        "select_calibrators": ["4C39.25","J1011+0106"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -146,9 +146,9 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"]],
-        "time_range"        : [""],
-        "sol_interval"      : ["inf"],
+        "select_calibrators": [["default"],["J1011+0106"]],
+        "time_range"        : ["","2021/01/14/12:07:04.0~12:07:52.0"],
+        "sol_interval"      : ["60s","inf"],
         "min_snr"           : [5.0,5.0],
         "fringe_niter"      :  300,
         "do_disp_delays"    :  true,
@@ -211,6 +211,7 @@
         }
     },
     "apply_target":{
+        "flag_target": true,
         "statistical_reweigh":{
                 "run": true,
                 "minsamp"   : 10

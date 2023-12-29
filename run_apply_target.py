@@ -45,7 +45,7 @@ else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_apply_target')
 '''
 ## Apply to standard files
-applycal(vis='%s/%s'%(cwd,msfile),
+applycal(vis='%s%s'%(cwd,msfile),
 	     field=",".join(params['global']['targets']),
 	     gaintable=gaintables['gaintable'],
 		 gainfield=gaintables['gainfield'],
@@ -61,26 +61,27 @@ else:
 for i in params['global']['targets']:
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
 	
-	flagdata(vis=msfile,
-			mode='tfcrop',
-			field=i,
-			datacolumn='corrected',
-			combinescans=False,
-			winsize=3,
-			timecutoff=4.5,
-			freqcutoff=4.5,
-			maxnpieces=7,
-			halfwin=1,
-			extendflags=False,
-			action='apply',
-			display='',
-			flagbackup=False)
+	if params['apply_target']["flag_target"] == True:
+		flagdata(vis='%s%s'%(cwd,msfile),
+				mode='tfcrop',
+				field=i,
+				datacolumn='corrected',
+				combinescans=False,
+				winsize=3,
+				timecutoff=4.5,
+				freqcutoff=4.5,
+				maxnpieces=7,
+				halfwin=1,
+				extendflags=False,
+				action='apply',
+				display='',
+			    flagbackup=False)
 	split(vis='%s%s'%(cwd,msfile),
 		  field=i,
 		  outputvis='%s/%s_calibrated.ms'%(cwd,i))
 	
 	if params['apply_target']["statistical_reweigh"]['run'] == True:
-		statwt(vis='%s/%s_calibrated.ms'%(cwd,i),
+		statwt(vis='%s%s_calibrated.ms'%(cwd,i),
 			   minsamp=params['apply_target']["statistical_reweigh"]["minsamp"],
                datacolumn='data')
 		tb = casatools.table()
