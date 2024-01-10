@@ -51,6 +51,12 @@ cal_type = params['phase_referencing']["cal_type"]
 if steps_run['phase_referencing'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_phase_referencing')
 	clearcal(vis=msfile)
+	if params['global']['use_initial_model'] != {}:
+		for i in params['global']['use_initial_model'].keys():
+			ft(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
+				field=i,
+				nterms=len(params['global']['use_initial_model'][i]),
+				model=params['global']['use_initial_model'][i],usescratch=True)
 else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_phase_referencing')
 
