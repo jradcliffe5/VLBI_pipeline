@@ -1816,6 +1816,7 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			check_arr = []
 			files = []
 			fl = [f for f in os.listdir('%s'%target_dir) if os.path.isfile(f)]
+			print(fl)
 			for i in fl:
 				files.append(i)
 				check_arr.append((project_code in i)&(i.endswith('.idifits')))
