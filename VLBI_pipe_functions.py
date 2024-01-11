@@ -1786,11 +1786,10 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 		if telescope == 'EVN':
 			check_arr = []
 			files = []
-
-			fl = [f for f in os.listdir('%s'%target_dir) if os.path.isfile(f)]
-			for i in fl:
-				files.append(i)
-				check_arr.append(i.startswith(project_code)&('IDI'in i))
+			for i in os.listdir('%s'%target_dir):
+				if os.path.isfile(i) == True:
+					files.append(i)
+					check_arr.append(i.startswith(project_code)&('IDI'in i))
 			if np.all(check_arr) == True:
 				tar=False
 				unique_files = np.unique([i.split('.IDI')[0] for i in files])
@@ -1815,11 +1814,10 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 		if telescope == 'VLBA':
 			check_arr = []
 			files = []
-			fl = [f for f in os.listdir('%s'%target_dir) if os.path.isfile(f)]
-			print(fl)
-			for i in fl:
-				files.append(i)
-				check_arr.append((project_code in i)&(i.endswith('.idifits')))
+			for i in os.listdir('%s'%target_dir):
+				if os.path.isfile(i) == True:
+					files.append(i)
+					check_arr.append((project_code in i)&(i.endswith('.idifits')))
 			if np.all(check_arr) == True:
 				tar=False
 				unique_files = np.unique([i.split('.idifits')[0] for i in files])
