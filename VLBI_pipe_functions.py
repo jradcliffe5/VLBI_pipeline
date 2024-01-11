@@ -1786,7 +1786,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 		if telescope == 'EVN':
 			check_arr = []
 			files = []
-			for i in os.listdir('%s'%target_dir):
+
+			fl = [f for f in os.listdir('%s'%target_dir) if os.path.isfile(f)]
+			for i in fl:
 				files.append(i)
 				check_arr.append(i.startswith(project_code)&('IDI'in i))
 			if np.all(check_arr) == True:
@@ -1813,7 +1815,8 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 		if telescope == 'VLBA':
 			check_arr = []
 			files = []
-			for i in os.listdir('%s'%target_dir):
+			fl = [f for f in os.listdir('%s'%target_dir) if os.path.isfile(f)]
+			for i in fl:
 				files.append(i)
 				check_arr.append((project_code in i)&(i.endswith('.idifits')))
 			if np.all(check_arr) == True:
