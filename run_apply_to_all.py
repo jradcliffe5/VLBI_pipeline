@@ -91,6 +91,7 @@ if params['global']['job_manager'] == 'bash':
 				else:
 					targets = []
 				apply_tar_output(prefix=prefix[j],params=params,targets=targets)
+				rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix[j])])
 
 	if parallel == True:
 		resultList = client.get_command_response(cmd,block=True)
@@ -115,6 +116,7 @@ else:
 			apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=1)
 			targets = []
 		apply_tar_output(prefix=prefix,params=params,targets=targets)
+		rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
 	
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 steps_run['apply_to_all'] = 1

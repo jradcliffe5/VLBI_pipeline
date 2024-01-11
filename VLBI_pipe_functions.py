@@ -2292,7 +2292,6 @@ def image_targets(prefix,params,parallel):
 			   noisethreshold=4.0,
 			   sidelobethreshold=1.0,
 			   parallel=parallel)
-	rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
 	return targets
 
 def apply_tar_output(prefix,params,targets):
