@@ -362,7 +362,7 @@ def append_tsys(antabfile, idifiles):
         hdulist = pyfits.open(idifiles[0])
         hdu = hdulist['SYSTEM_TEMPERATURE']
         print('SYSTEM_TEMPERATURE table already present in FITS-IDI file')
-        sys.exit(1)
+        return
     except KeyError:
         pass
 
@@ -488,7 +488,7 @@ def append_gc(antabfile, idifile):
         hdulist = pyfits.open(idifile)
         hdu = hdulist['GAIN_CURVE']
         print('GAIN_CURVE table already present in FITS-IDI file')
-        sys.exit(1)
+        return
     except KeyError:
         pass
 

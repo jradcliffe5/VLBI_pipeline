@@ -1787,8 +1787,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			check_arr = []
 			files = []
 			for i in os.listdir('%s'%target_dir):
-				files.append(i)
-				check_arr.append(i.startswith(project_code)&('IDI'in i))
+				if os.path.isfile('%s%s'%(target_dir,i)) == True:
+					files.append(i)
+					check_arr.append(i.startswith(project_code)&('IDI'in i))
 			if np.all(check_arr) == True:
 				tar=False
 				unique_files = np.unique([i.split('.IDI')[0] for i in files])
@@ -1798,8 +1799,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 				check_arr = []
 				files = []
 				for i in os.listdir('%s'%target_dir):
-					files.append(i)
-					check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
+					if os.path.isfile('%s%s'%(target_dir,i)) == True:
+						files.append(i)
+						check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
 					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
@@ -1814,8 +1816,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			check_arr = []
 			files = []
 			for i in os.listdir('%s'%target_dir):
-				files.append(i)
-				check_arr.append((project_code in i)&(i.endswith('.idifits')))
+				if os.path.isfile('%s%s'%(target_dir,i)) == True:
+					files.append(i)
+					check_arr.append((project_code in i)&(i.endswith('.idifits')))
 			if np.all(check_arr) == True:
 				tar=False
 				unique_files = np.unique([i.split('.idifits')[0] for i in files])
@@ -1825,8 +1828,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 				check_arr = []
 				files = []
 				for i in os.listdir('%s'%target_dir):
-					files.append(i)
-					check_arr.append((project_code in i)&(i.endswith('.tar.gz')))
+					if os.path.isfile('%s%s'%(target_dir,i)) == True:
+						files.append(i)
+						check_arr.append((project_code in i)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
 					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
@@ -2292,7 +2296,6 @@ def image_targets(prefix,params,parallel):
 			   noisethreshold=4.0,
 			   sidelobethreshold=1.0,
 			   parallel=parallel)
-	rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
 	return targets
 
 def apply_tar_output(prefix,params,targets):
