@@ -71,6 +71,7 @@ if os.path.exists("%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global'
 		for j,i in enumerate(idifiles):
 			idifiles[j] = '%s/%s'%(params['global']['cwd'],i.split(params['global']['fitsidi_path']+'/')[1])
 
+	idifiles= natural_sort(idifiles)
 	casalog.post(origin=filename,message='Importing fits into measurement set: %s.ms'%(params['global']['project_code']),priority='INFO')
 	importfitsidi(fitsidifile=idifiles,\
 				vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
