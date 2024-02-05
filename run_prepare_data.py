@@ -90,8 +90,8 @@ if params['global']['fitsidi_path'] != params['global']['cwd']:
 
 telescop = []
 for i in idifiles:
-	hdu = fits.open(i)
 	telescop.append(hdu['ARRAY_GEOMETRY'].header['ARRNAM'])
+	hdu.close()
 
 if telescop.count(telescop[0]) == len(telescop):
 	telescop = telescop[0]
@@ -119,29 +119,37 @@ if telescop == 'EVN':
 		else:
 			antabfile='%s'%params['prepare_data']['antab']
 
-casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
-for i in idifiles:
+
+ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',remove_ext=inputs['prepare_data']['replace_antab'])
+if (inputs['prepare_data']['replace_antab'] == True)|(ts_fits==False):
+	casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
+	for i in idifiles:
+		if parallel == True:
+			cmd1 = "import inspect, os, sys; sys.path.append('%s'); from casavlbitools.fitsidi import append_tsys; append_tsys(antabfile='%s', idifiles='%s')"%(mpipath,antabfile,i)
+			cmdId = client.push_command_request(cmd1,block=False)
+			cmd.append(cmdId[0])
+		else:
+			casalog.post(origin=filename,message='Appending to %s'%i)
+			append_tsys(antabfile=antabfile, idifiles=i)
 	if parallel == True:
-		cmd1 = "import inspect, os, sys; sys.path.append('%s'); from casavlbitools.fitsidi import append_tsys; append_tsys(antabfile='%s', idifiles='%s')"%(mpipath,antabfile,i)
-		cmdId = client.push_command_request(cmd1,block=False)
-		cmd.append(cmdId[0])
-	else:
-		casalog.post(origin=filename,message='Appending to %s'%i)
-		append_tsys(antabfile=antabfile, idifiles=i)
-if parallel == True:
-	resultList = client.get_command_response(cmd,block=True)
+		resultList = client.get_command_response(cmd,block=True)
+else:
+	casalog.post(origin=filename,message='System temperature information already exists in the idifile',priority='INFO')
 
 ### Convert gaincurve
-rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
-casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
-if telescop == 'EVN':
-	convert_gaincurve(antab=antabfile, gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
-elif telescop == 'VLBA':
-	convert_gaincurve(antab='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path']), gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
+gc_fits = check_fits_ext(idifiles=idifiles,ext='GAIN_CURVE',remove_ext=inputs['prepare_data']['replace_antab'])
+if (inputs['prepare_data']['replace_antab'] == True)|(gc_fits==False):
+	rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
+	casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
+	if telescop == 'EVN':
+		convert_gaincurve(antab=antabfile, gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
+	elif telescop == 'VLBA':
+		convert_gaincurve(antab='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path']), gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
+	else:
+		casalog.post(origin=filename,message='Unknown array!'%params['global']['project_code'],priority='INFO')
+		sys.exit()
 else:
-	casalog.post(origin=filename,message='Unknown array!'%params['global']['project_code'],priority='INFO')
-	sys.exit()
-
+	casalog.post(origin=filename,message='Gain curve information already exists in the idifile',priority='INFO')
 #for i in idifiles:
 #	append_gc(antabfile=antabfile, idifile=i)
 

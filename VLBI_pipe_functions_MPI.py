@@ -34,6 +34,10 @@ except:
 	from partition_cli import partition_cli as partition
 	from tclean_cli import tclean_cli as tclean
 	casa6=False
+try: 
+	from astropy.io import fits
+except:
+	import pyfits as fits
 
 class NpEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -2645,3 +2649,22 @@ def filter_smooth_delay(caltable,nsig=[2.5,2.]):
 	tb.putcol('FPARAM',gain_edit)
 	tb.putcol('FLAG',flg)
 	tb.close()
+
+def check_fits_ext(idifiles=[],ext='',del_ext=False):
+	tr = []
+	for i in idifiles:
+		hdu = fits.open(i)
+		try:
+			hdu[ext]
+			tr.append(True)
+			if del_ext==True:
+				casalog.post(message='Removing %s info from %s'%(ext,i),priority='INFO')
+				del hdu[ext]
+				hdu.writeto(i,overwrite=True)
+		except:
+			tr.append(False)
+		hdu.close()
+	if True in tr:
+		return True
+	else:
+		return False
