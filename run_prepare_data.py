@@ -90,6 +90,7 @@ if params['global']['fitsidi_path'] != params['global']['cwd']:
 
 telescop = []
 for i in idifiles:
+	hdu = fits.open(i)
 	telescop.append(hdu['ARRAY_GEOMETRY'].header['ARRNAM'])
 	hdu.close()
 
@@ -150,6 +151,7 @@ if (inputs['prepare_data']['replace_antab'] == True)|(gc_fits==False):
 		sys.exit()
 else:
 	casalog.post(origin=filename,message='Gain curve information already exists in the idifile',priority='INFO')
+
 #for i in idifiles:
 #	append_gc(antabfile=antabfile, idifile=i)
 
