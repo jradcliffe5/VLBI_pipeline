@@ -120,7 +120,7 @@ if telescop == 'EVN':
 		else:
 			antabfile='%s'%params['prepare_data']['antab']
 
-
+print(idifiles)
 ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',remove_ext=inputs['prepare_data']['replace_antab'])
 if (inputs['prepare_data']['replace_antab'] == True)|(ts_fits==False):
 	casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
