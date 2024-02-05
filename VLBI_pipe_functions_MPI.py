@@ -2123,6 +2123,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 			files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 		
 		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+		check_fits_ext(idifiles=files,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
+		check_fits_ext(idifiles=files,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
 		importfitsidi(fitsidifile=files,
 					  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 					  constobsid=params['import_fitsidi']["const_obs_id"],
