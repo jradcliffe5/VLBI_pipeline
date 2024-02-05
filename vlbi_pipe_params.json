@@ -28,7 +28,7 @@
         "do_parang"         :  true
     },
     "prepare_data":{
-        "replace_antab"      : false,
+        "replace_antab"     : false,
         "antab_file"        :  "auto",
         "flag_file"         :  "auto",
         "gaincurve":{

@@ -45,7 +45,7 @@ casalog.post("")
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file_path'])
-print(params['prepare_data']['prepare_antab'])
+print(params['prepare_data']['replace_antab'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 
@@ -123,7 +123,7 @@ if telescop == 'EVN':
 
 print(idifiles)
 ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',remove_ext=params['prepare_data']['replace_antab'])
-if (inputs['prepare_data']['replace_antab'] == True)|(ts_fits==False):
+if (params['prepare_data']['replace_antab'] == True)|(ts_fits==False):
 	casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
 	for i in idifiles:
 		if parallel == True:
@@ -140,7 +140,7 @@ else:
 
 ### Convert gaincurve
 gc_fits = check_fits_ext(idifiles=idifiles,ext='GAIN_CURVE',remove_ext=params['prepare_data']['replace_antab'])
-if (inputs['prepare_data']['replace_antab'] == True)|(gc_fits==False):
+if (params["prepare_data"]["replace_antab"] == True)|(gc_fits==False):
 	rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 	casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
 	if telescop == 'EVN':
