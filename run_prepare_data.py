@@ -45,6 +45,7 @@ casalog.post("")
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file_path'])
+print(params['prepare_data']['prepare_antab'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 
