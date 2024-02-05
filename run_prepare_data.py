@@ -121,7 +121,7 @@ if telescop == 'EVN':
 			antabfile='%s'%params['prepare_data']['antab']
 
 print(idifiles)
-ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',remove_ext=inputs['prepare_data']['replace_antab'])
+ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',remove_ext=params['prepare_data']['replace_antab'])
 if (inputs['prepare_data']['replace_antab'] == True)|(ts_fits==False):
 	casalog.post(origin=filename,message='Appending TSYS information onto idifiles',priority='INFO')
 	for i in idifiles:
@@ -138,7 +138,7 @@ else:
 	casalog.post(origin=filename,message='System temperature information already exists in the idifile',priority='INFO')
 
 ### Convert gaincurve
-gc_fits = check_fits_ext(idifiles=idifiles,ext='GAIN_CURVE',remove_ext=inputs['prepare_data']['replace_antab'])
+gc_fits = check_fits_ext(idifiles=idifiles,ext='GAIN_CURVE',remove_ext=params['prepare_data']['replace_antab'])
 if (inputs['prepare_data']['replace_antab'] == True)|(gc_fits==False):
 	rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 	casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
