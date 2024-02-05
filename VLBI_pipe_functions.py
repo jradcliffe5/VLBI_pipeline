@@ -2653,7 +2653,7 @@ def filter_smooth_delay(caltable,nsig=[2.5,2.]):
 def check_fits_ext(idifiles=[],ext='',del_ext=False):
 	tr = []
 	for i in idifiles:
-		hdu = fits.open(i)
+		hdu = fits.open(i,mode='update')
 		try:
 			hdu[ext]
 			tr.append(True)
