@@ -51,11 +51,41 @@ cal_type = params['phase_referencing']["cal_type"]
 if steps_run['phase_referencing'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_phase_referencing')
 	clearcal(vis=msfile)
+	if params['global']['use_initial_model'] != {}:
+		for i in params['global']['use_initial_model'].keys():
+			ft(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
+				field=i,
+				nterms=len(params['global']['use_initial_model'][i]),
+				model=params['global']['use_initial_model'][i],usescratch=True)
 else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_phase_referencing')
 
 
+
+applycal(vis=msfile,
+		 field="",
+	     gaintable=gaintables['gaintable'],
+	     interp=gaintables['interp'],
+	     gainfield=gaintables['gainfield'],
+	     spwmap=gaintables['spwmap'],
+	     parang=gaintables['parang'])
+
+
 for i in range(len(fields)):
+	flagdata(vis=msfile,
+			mode='tfcrop',
+			field=','.join(fields[i]),
+			datacolumn='residual',
+			combinescans=False,
+			winsize=3,
+			timecutoff=5.0,
+			freqcutoff=5.0,
+			maxnpieces=7,
+			halfwin=1,
+			extendflags=False,
+			action='apply',
+			display='',
+			flagbackup=False)
 	for j in range(len(cal_type[i])):
 		if len(fields[i]) < 2:
 			fields[i] = list(fields[i])

@@ -1,10 +1,9 @@
-import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil
+import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil, ast
 import collections
 from collections import OrderedDict
 ## Numerical routines
 import numpy as np
 ## Plotting routines
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib import gridspec
@@ -12,11 +11,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.lines as mlines
 ## Sci-py dependencies
 from scipy.interpolate import interp1d
-from scipy.optimize import least_squares
 from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
-import tempfile
 from scipy.special import j1
 try:
 	# CASA 6
@@ -36,7 +33,12 @@ except:
 	from gencal_cli import gencal_cli as gencal
 	from partition_cli import partition_cli as partition
 	from tclean_cli import tclean_cli as tclean
+	from statwt_cli import statwt_cli as statwt
 	casa6=False
+try: 
+	from astropy.io import fits
+except:
+	import pyfits as fits
 
 class NpEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -62,7 +64,6 @@ def json_loads_byteified(json_text):
 	)
 
 def json_load_byteified_dict(file_handle,casa6):
-	#print(casa6)
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
@@ -98,7 +99,6 @@ def convert_temp(data):
 	elif isinstance(data, collections.Mapping):
 		return OrderedDict(map(convert_temp, data.items()))
 	elif isinstance(data, collections.Iterable):
-		#print(data)
 		return type(data)(map(convert_temp, data))
 	else:
 		return data
@@ -379,7 +379,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	elif aoflag=='both':
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
-		#print(fields)
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 			msinfo = get_ms_info(msfile)
 			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
@@ -392,8 +391,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 				commands.append(k)
 			msfile='%s.ms'%params['global']['project_code']
 			ids = []
-			#print(fields)
-			print(i)
 			for j in fields[i]:
 				ids.append(str(msinfo['FIELD']['fieldtoID'][j]))
 			commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
@@ -424,7 +421,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	elif aoflag==True:
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
-		#print(fields)
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
 			msinfo = get_ms_info(msfile)
 			save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
@@ -437,8 +433,6 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 				commands.append(k)
 			msfile='%s.ms'%params['global']['project_code']
 			ids = []
-			#print(fields)
-			print(i)
 			for j in fields[i]:
 				ids.append(str(msinfo['FIELD']['fieldtoID'][j]))
 			commands[-1] = commands[-1]+' -fields %s '%(",".join(ids))
@@ -474,18 +468,19 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
-		if (params['global']['job_manager'] == 'bash'):
-			commands.append('for a in \"${array[@]}\"')
-			commands.append('do')
-			variable="$a"
-		commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
-		for i in params['global']['AOflag_command']:
-			commands.append(i)
-		tar_idx = find_nestlist(params['init_flag']['AO_flag_fields'], params['global']['targets'][0])[0]
-		commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'][tar_idx])
-		if (params['global']['job_manager'] == 'bash'):
-			commands.append('done')
-			variable=""
+		if params["init_flag"]["run_AOflag"] == True:
+			if (params['global']['job_manager'] == 'bash'):
+				commands.append('for a in \"${array[@]}\"')
+				commands.append('do')
+				variable="$a"
+			commands.append("IFS=' ' read -r -a arrays <<< \"%s\""%variable)
+			for i in params['global']['AOflag_command']:
+				commands.append(i)
+			tar_idx = find_nestlist(params['init_flag']['AO_flag_fields'], params['global']['targets'][0])[0]
+			commands[-1] = commands[-1]+' -strategy %s ${arrays[1]}_presplit.ms'%(params['init_flag']['AO_flag_strategy'][tar_idx])
+			if (params['global']['job_manager'] == 'bash'):
+				commands.append('done')
+				variable=""
 		if casa6 == False:
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
@@ -618,10 +613,8 @@ def get_ms_info(msfile):
 	ms.close()
 	scan = {}
 	for i in list(scans.keys()):
-		#print(i)
 		fieldid = scans[i]['0']['FieldId']
 		if fieldid not in list(scan.keys()):
-			#print(i)
 			scan[fieldid] = [i]
 		else:
 			vals = scan[fieldid]
@@ -685,7 +678,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 	nchan=len(gain[0,:,0])
 	
 	k=1
-	#print('maxant', maxant)
 	numflag=0.0
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
@@ -693,7 +685,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 					subt=t[(ant==k) & (dd==j)]
 					#subsol=sol[:,:,(ant==k) & (dd==j)]
 					subgain=gain[:,:,(ant==k) & (dd==j)]
-					#print 'subgain', subgain.shape
 					for kk in range(1, len(subt)):
 							for chan in range(nchan):
 									for pol in range(npol):
@@ -711,8 +702,6 @@ def fill_flagged_soln(caltable='', fringecal=False):
 					#sol[:,:,(ant==k) & (dd==j)]=subsol
 					gain[:,:,(ant==k) & (dd==j)]=subgain
 
-
-	#print('numflag', numflag)
 	 
 	###
 	tb.putcol('FLAG', flg)
@@ -786,9 +775,6 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 					flg[:,:,(ant==k) & (dd==j)]=subflg
 					#sol[:,:,(ant==k) & (dd==j)]=subsol
 					gain[:,:,(ant==k) & (dd==j)]=subgain
-
-
-	#print('numflag', numflag)
 	 
 	###
 	tb.putcol('FLAG', flg)
@@ -808,7 +794,6 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	gain_edit = copy.deepcopy(gain)*0
 	t=tb.getcol('TIME')
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
-	#print(dd)
 	npol=gain.shape[0]
 	casalog.post(priority="INFO",origin=func_name,message='Editing and smoothing the tsys table')
 	for k in range(npol):
@@ -831,16 +816,13 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 					flg_temp2[ind] = 1
 					flg_temp[flg_temp==0] = flg_temp2
 					flg[k,0,((ant==i)&(dd==j))] = flg_temp
-
 					gain_edit[k,0,((ant==i)&(dd==j))]= gain_uflg2
-
 	tb.putcol('FPARAM',gain_edit)
 	tb.putcol('FLAG',flg)
 	tb.close()
 
 def smooth_series(y, box_pts):
 	box = np.ones(box_pts)/box_pts
-	#print(box_pts)
 	y_smooth = np.convolve(y, box, mode='valid')
 	y_smooth = np.hstack([np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[0],y_smooth])
 	y_smooth = np.hstack([y_smooth,np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[-1]])
@@ -858,14 +840,25 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 	for i in range((window_size),(n - window_size)):
 		x0 = np.median(input_series[1][(i - window_size):(i + window_size)])
 		S0 = k * np.median(np.abs(input_series[1][(i - window_size):(i + window_size)] - x0))
-		if (np.abs(input_series[1][i] - x0) > n_sigmas * S0):
-			new_series[1][i] = x0
-			indices.append(i)
-
+		if i == window_size:
+			for j in range(0,window_size):
+				if (np.abs(input_series[1][j] - x0) > n_sigmas * S0):
+					new_series[1][j] = x0
+					indices.append(j)
+		elif i == ((n - window_size)-1):
+			for j in range(n-window_size,n):
+				if (np.abs(input_series[1][j] - x0) > n_sigmas * S0):
+					new_series[1][j] = x0
+					indices.append(j)
+		else:
+			if (np.abs(input_series[1][i] - x0) > n_sigmas * S0):
+				new_series[1][i] = x0
+				indices.append(i)
+	
 	detected_outliers = np.array(indices)
 	already_tagged=[]
 	for i in range(len(input_series[1])):
-		if i<input_series[0].shape[0]-1:
+		if ((i<input_series[0].shape[0]-1)&(i>0)):
 			if i in detected_outliers:
 				if i not in already_tagged:
 					low=i-1
@@ -873,18 +866,18 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 					while i+1 in detected_outliers:
 						i+=1
 						already_tagged.append(i)
-
-					high=i+1
-					t_high=input_series[0][high]
-					#m=(gain_uflg[high]-gain_uflg[low])/(t_high-t_low)
-					#c=gain_uflg[low]-(m*t_low)
-
-					f = interp1d(x=[t_low,t_high], y=[input_series[1][low],input_series[1][high]])
-					#print(t_temp2[np.arange(low,high,1)])
-					#t_interp=t_temp2[np.arange(low,high,1)]
-					
-					input_series[1][low:high]= f(input_series[0][np.arange(low,high,1)])
-
+					if i < (input_series[0].shape[0]-1):
+						high=i+1
+						t_high=input_series[0][high]
+						f = interp1d(x=[t_low,t_high], y=[input_series[1][low],input_series[1][high]])		
+						input_series[1][low:high]= f(input_series[0][np.arange(low,high,1)])
+	if 0 in detected_outliers:
+		input_series[1][0] = input_series[1][1]
+	if (input_series[0].shape[0]-1) in detected_outliers:
+		i = (input_series[0].shape[0]-1)
+		while i-1 in detected_outliers:
+			i-=1
+		input_series[1][i:input_series[0].shape[0]] = input_series[1][input_series[0].shape[0]-(i-2)]
 	return input_series[1],detected_outliers
 
 def detect_jump_and_smooth(array,jump_pc):
@@ -896,15 +889,11 @@ def detect_jump_and_smooth(array,jump_pc):
 					jump=True
 					low=i
 					if i < len(array)-1:
-						#print(i+1)
 						i+=1
-						#print(i)
 						while ((array[i+1] > (1+jump_pc)*array[i])==False)&((array[i+1]<(1-jump_pc)*array[i])==False):
 							if i > (len(array)-3):
-								#print(i)
 								break
 							else:
-								#print(i)
 								i+=1
 					high=i+1
 					diff=int((high-low)/2.)
@@ -1137,7 +1126,6 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 		solint=float(solint.split('s')[0])
 	elif solint[-1] == 'm' or solint[-3:]=="min":
 		solint=float(solint.split('m')[0])*60.
-	#print(solint)
 
 	os.system('cp -r %s %s_original'%(caltable,caltable))
 
@@ -1225,14 +1213,10 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 	FIELD_ID = np.empty(tbnrows)
 	SPECTRAL_WINDOW_ID = np.empty(tbnrows)
 	ANTENNA1 = np.empty(tbnrows)
-	ANTENNA2 = np.zeros(tbnrows)
-	INTERVAL = np.zeros(tbnrows)
-	OBSERVATION_ID = np.zeros(tbnrows)
 	CPARAM = np.empty((npol,nchan,tbnrows),dtype=complex)
 	PARAMERR = np.ones((npol,nchan,tbnrows))
 	FLAG = np.zeros((npol,nchan,tbnrows))
 	SNR =  np.ones((npol,nchan,tbnrows))
-	WEIGHT = np.empty(tbnrows)
 
 	runc=0
 	tb.open(msfile)
@@ -1307,7 +1291,7 @@ def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalis
 						for p in range(len(data_median_i)):
 							autocorrs[k,p] = data_median_i[p]+0j	
 					except:
-						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s, field %s, spw %s, pol %s'%(i,calibrators[h],j,k))
+						casalog.post(priority='WARN',origin=func_name,message='No data for - antenna %s (%s), field %s (%s), spw %s, pol %s'%(i,msinfo['ANTENNAS']['IDtoant'][str(i)],calibrators[h],msinfo['FIELD']['IDtofield'][str(calibrators[h])],j,k))
 						autocorrs[k,:] = 1 + 0j
 						FLAG[k,:,runc] = 1
 				TIME[runc] = t_cal
@@ -1341,7 +1325,6 @@ def clip_fitsfile(model,im,snr):
 	model_data = model_hdu['PRIMARY'].data
 	im_hdu = fits.open(im)
 	im_head = im_hdu['PRIMARY'].header
-	print(im_hdu['PRIMARY'].data.squeeze().shape)
 	rms = np.std(im_hdu['PRIMARY'].data.squeeze()[0:int(im_head['NAXIS1']/4.),0:int(im_head['NAXIS2']/4.)])
 	im_hdu.close()
 	model_data[model_data<float(snr)*rms] = 0
@@ -1578,7 +1561,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 							polrange=1
 							pol_names=['']
 						for pol in range(polrange):
-							#print(polrange)
 							if gaincol == 'FPARAM':
 								if yaxis == 'tsys':
 									gain_t = col_params[gaincol][yaxis][1](gain[pol,col_params[gaincol][yaxis][0],:])
@@ -1647,6 +1629,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				plt.close()
 				plt.cla()
 				plt.clf()
+				plt.close(fig)
+				plt.close('all')
 		elif xaxis == 'freq':
 			for a in range(len(ant)):
 				fig = plt.figure(figsize=(9,9))
@@ -1658,7 +1642,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				for s in range(len(spw)):
 					subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
 					gain = subt.getcol(gaincol)
-					#print(gain.shape)
 					flag = subt.getcol('FLAG')
 					try:
 						if gain.shape[1] == 1:
@@ -1749,6 +1732,8 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				plt.close()
 				plt.cla()
 				plt.clf()
+				plt.close(fig)
+				plt.close('all')
 		else:
 			casalog.post(priority='SEVERE',origin=func_name,message='Table cannot be plotted by this function')
 			sys.exit()
@@ -1807,8 +1792,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			check_arr = []
 			files = []
 			for i in os.listdir('%s'%target_dir):
-				files.append(i)
-				check_arr.append(i.startswith(project_code)&('IDI'in i))
+				if os.path.isfile('%s%s'%(target_dir,i)) == True:
+					files.append(i)
+					check_arr.append(i.startswith(project_code)&('IDI'in i))
 			if np.all(check_arr) == True:
 				tar=False
 				unique_files = np.unique([i.split('.IDI')[0] for i in files])
@@ -1818,8 +1804,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 				check_arr = []
 				files = []
 				for i in os.listdir('%s'%target_dir):
-					files.append(i)
-					check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
+					if os.path.isfile('%s%s'%(target_dir,i)) == True:
+						files.append(i)
+						check_arr.append(i.startswith(project_code)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
 					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
@@ -1834,8 +1821,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			check_arr = []
 			files = []
 			for i in os.listdir('%s'%target_dir):
-				files.append(i)
-				check_arr.append((project_code in i)&(i.endswith('.idifits')))
+				if os.path.isfile('%s%s'%(target_dir,i)) == True:
+					files.append(i)
+					check_arr.append((project_code in i)&(i.endswith('.idifits')))
 			if np.all(check_arr) == True:
 				tar=False
 				unique_files = np.unique([i.split('.idifits')[0] for i in files])
@@ -1845,8 +1833,9 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 				check_arr = []
 				files = []
 				for i in os.listdir('%s'%target_dir):
-					files.append(i)
-					check_arr.append((project_code in i)&(i.endswith('.tar.gz')))
+					if os.path.isfile('%s%s'%(target_dir,i)) == True:
+						files.append(i)
+						check_arr.append((project_code in i)&(i.endswith('.tar.gz')))
 				if np.all(check_arr) == True:
 					tar=True
 					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
@@ -1898,7 +1887,6 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		f_id = msinfo['FIELD']['fieldtoID'][j]
 		scans = scans + msinfo['SCANS'][str(f_id)]
 	scans = np.sort(np.array(scans))
-	print(scans)
 
 
 	
@@ -1934,7 +1922,6 @@ def generate_ff_full_table(msinfo):
 		except:
 			print('no ant %s'%i)
 	times = np.unique(t)
-	#for i in 
 	
 def progressbar(it, prefix="", size=60, file=sys.stdout):
 	count = len(it)
@@ -2137,6 +2124,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 			files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 		
 		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
+		check_fits_ext(idifiles=files,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
+		check_fits_ext(idifiles=files,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
 		importfitsidi(fitsidifile=files,
 					  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
 					  constobsid=params['import_fitsidi']["const_obs_id"],
@@ -2204,6 +2193,30 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 						 quackmode=quack_mode)
 		
 		append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
+		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
+				 field=",".join(targets),
+				 gaintable=gaintables['gaintable'],
+				 gainfield=gaintables['gainfield'],
+				 interp=gaintables['interp'],
+				 spwmap=gaintables['spwmap'],
+				 parang=gaintables['parang'])
+
+		if params['apply_target']['flag_target'] == True:
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+				mode='tfcrop',
+				field=",".join(targets),
+				datacolumn='corrected',
+				combinescans=False,
+				winsize=3,
+				timecutoff=4.5,
+				freqcutoff=4.5,
+				maxnpieces=7,
+				halfwin=1,
+				extendflags=False,
+				action='apply',
+				display='',
+				flagbackup=False)
+		#os.system('cp -r %s/%s_presplit.ms %s/%s_presplit_beforepbcor.ms'%(cwd,i,cwd,i))
 
 	else:
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
@@ -2219,6 +2232,11 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
 				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
 				archive.close()
+			
+		if params['init_flag']['manual_flagging']['run'] == True:
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+					 mode='list',
+					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		
 		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
 				 field=",".join(targets),
@@ -2228,16 +2246,22 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				 spwmap=gaintables['spwmap'],
 				 parang=gaintables['parang'])
 
-		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis=msfile,
-					 mode='list',
-					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
-
 		rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
 		if len(targets)> 1:
 			fd = ",".join(targets)
 		else:
 			fd = targets[0]
+		
+		if params['apply_target']['statistical_reweigh']['run'] == True: 
+			statwt(vis='%s/%s_presplit.ms'%(cwd,i), minsamp=params['apply_target']["statistical_reweigh"]["minsamp"])
+			tb = casatools.table()
+			tb.open('%s/%s_presplit.ms'%(cwd,i)) 
+			weight=tb.getcol('WEIGHT')
+			tb.close()
+			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+		         mode='clip',
+				 datacolumn='WEIGHT',
+				 clipminmax=[0,np.median(weight)+6*np.std(weight)])
 		split(vis='%s/%s_presplit.ms'%(cwd,i),
 			  field=fd,
 			  keepmms=False,
@@ -2270,7 +2294,7 @@ def image_targets(prefix,params,parallel):
 			   datacolumn='data',
 			   stokes='pseudoI',
 			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][str(j)]/1000.),
-			   imsize=[1024,1024],
+			   imsize=ast.literal_eval(params['apply_to_all']["image_target"]["imsize"]),
 			   deconvolver='clarkstokes',
 			   niter=int(1e5),
 			   weighting='natural',
@@ -2279,7 +2303,6 @@ def image_targets(prefix,params,parallel):
 			   noisethreshold=4.0,
 			   sidelobethreshold=1.0,
 			   parallel=parallel)
-	rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
 	return targets
 
 def apply_tar_output(prefix,params,targets):
@@ -2307,8 +2330,10 @@ def apply_tar_output(prefix,params,targets):
 			os.system('mv %s %s/'%(msfile,params['apply_to_all']['target_outpath']))
 			if params["apply_to_all"]["image_target"]["run"] == True:
 				for k in targets:
-					for j in ['image','psf','model','residual','sumwt','mask','pb']:
+					for j in ['image','psf','model','residual']:
 						os.system('mv %s%s_%s_initial.%s %s/'%(cwd,i,k,j,params['apply_to_all']['target_outpath']))
+					for j in ['sumwt','mask','pb']:
+						rmfiles(["%s%s_%s_initial.%s"%(cwd,i,k,j)])
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
 	qa = casatools.quanta()
@@ -2324,7 +2349,6 @@ def angsep(ra1,dec1,ra2rad,dec2rad):
 	try:
 		rad=math.acos(x+y+z)
 	except:
-		print(x,y,z)
 		rad=0
 
 	# use Pythargoras approximation if rad < 1 arcsec
@@ -2534,7 +2558,6 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 		img.export_image(outfile=name+'_gaus.model.fits',img_type='gaus_model',clobber=True)
 		img.export_image(outfile=name+'.rms.fits', img_type='rms', clobber=True)
 
-	#write_catalog_pybdsf('HDFA0002_MSSC_FG_NA_IM.fits',detection_threshold)
 
 	def combine_pybdsf(shorthand,postfix,catalog_list):
 		os.system('rm catalogue_PYBDSF_%s.csv' % postfix)
@@ -2551,8 +2574,6 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 				else:
 					names = file+','
 				if len(lines) > 6:
-					#detections = detections + [file]
-					#print names+names.join(lines[6:])
 					text_file.write(names+names.join(lines[6:]))
 				os.system('rm %s' % file)
 	catalog_list = []
@@ -2593,3 +2614,60 @@ def remove_flagged_scans(caltable):
 			index.append(i)
 	tb.removerows(index)
 	tb.close()
+
+def filter_smooth_delay(caltable,nsig=[2.5,2.]):
+	func_name = inspect.stack()[0][3]
+	tb=casatools.table()
+	tb.open(caltable, nomodify=False)
+	flg=tb.getcol('FLAG')
+	gaincol='FPARAM'
+	ant=tb.getcol('ANTENNA1')
+	gain=tb.getcol(gaincol)
+	gain_edit = copy.deepcopy(gain)*0
+	t=tb.getcol('TIME')
+	dd=tb.getcol('SPECTRAL_WINDOW_ID')
+	npol=2
+	casalog.post(priority="INFO",origin=func_name,message='Editing the delays')
+	increm = 4
+	for k in range(npol):
+		for i in np.unique(ant):
+			for j in np.unique(dd):
+				flg_temp=flg[1+(k*increm),0,((ant==i)&(dd==j))]
+				gain_uflg2=gain[1+(k*increm),0,((ant==i)&(dd==j))]
+				gain_uflg = gain_uflg2[flg_temp==0]
+				if gain_uflg != []:
+					t_temp=t[((ant==i)&(dd==j))][flg_temp==0]
+					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 21 ,n_sigmas=nsig[0])
+					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
+					#gain_uflg, jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
+					#if jump == False:
+					#	gain_uflg = smooth_series(gain_uflg, 21)
+					gain_uflg2[flg_temp==0] = gain_uflg
+					ind = np.where(np.isnan(gain_uflg2[flg_temp==0]))[0]
+					flg_temp2 = flg_temp[flg_temp==0]
+					flg_temp2[ind] = 1
+					flg_temp[flg_temp==0] = flg_temp2
+					flg[1+(k*increm),0,((ant==i)&(dd==j))] = flg_temp
+					gain_edit[1+(k*increm),0,((ant==i)&(dd==j))]= gain_uflg2
+	tb.putcol('FPARAM',gain_edit)
+	tb.putcol('FLAG',flg)
+	tb.close()
+
+def check_fits_ext(idifiles=[],ext='',del_ext=False):
+	tr = []
+	for i in idifiles:
+		hdu = fits.open(i,mode='update')
+		try:
+			hdu[ext]
+			tr.append(True)
+			if del_ext==True:
+				casalog.post(message='Removing %s info from %s'%(ext,i),priority='INFO')
+				del hdu[ext]
+				hdu.writeto(i,overwrite=True)
+		except:
+			tr.append(False)
+		hdu.close()
+	if True in tr:
+		return True
+	else:
+		return False

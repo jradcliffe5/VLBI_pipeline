@@ -357,15 +357,6 @@ def append_tsys(antabfile, idifiles):
         idifiles = [idifiles]
         pass
 
-    # Check if we already have a SYSTEM_TEMPERATURES table
-    try:
-        hdulist = pyfits.open(idifiles[0])
-        hdu = hdulist['SYSTEM_TEMPERATURE']
-        print('SYSTEM_TEMPERATURE table already present in FITS-IDI file')
-        sys.exit(1)
-    except KeyError:
-        pass
-
     idi = IdiData(idifiles)
     data = TSysTable()
 
@@ -483,15 +474,6 @@ def append_tsys(antabfile, idifiles):
     return
 
 def append_gc(antabfile, idifile):
-    # Check if we already have a GAIN_CURVE table
-    try:
-        hdulist = pyfits.open(idifile)
-        hdu = hdulist['GAIN_CURVE']
-        print('GAIN_CURVE table already present in FITS-IDI file')
-        sys.exit(1)
-    except KeyError:
-        pass
-
     idi = IdiData([idifile])
     data = GainCurveTable()
 
