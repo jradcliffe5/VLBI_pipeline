@@ -1,4 +1,4 @@
-import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil
+import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil, ast
 import collections
 from collections import OrderedDict
 ## Numerical routines
@@ -33,6 +33,7 @@ except:
 	from gencal_cli import gencal_cli as gencal
 	from partition_cli import partition_cli as partition
 	from tclean_cli import tclean_cli as tclean
+	from statwt_cli import statwt_cli as statwt
 	casa6=False
 try: 
 	from astropy.io import fits
@@ -2293,7 +2294,7 @@ def image_targets(prefix,params,parallel):
 			   datacolumn='data',
 			   stokes='pseudoI',
 			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][str(j)]/1000.),
-			   imsize=[1024,1024],
+			   imsize=ast.literal_eval(params['apply_to_all']["image_target"]["imsize"]),
 			   deconvolver='clarkstokes',
 			   niter=int(1e5),
 			   weighting='natural',
