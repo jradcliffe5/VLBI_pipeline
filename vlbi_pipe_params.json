@@ -247,7 +247,7 @@
         },
         "image_target":{
             "run"           : true,
-            "imsize"        : [1024,1024]
+            "imsize"        : 1024
         },
         "hpc_options":{
             "partition"     :  "default",
