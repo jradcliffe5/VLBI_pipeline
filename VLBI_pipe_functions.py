@@ -2294,7 +2294,7 @@ def image_targets(prefix,params,parallel):
 			   datacolumn='data',
 			   stokes='pseudoI',
 			   cell='%.6farcsec'%(msinfo_target["IMAGE_PARAMS"][str(j)]/1000.),
-			   imsize=ast.literal_eval(params['apply_to_all']["image_target"]["imsize"]),
+			   imsize=int(params['apply_to_all']["image_target"]["imsize"]),
 			   deconvolver='clarkstokes',
 			   niter=int(1e5),
 			   weighting='natural',
