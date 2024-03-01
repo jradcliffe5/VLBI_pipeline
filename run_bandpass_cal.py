@@ -106,7 +106,7 @@ remove_flagged_scans('%s/%s.bpass'%(cwd,p_c))
 interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 
 
-
+'''
 if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	tb = casatools.table()
 	tb.open('%s/%s.bpass'%(cwd,p_c))
@@ -135,7 +135,7 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	tb.putcol('CPARAM',data)
 	tb.putcol('FLAG',flags)
 	tb.close()
-
+'''
 
 if casa6 == True:
 	for i in ['amp','phase']:
