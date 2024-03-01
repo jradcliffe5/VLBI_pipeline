@@ -50,7 +50,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 		fields=",".join(params['global']['fringe_finders'])
 	else:
 		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
-	gainfield.extend(fields)
+	gainfield.append(fields)
 	
 	flagdata(vis=msfile,
 		 mode='tfcrop',

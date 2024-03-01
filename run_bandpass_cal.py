@@ -79,7 +79,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 		fields=",".join(params['global']['fringe_finders'])
 	else:
 		fields=",".join(params[substep]['select_calibrators'][i])
-	gainfield.extend(fields)
+	gainfield.append(fields)
 		
 	bandpass(vis=msfile,
 			 caltable='%s/%s.bpass'%(cwd,p_c),
