@@ -84,7 +84,6 @@ gencal(vis=msfile,\
        antenna='',\
        caltable='%s/%s.tsys'%(cwd,p_c),\
        uniform=False)
-#remove_flagged_scans('%s/%s.tsys'%(cwd,p_c))
 
 if casa6 == True:
 	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_time.pdf'%p_c)

@@ -38,12 +38,11 @@ if os.path.exists('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))==F
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))
 
-'''
 if steps_run['apply_target'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_apply_target')
 else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_apply_target')
-'''
+
 ## Apply to standard files
 applycal(vis='%s%s'%(cwd,msfile),
 	     field=",".join(params['global']['targets']),
