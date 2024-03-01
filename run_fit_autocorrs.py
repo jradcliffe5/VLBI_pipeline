@@ -58,7 +58,7 @@ if casa6 == True:
 	plotcaltable(caltable='%s/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-autobpass_amp_vs_freq.pdf'%p_c)
 	plotcaltable(caltable='%s/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-autobpass_amp_vs_time.pdf'%p_c)
 
-gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),gainfield,[],'linear,linear'])
 gt_r['fit_autocorrs'] = append_gaintable(gt_r['fit_autocorrs'],['%s/%s.auto.bpass'%(cwd,p_c),gainfield,[],'linear,linear'])
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)

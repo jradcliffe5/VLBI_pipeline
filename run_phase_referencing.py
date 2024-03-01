@@ -181,7 +181,7 @@ for i in range(len(fields)):
 			spwmap = msinfo['SPECTRAL_WINDOW']['nspws']*[0]
 		else:
 			spwmap=[]
-		gaintables = append_gaintable(gaintables,[caltable,'',spwmap,'linear'])
+		gaintables = append_gaintable(gaintables,[caltable,','.join(fields[i]),spwmap,'linear'])
 		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],[caltable,','.join(fields[i]),spwmap,'linear'])
 
 		applycal(vis=msfile,

@@ -142,7 +142,7 @@ if casa6 == True:
 		for j in ['freq','time']:
 			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
 
-gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),','.join(gainfield),[],'linear,linear'])
 gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),','.join(gainfield),[],'linear,linear'])
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
