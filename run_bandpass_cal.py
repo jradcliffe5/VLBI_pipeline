@@ -67,6 +67,7 @@ if params['bandpass_cal']['same_as_sbd_cal'] == True:
 else:
 	substep='bandpass_cal'
 
+gainfield = []
 for i in range(len(params[substep]['select_calibrators'])):
 	if i==0:
 		append=False
@@ -78,6 +79,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 		fields=",".join(params['global']['fringe_finders'])
 	else:
 		fields=",".join(params[substep]['select_calibrators'][i])
+	gainfield.extend(fields)
 		
 	bandpass(vis=msfile,
 			 caltable='%s/%s.bpass'%(cwd,p_c),
@@ -141,7 +143,7 @@ if casa6 == True:
 			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
 
 gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
-gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),','.join(gainfield),[],'linear,linear'])
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)

@@ -39,6 +39,7 @@ else:
 refant = find_refants(params['global']['refant'],msinfo)
 
 rmdirs(['%s/%s.sbd'%(cwd,p_c)])
+gainfield=[]
 for i in range(len(params['sub_band_delay']['select_calibrators'])):
 	if i==0:
 		append=False
@@ -49,6 +50,7 @@ for i in range(len(params['sub_band_delay']['select_calibrators'])):
 		fields=",".join(params['global']['fringe_finders'])
 	else:
 		fields=",".join(params['sub_band_delay']['select_calibrators'][i])
+	gainfield.extend(fields)
 	
 	flagdata(vis=msfile,
 		 mode='tfcrop',
@@ -137,7 +139,7 @@ if casa6 == True:
 			plotcaltable(caltable='%s/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-sbd_%s_vs_%s.pdf'%(p_c,i,j))
 
 gaintables = append_gaintable(gaintables,['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
-gt_r['sub_band_delay'] = append_gaintable(gt_r['sub_band_delay'],['%s/%s.sbd'%(cwd,p_c),'',[],'linear'])
+gt_r['sub_band_delay'] = append_gaintable(gt_r['sub_band_delay'],['%s/%s.sbd'%(cwd,p_c),','.join(gainfield),[],'linear'])
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)

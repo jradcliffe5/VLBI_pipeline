@@ -182,7 +182,7 @@ for i in range(len(fields)):
 		else:
 			spwmap=[]
 		gaintables = append_gaintable(gaintables,[caltable,'',spwmap,'linear'])
-		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],[caltable,'',spwmap,'linear'])
+		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],[caltable,','.join(fields[i]),spwmap,'linear'])
 
 		applycal(vis=msfile,
 			     field=','.join(fields[i]),
