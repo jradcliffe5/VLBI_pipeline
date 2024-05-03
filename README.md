@@ -1,5 +1,3 @@
-### NOTICE: There is a weird bug at the moment which causes noise in multiple phase centres to be increased by a factor of 2. This does not affect the source combined with the calibrators and doesn't affect some observations.
-
 # Generic VLBI pipeline
 
 This is a generic VLBI pipeline for use on clusters (with job managers SLURM & PBS) but can also be used on your home machine. The pipeline is CASA-based and has been tested on the European VLBI Network (EVN) and Very Long Baseline Array (VLBA) data sets. Both CASA 5.5+ and CASA 6 versions are supported and has been tested on CASA versions 5.8.0 and 6.5.0.
