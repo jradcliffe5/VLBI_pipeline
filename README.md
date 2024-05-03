@@ -2,7 +2,7 @@
 
 This is a generic VLBI pipeline for use on clusters (with job managers SLURM & PBS) but can also be used on your home machine. The pipeline is CASA-based and has been tested on the European VLBI Network (EVN) and Very Long Baseline Array (VLBA) data sets. Both CASA 5.5+ and CASA 6 versions are supported and has been tested on CASA versions 5.8.0 and 6.5.0.
 
-As of 22-07-2022, it will only calibrate continuum data-sets, but spectral line data-sets are planned to be implemented. The pipeline is still under development.
+As of 03-05-2024, it will only calibrate continuum data-sets, but spectral line data-sets are planned to be implemented. The pipeline is still under development.
 
 This README includes installation instructions and simple usage, but we advise that you read the [Wiki](../../wiki) before running or using the pipeline.
 
@@ -11,15 +11,18 @@ This README includes installation instructions and simple usage, but we advise t
 If you use this pipeline, please make sure that you cite this repository using the bibtex or zenodo code below
 
 ```
-@software{jack_radcliffe_2021_4776805,
+Jack Radcliffe, (2024). jradcliffe5/VLBI_pipeline: v1.1 (v1.1). Zenodo. https://doi.org/10.5281/zenodo.11108171``
+```
+```
+@software{jack_radcliffe_2024_11108171,
   author       = {Jack Radcliffe},
-  title        = {jradcliffe5/VLBI\_pipeline: v0.9},
+  title        = {jradcliffe5/VLBI\_pipeline: v1.1},
   month        = may,
-  year         = 2021,
+  year         = 2024,
   publisher    = {Zenodo},
-  version      = {v0l.9},
-  doi          = {10.5281/zenodo.4776805},
-  url          = {https://doi.org/10.5281/zenodo.4776805}
+  version      = {v1.1},
+  doi          = {10.5281/zenodo.11108171},
+  url          = {https://doi.org/10.5281/zenodo.11108171}
 }
 ```
 
