@@ -2478,6 +2478,10 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 				## get pb_params
 				IDtoant = msinfo['ANTENNAS']['IDtoant']
 				for j in list(msinfo['ANTENNAS']['anttoID'].values()):
+					if j in [0,12]:
+						offset=offset
+					else:
+						offset = angsep(params['apply_to_all']['pbcor']['pointing_centre'][0],params['apply_to_all']['pbcor']['pointing_centre'][1],radec_target[0],radec_target[1])
 					for k in range(msinfo['SPECTRAL_WINDOW']['nspws']):
 						obs_freq = msinfo['SPECTRAL_WINDOW']['freq_range'][0] + ((k+1)-0.5)*msinfo['SPECTRAL_WINDOW']['spw_bw']
 						attenuation = pb_model_uvcorr(parameters=pb_parameters[IDtoant[str(j)]]['params'],model=pb_parameters[IDtoant[str(j)]]['model'], obs_freq=obs_freq,angsep=offset)
