@@ -1549,6 +1549,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 					ax1.set_yticks([])
 					ax1.set_yticklabels([])
 				for s in range(len(spw)):
+					ax = fig.add_subplot(gs00[s])
 					try:
 						subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(ant[a],spw[s]))
 						gain = subt.getcol(gaincol)
@@ -1556,7 +1557,6 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 						time = subt.getcol('TIME')
 						min_time = time.min()
 						time = (time - min_time)/3600.
-						ax = fig.add_subplot(gs00[s])
 						if yaxis == 'tec':
 							polrange=1
 							pol_names=['']
