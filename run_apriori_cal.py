@@ -119,6 +119,20 @@ if params['apriori_cal']["make_gaincurve"] == True:
 	gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
+if params['apriori_cal']['do_eops'] == True:
+	rmdirs(['%s/%s.eop'%(cwd,p_c),'usno_finals.erp'])
+	os.system('curl -u anonymous:daip@nrao.edu --ftp-ssl ftp://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/usno_finals.erp > %s/usno_finals.erp' %cwd)
+	if os.path.exists('%s/usno_finals.erp'%cwd):
+		gencal(vis=msfile, 
+		   	   caltable='%s/%s.eop'%(cwd,p_c),
+	           caltype='eop', 
+	           infile='%s/usno_finals.erp'%(cwd))
+		gaintables = append_gaintable(gaintables,['%s/%s.eop'%(cwd,p_c),'',[],''])
+		gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.eop'%(cwd,p_c),'',[],''])
+	else:
+		casalog.post(priority='SEVERE',origin=filename,message='EOP parameters have failed. Please ensure that curl is installed on your system')
+		pass
+
 if params['apriori_cal']['ionex_options']['run'] == True:
 	rmdirs(['%s/%s.tecim'%(cwd,p_c),
 		    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
