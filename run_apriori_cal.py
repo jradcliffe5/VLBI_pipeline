@@ -5,12 +5,13 @@ filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
-import tec_maps
+#import tec_maps
 
 try:
 	# CASA 6
 	import casatools
 	from casatasks import *
+	from casatasks.private import tec_maps
 	casalog.showconsole(True)
 	casa6=True
 except:
@@ -140,11 +141,7 @@ if params['apriori_cal']['ionex_options']['run'] == True:
 		    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
 		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
-	tec_image, tec_rms_image, plotname = tec_maps.create0(ms_name=msfile, 
-		                                                  plot_vla_tec=False, 
-		                                                  username='anonymous',
-		                                                  password=params['global']["email_progress"],
-		                                                  force_to=params['apriori_cal']["ionex_options"]["ionex_type"])
+	tec_image, tec_rms_image, plotname = tec_maps.create(ms_name=msfile,doplot=True)
 	if casa6 == True:
 		try:
 			plot_tec_maps(msfile=msfile,
@@ -155,6 +152,7 @@ if params['apriori_cal']['ionex_options']['run'] == True:
 				          plotfile='%s/%s_TEC_RMS.pdf'%(cwd,p_c))
 		except:
 			print('error')
+			pass
 
 
 	gencal(vis=msfile, 
