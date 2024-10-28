@@ -1,6 +1,10 @@
 import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil, ast
 import collections
 from collections import OrderedDict
+try:
+	from collections import Mapping, Iterable
+except:
+	from collections.abc import Mapping, Iterable
 ## Numerical routines
 import numpy as np
 ## Plotting routines
@@ -86,9 +90,9 @@ def json_loads_byteified_dict(json_text,casa6):
 def convert(data):
 	if isinstance(data, basestring):
 		return str(data)
-	elif isinstance(data, collections.Mapping):
+	elif isinstance(data, Mapping):
 		return OrderedDict(map(convert, data.iteritems()))
-	elif isinstance(data, collections.Iterable):
+	elif isinstance(data, Iterable):
 		return type(data)(map(convert, data))
 	else:
 		return data
@@ -96,9 +100,9 @@ def convert(data):
 def convert_temp(data):
 	if isinstance(data, str):
 		return str(data)
-	elif isinstance(data, collections.Mapping):
+	elif isinstance(data, Mapping):
 		return OrderedDict(map(convert_temp, data.items()))
-	elif isinstance(data, collections.Iterable):
+	elif isinstance(data, Iterable):
 		return type(data)(map(convert_temp, data))
 	else:
 		return data
