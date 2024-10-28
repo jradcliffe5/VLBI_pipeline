@@ -141,7 +141,7 @@ if params['apriori_cal']['ionex_options']['run'] == True:
 		    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
 		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
-	tec_image, tec_rms_image, plotname = tec_maps.create(ms_name=msfile,doplot=True)
+	tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile,doplot=True)
 	if casa6 == True:
 		try:
 			plot_tec_maps(msfile=msfile,
