@@ -18,6 +18,19 @@ except:
 	from taskinit import casalog
 	casa6=False
 
+try:
+	if casa6 == True:	
+		from casampi.MPICommandClient import MPICommandClient
+	else:
+		from mpi4casa.MPICommandClient import MPICommandClient
+	client = MPICommandClient()
+	client.set_log_mode('redirect')
+	client.start_services()
+	parallel=True
+	cmd = []
+except:
+	parallel=False
+
 casalog.origin('vp_phase_referencing')
 
 inputs = load_json('vp_inputs.json')
@@ -102,24 +115,32 @@ for i in range(len(fields)):
 			else:
 				delaywindow=[]
 				ratewindow = []
-			fringefit(vis=msfile,
-					  caltable=caltable,
-					  field=','.join(fields[i]),
-					  solint=params['phase_referencing']['sol_interval'][i][j],
-					  zerorates=False,
-					  niter=params['phase_referencing']['fringe_niter'],
-					  refant=refant,
-					  combine=params['phase_referencing']['combine'][i][j],
-					  minsnr=params['phase_referencing']['min_snr'],
-					  paramactive=paramactive,
-					  delaywindow=delaywindow,
-					  ratewindow=ratewindow,
-					  gaintable=gaintables['gaintable'],
-					  gainfield=gaintables['gainfield'],
-					  interp=gaintables['interp'],
-					  spwmap=gaintables['spwmap'],
-					  corrdepflags=True,
-					  parang=gaintables['parang'])
+			if parallel==False:
+				fringefit(vis=msfile,
+						caltable=caltable,
+						field=','.join(fields[i]),
+						solint=params['phase_referencing']['sol_interval'][i][j],
+						zerorates=False,
+						niter=params['phase_referencing']['fringe_niter'],
+						refant=refant,
+						combine=params['phase_referencing']['combine'][i][j],
+						minsnr=params['phase_referencing']['min_snr'],
+						paramactive=paramactive,
+						delaywindow=delaywindow,
+						ratewindow=ratewindow,
+						gaintable=gaintables['gaintable'],
+						gainfield=gaintables['gainfield'],
+						interp=gaintables['interp'],
+						spwmap=gaintables['spwmap'],
+						corrdepflags=True,
+						parang=gaintables['parang'])
+			else:
+				subms = os.listdir('%s/SUBMSS'%msfile)
+				for s in subms:
+					cmd1 = "import inspect, os, sys; filename = inspect.getframeinfo(inspect.currentframe()).filename; sys.path.append(os.path.dirname(os.path.realpath(filename))); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); fringefit(vis='%s/SUBMSS/%s',caltable='%s_%s',field='%s',solint=params['phase_referencing']['sol_interval'][%d][%d],zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant=refant,combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'])" %(msfile,s,caltable,s,','.join(fields[i]),i,j,i,j,str(paramactive),str(delaywindow),str(ratewindow))
+					cmdId = client.push_command_request(cmd1,block=False,target_server=None,parameters=None)
+					cmd.append(cmdId[0])
+				resultList = client.get_command_response(cmd,block=True)
 			remove_flagged_scans(caltable)
 			if i == 1:
 				filter_smooth_delay(caltable,nsig=[2.5,2.])
@@ -255,10 +276,6 @@ for i in range(len(fields)):
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
 					delims.append('%s-%s%s%s'%(fields[i][k], cal_type[i][j], j,z))
 				rmdirs(delims)
-				if steps_run['make_mms'] == 1:
-					parallel=False
-				else:
-					parallel = False
 				if params['phase_referencing']['masking'] == 'peak':
 					tclean(vis=msfile,
 					   imagename='%s-%s%s'%(fields[i][k], cal_type[i][j], j),
