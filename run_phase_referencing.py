@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
+mpipath = os.path.dirname(os.path.realpath(filename))
 
 from VLBI_pipe_functions import *
 
@@ -137,7 +138,7 @@ for i in range(len(fields)):
 			else:
 				subms = os.listdir('%s/SUBMSS'%msfile)
 				for s in subms:
-					cmd1 = "import inspect, os, sys; filename = inspect.getframeinfo(inspect.currentframe()).filename; sys.path.append(os.path.dirname(os.path.realpath(filename))); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); fringefit(vis='%s/SUBMSS/%s',caltable='%s_%s',field='%s',solint=params['phase_referencing']['sol_interval'][%d][%d],zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant=refant,combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'])" %(msfile,s,caltable,s,','.join(fields[i]),i,j,i,j,str(paramactive),str(delaywindow),str(ratewindow))
+					cmd1 = "import inspect, os, sys; sys.path.append(%s); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); fringefit(vis='%s/SUBMSS/%s',caltable='%s_%s',field='%s',solint=params['phase_referencing']['sol_interval'][%d][%d],zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant=refant,combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'])" %(mpipath,msfile,s,caltable,s,','.join(fields[i]),i,j,i,j,str(paramactive),str(delaywindow),str(ratewindow))
 					cmdId = client.push_command_request(cmd1,block=False,target_server=None,parameters=None)
 					cmd.append(cmdId[0])
 				resultList = client.get_command_response(cmd,block=True)
