@@ -26,7 +26,7 @@ gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['import_fitsidi'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 rmdirs(['%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])])
-if os.path.exists("%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global']['project_code'])) == False:
+if os.path.exists("%s/%s_backup.tar"%(params['global']['cwd'],params['global']['project_code'])) == False:
 	casalog.post(origin=filename,message='Searching for location of fitsidifiles')
 	## Set location of fitsidifiles
 	if params['global']['fitsidi_path'] == "":
@@ -85,14 +85,14 @@ if os.path.exists("%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global'
 		rmfiles(idifiles)
 
 	if params['import_fitsidi']['make_backup'] == True:
-		casalog.post(origin=filename,message='Creating backup: %s_backup.tar.gz'%(params['global']['project_code']),priority='INFO')
-		rmfiles(["%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global']['project_code'])])
+		casalog.post(origin=filename,message='Creating backup: %s_backup.tar'%(params['global']['project_code']),priority='INFO')
+		rmfiles(["%s/%s_backup.tar"%(params['global']['cwd'],params['global']['project_code'])])
 		source_dir = "%s/%s.ms"%(params['global']['cwd'],params['global']['project_code'])
-		with tarfile.open('%s/%s_backup.tar.gz'%(params['global']['cwd'],params['global']['project_code']),"w:gz") as tar:
+		with tarfile.open('%s/%s_backup.tar'%(params['global']['cwd'],params['global']['project_code']),"w") as tar:
 			tar.add(source_dir, arcname=os.path.basename(source_dir))
 else:
-	casalog.post(origin=filename,message='Extracting: %s_backup.tar.gz'%(params['global']['project_code']),priority='INFO')
-	file = tarfile.open("%s/%s_backup.tar.gz"%(params['global']['cwd'],params['global']['project_code']))  
+	casalog.post(origin=filename,message='Extracting: %s_backup.tar'%(params['global']['project_code']),priority='INFO')
+	file = tarfile.open("%s/%s_backup.tar"%(params['global']['cwd'],params['global']['project_code']))  
 	file.extractall('%s/'%params['global']['cwd']) 
 	file.close() 
 
