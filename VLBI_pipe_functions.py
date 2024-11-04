@@ -806,7 +806,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 				flg_temp=flg[k,0,((ant==i)&(dd==j))]
 				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
 				gain_uflg = gain_uflg2[flg_temp==0]
-				if gain_uflg != []:
+				if gain_uflg != np.empty(gain_uflg.shape):
 					t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
