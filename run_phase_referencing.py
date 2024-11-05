@@ -137,6 +137,7 @@ for i in range(len(fields)):
 						parang=gaintables['parang'])
 			else:
 				subms = natural_sort(os.listdir('%s/SUBMSS'%msfile))
+				rmdirs(['%s_temp'%(caltable)])
 				os.mkdir('%s_temp'%(caltable))
 				subcaltable=[]
 				for s in subms:
