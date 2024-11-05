@@ -61,7 +61,7 @@
         }
     },
     "make_mms":{
-        "separationaxis"    :  "auto",
+        "separationaxis"    :  "scan",
         "numsubms"          :  "auto",
         "hpc_options":{
             "partition"     :  "default",
