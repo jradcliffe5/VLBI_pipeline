@@ -806,7 +806,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 				flg_temp=flg[k,0,((ant==i)&(dd==j))]
 				gain_uflg2=gain[k,0,((ant==i)&(dd==j))]
 				gain_uflg = gain_uflg2[flg_temp==0]
-				if gain_uflg != []:
+				if len(gain_uflg) != 0:
 					t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
@@ -1976,12 +1976,13 @@ def plot_tec_maps(msfile,tec_image,plotfile):
 	hr[0] = 1/20.
 	gs = gridspec.GridSpec(nrows=nplo+1,ncols=nplo,hspace=0.05,wspace=0.05,height_ratios=hr)
 	data = hdu[0].data
+	plt.clf()
 	with PdfPages('%s'%plotfile) as pdf:
 		nplo2=nplo**2
 		time = hdu[0].header['CRVAL3']
 		minmax = [np.min(data),np.max(data)]
 		for j in range(np.ceil(data.shape[0]/nplo2).astype(int)):
-			fig = plt.figure(1,figsize=(18,18))
+			fig = plt.figure(figsize=(18,18))
 			for i in range(nplo2):
 				nco = j*nplo2 + i
 				if nco < data.shape[0]:
@@ -2676,3 +2677,14 @@ def check_fits_ext(idifiles=[],ext='',del_ext=False):
 		return True
 	else:
 		return False
+
+def combine_caltables(caltable='',subcaltables=[]):
+	tb=casatools.table()
+	for i,j in enumerate(subcaltables):
+		if i == 0:
+			tb.open(j)
+			tb.copy(newtablename=caltable,deep=True)
+		else:
+			tb.open(j)
+			tb.copyrows(outtable=caltable)
+		tb.close()

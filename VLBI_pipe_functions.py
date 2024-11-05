@@ -1976,12 +1976,13 @@ def plot_tec_maps(msfile,tec_image,plotfile):
 	hr[0] = 1/20.
 	gs = gridspec.GridSpec(nrows=nplo+1,ncols=nplo,hspace=0.05,wspace=0.05,height_ratios=hr)
 	data = hdu[0].data
+	plt.clf()
 	with PdfPages('%s'%plotfile) as pdf:
 		nplo2=nplo**2
 		time = hdu[0].header['CRVAL3']
 		minmax = [np.min(data),np.max(data)]
 		for j in range(np.ceil(data.shape[0]/nplo2).astype(int)):
-			fig = plt.figure(1,figsize=(18,18))
+			fig = plt.figure(figsize=(18,18))
 			for i in range(nplo2):
 				nco = j*nplo2 + i
 				if nco < data.shape[0]:
