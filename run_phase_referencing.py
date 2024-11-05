@@ -293,7 +293,7 @@ for i in range(len(fields)):
 					   nterms=deconvolver_tclean[1],
 					   niter = 0,
 					   weighting=weight,
-					   parallel=parallel
+					   parallel=False
 					   )
 					imname='%s-%s%s.image'%(fields[i][k], cal_type[i][j], j)
 					if mtmfs == True:
@@ -328,7 +328,7 @@ for i in range(len(fields)):
 					   nterms=deconvolver_tclean[1],
 					   niter = 0,
 					   weighting=weight,
-					   parallel=parallel
+					   parallel=False
 					   )
 					imname='%s-%s%s_rms.image'%(fields[i][k], cal_type[i][j], j)
 					if mtmfs == True:
@@ -355,7 +355,7 @@ for i in range(len(fields)):
 					   mask=masking[1],
 					   noisethreshold=masking[2],
 					   sidelobethreshold=masking[3],
-					   parallel=parallel
+					   parallel=False
 					   )
 				if deconvolver_tclean[1]>1:
 					model = []
@@ -397,7 +397,7 @@ for i in range(len(fields)):
 							       nterms=deconvolver_tclean[1],
 							       niter = 0,
 							       weighting=weight,
-							       parallel=parallel
+							       parallel=False
 							   )
 							imname = '%s-initmodel.image'%(fields[i+1][m])
 							if mtmfs == True:
@@ -428,7 +428,7 @@ for i in range(len(fields)):
 							       nterms=deconvolver_tclean[1],
 							       niter = 0,
 							       weighting=weight,
-							       parallel=parallel
+							       parallel=False
 							   )
 							imname='%s-initmodel.image'%(fields[i+1][m])
 							if mtmfs == True:
@@ -455,7 +455,7 @@ for i in range(len(fields)):
 							   mask=masking[1],
 							   noisethreshold=masking[2],
 							   sidelobethreshold=masking[3],
-							   parallel=parallel
+							   parallel=False
 							   )
 
 						if deconvolver_tclean[1]>1:
