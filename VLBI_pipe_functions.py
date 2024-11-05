@@ -1757,7 +1757,7 @@ def clip_model(model, im, snr):
 	for i in model:
 		ia.open(i)
 		model_data = ia.getchunk()
-		if (i.endswith('tt0')==True)|(i.endswith('image')==True):
+		if (i.endswith('tt0')==True)|(i.endswith('model')==True):
 			model_data[model_data<0] = 0
 		model_data[:max_pix[0]-pix_scale[1],:,:,:] = 0
 		model_data[max_pix[0]+pix_scale[1]:,:,:,:] = 0
