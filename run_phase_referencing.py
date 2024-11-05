@@ -145,8 +145,9 @@ for i in range(len(fields)):
 					cmdId = client.push_command_request(cmd1,block=False,target_server=None,parameters=None)
 					cmd.append(cmdId[0])
 				resultList = client.get_command_response(cmd,block=True)
+				print(caltable,subcaltable)
 				combine_caltables(caltable=caltable,subcaltables=subcaltable)
-				#rmdirs(['%s_temp'%(caltable)])
+				rmdirs(['%s_temp'%(caltable)])
 			remove_flagged_scans(caltable)
 			if i == 1:
 				filter_smooth_delay(caltable,nsig=[2.5,2.])
@@ -457,7 +458,6 @@ for i in range(len(fields)):
 							   sidelobethreshold=masking[3],
 							   parallel=False
 							   )
-
 						if deconvolver_tclean[1]>1:
 							model = []
 							for p in range(deconvolver_tclean[1]):
