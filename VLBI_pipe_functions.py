@@ -2676,3 +2676,13 @@ def check_fits_ext(idifiles=[],ext='',del_ext=False):
 		return True
 	else:
 		return False
+
+def combine_caltables(caltable='',subcaltables=[]):
+	tb=casatools.table()
+	for i in subcaltables:
+		if i == 0:
+			tb.open(i)
+			tb.copy(newtablename=caltable,deep=True)
+		else:
+			tb.copyrows(outtable=caltable)
+		tb.close()
