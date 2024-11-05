@@ -2684,5 +2684,6 @@ def combine_caltables(caltable='',subcaltables=[]):
 			tb.open(i)
 			tb.copy(newtablename=caltable,deep=True)
 		else:
+			tb.open(i)
 			tb.copyrows(outtable=caltable)
 		tb.close()

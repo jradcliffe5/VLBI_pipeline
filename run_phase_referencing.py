@@ -146,7 +146,7 @@ for i in range(len(fields)):
 					cmd.append(cmdId[0])
 				resultList = client.get_command_response(cmd,block=True)
 				combine_caltables(caltable=caltable,subcaltables=subcaltable)
-				rmdirs(['%s_temp'%(caltable)])
+				#rmdirs(['%s_temp'%(caltable)])
 			remove_flagged_scans(caltable)
 			if i == 1:
 				filter_smooth_delay(caltable,nsig=[2.5,2.])
