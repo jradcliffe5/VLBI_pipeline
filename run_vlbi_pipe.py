@@ -92,7 +92,7 @@ for j,i in enumerate(steps.keys()):
 			else:
 				write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='both',casa6=casa6)
 		elif i == 'apply_to_all':
-			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag='apply_to_all',casa6=casa6)
+			write_commands(step=i,inputs=inputs,params=params,parallel=False,aoflag='apply_to_all',casa6=casa6)
 		else:
 			write_commands(step=i,inputs=inputs,params=params,parallel=parallel,aoflag=False,casa6=casa6)
 		high_step = j
