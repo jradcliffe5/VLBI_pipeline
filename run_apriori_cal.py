@@ -5,7 +5,6 @@ filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
 
 from VLBI_pipe_functions import *
-#import tec_maps
 
 try:
 	# CASA 6
@@ -123,7 +122,8 @@ if params['apriori_cal']["make_gaincurve"] == True:
 
 if params['apriori_cal']['do_eops'] == True:
 	if ((version[0]*100)+(version[1]*10)+(version[2]))>664:
-		rmdirs(['%s/%s.eop'%(cwd,p_c),'usno_finals.erp'])
+		rmdirs(['%s/%s.eop'%(cwd,p_c)])
+		rmfiles(['usno_finals.erp'])
 		os.system('curl -u anonymous:daip@nrao.edu --ftp-ssl ftp://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/usno_finals.erp > %s/usno_finals.erp' %cwd)
 		if os.path.exists('%s/usno_finals.erp'%cwd):
 			gencal(vis=msfile, 
