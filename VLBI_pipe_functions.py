@@ -282,6 +282,9 @@ def write_hpc_headers(step,params):
 		else:
 			hpc_opts[i] = params[step]["hpc_options"][i]
 	
+	if step == 'apply_to_all':
+		hpc_opts['cpus'] = 1
+		hpc_opts['nodes'] = 1
 
 	hpc_dict = {'slurm':{
 					 'partition'     :'#SBATCH --partition=%s'%hpc_opts['partition'],
