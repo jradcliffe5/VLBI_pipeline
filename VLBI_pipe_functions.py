@@ -2307,7 +2307,7 @@ def image_targets(prefix,params,parallel):
 			   usemask='auto-multithresh',
 			   noisethreshold=4.0,
 			   sidelobethreshold=1.0,
-			   parallel=parallel)
+			   parallel=False)
 	return targets
 
 def apply_tar_output(prefix,params,targets):
