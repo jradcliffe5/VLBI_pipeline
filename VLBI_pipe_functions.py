@@ -289,7 +289,7 @@ def write_hpc_headers(step,params):
 	hpc_dict = {'slurm':{
 					 'partition'     :'#SBATCH --partition=%s'%hpc_opts['partition'],
 					 'nodetype'      :'',
-					 'cpus'          :'#SBATCH --tasks-per-node %s'%hpc_opts['cpus'], 
+					 'cpus'          :'#SBATCH -n %s'%hpc_opts['cpus'], 
 					 'nodes'         :'#SBATCH -N %s-%s'%(hpc_opts['nodes'],hpc_opts['nodes']),
 					 'mpiprocs'      :'', 
 					 'walltime'      :'#SBATCH --time=%s'%hpc_opts['walltime'],
