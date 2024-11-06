@@ -282,11 +282,14 @@ def write_hpc_headers(step,params):
 		else:
 			hpc_opts[i] = params[step]["hpc_options"][i]
 	
+	if step == 'apply_to_all':
+		hpc_opts['cpus'] = 1
+		hpc_opts['nodes'] = 1
 
 	hpc_dict = {'slurm':{
 					 'partition'     :'#SBATCH --partition=%s'%hpc_opts['partition'],
 					 'nodetype'      :'',
-					 'cpus'          :'#SBATCH --tasks-per-node %s'%hpc_opts['cpus'], 
+					 'cpus'          :'#SBATCH -n %s'%hpc_opts['cpus'], 
 					 'nodes'         :'#SBATCH -N %s-%s'%(hpc_opts['nodes'],hpc_opts['nodes']),
 					 'mpiprocs'      :'', 
 					 'walltime'      :'#SBATCH --time=%s'%hpc_opts['walltime'],
@@ -1757,7 +1760,7 @@ def clip_model(model, im, snr):
 	for i in model:
 		ia.open(i)
 		model_data = ia.getchunk()
-		if i.endswith('tt0'):
+		if (i.endswith('tt0')==True)|(i.endswith('model')==True):
 			model_data[model_data<0] = 0
 		model_data[:max_pix[0]-pix_scale[1],:,:,:] = 0
 		model_data[max_pix[0]+pix_scale[1]:,:,:,:] = 0
@@ -2290,7 +2293,7 @@ def image_targets(prefix,params,parallel):
 
 	targets=[]
 	for k in msinfo_target['FIELD']['fieldtoID'].keys():
-		if k not in calibrators:
+		if (k not in calibrators)|(k in params['global']['targets']):
 			targets.append(k)
 
 	for j in targets:
