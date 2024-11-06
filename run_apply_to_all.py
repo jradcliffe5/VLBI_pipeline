@@ -80,10 +80,6 @@ if params['global']['job_manager'] == 'bash':
 			cmdId = client.push_command_request(cmd1,block=False)
 			cmd.append(cmdId[0])
 		else:
-			if steps_run['make_mms'] == 1:
-				parallel = True
-			else:
-				parallel = False
 			apply_to_all(prefix=prefix[j],files=target_files[prefix[j]],tar=tar[j],params=params,casa6=casa6,parallel=parallel,part=int(sys.argv[i]))
 			if int(sys.argv[i]) == 1:
 				if params["apply_to_all"]["image_target"]["run"] == True:
@@ -100,8 +96,6 @@ else:
 	prefix = sys.argv[i+2]
 	tar = sys.argv[i+1]
 	target_files[prefix] = sys.argv[i+3:]
-
-	parallel = False
 	
 	if sys.argv[i] == '0':
 		apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=0)
