@@ -2290,7 +2290,7 @@ def image_targets(prefix,params,parallel):
 
 	targets=[]
 	for k in msinfo_target['FIELD']['fieldtoID'].keys():
-		if k not in calibrators:
+		if (k not in calibrators)|(k in params['global']['targets']):
 			targets.append(k)
 
 	for j in targets:
