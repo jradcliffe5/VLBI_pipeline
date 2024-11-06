@@ -101,10 +101,7 @@ else:
 	tar = sys.argv[i+1]
 	target_files[prefix] = sys.argv[i+3:]
 
-	if steps_run['make_mms'] == 1:
-		parallel = True
-	else:
-		parallel = False
+	parallel = False
 	
 	if sys.argv[i] == '0':
 		apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=0)
