@@ -2142,7 +2142,8 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 		if parallel == True:
 			msfile2='%s/%s_presplit2.ms'%(params['global']['cwd'],i)
 			os.system('mv %s %s'%(msfile,msfile2))
-			partition(vis=msfile2,\
+			partition(vis=msfile2,
+			 		  separationaxis=params['make_mms']['separationaxis'],
 					  outputvis=msfile)
 			rmdirs([msfile2])
 
