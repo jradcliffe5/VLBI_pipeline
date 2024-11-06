@@ -281,16 +281,12 @@ def write_hpc_headers(step,params):
 			hpc_opts[i] = params['global']['default_%s'%i]
 		else:
 			hpc_opts[i] = params[step]["hpc_options"][i]
-	
-	if step == 'apply_to_all':
-		hpc_opts['cpus'] = 1
-		hpc_opts['nodes'] = 1
 
 	hpc_dict = {'slurm':{
 					 'partition'     :'#SBATCH --partition=%s'%hpc_opts['partition'],
 					 'nodetype'      :'',
 					 'cpus'          :'#SBATCH -n %s'%hpc_opts['cpus'], 
-					 'nodes'         :'#SBATCH -N %s-%s'%(hpc_opts['nodes'],hpc_opts['nodes']),
+					 'nodes'         :'#SBATCH -N %s'%(hpc_opts['nodes']),
 					 'mpiprocs'      :'', 
 					 'walltime'      :'#SBATCH --time=%s'%hpc_opts['walltime'],
 					 'job_name'      :'#SBATCH -J %s'%hpc_opts['job_name'],
