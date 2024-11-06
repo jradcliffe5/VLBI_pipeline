@@ -2151,7 +2151,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 		
 		targets=[]
 		for k in msinfo_target['FIELD']['fieldtoID'].keys():
-			if k not in calibrators:
+			if (k not in calibrators)|(k in params['global']['targets']):
 				targets.append(k)
 
 		if params['apriori_cal']["do_observatory_flg"] == True:
@@ -2231,7 +2231,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 		msinfo_target = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],i))
 		targets=[]
 		for k in msinfo_target['FIELD']['fieldtoID'].keys():
-			if k not in calibrators:
+			if (k not in calibrators)|(k in params['global']['targets']):
 				targets.append(k)
 		if params['apply_to_all']['pbcor']['run'] == True:
 			pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params,msinfo=msinfo_target)
