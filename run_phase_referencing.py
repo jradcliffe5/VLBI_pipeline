@@ -269,7 +269,7 @@ for i in range(len(fields)):
 								im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
 								snr=10.0)
 
-				os.system('%s -name %s-%s%s -reorder -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i][k],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i][k]],msfile))
+				os.system('%s -name %s-%s%s -reorder -predict -weight natural %s -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i][k],cal_type[i][j],mtmfs_wsclean,j,msinfo['FIELD']['fieldtoID'][fields[i][k]],msfile))
 				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
 						os.system('%s -name %s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
