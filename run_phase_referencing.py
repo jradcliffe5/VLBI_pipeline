@@ -285,7 +285,7 @@ for i in range(len(fields)):
 						clip_fitsfile(model='%s-initmodel.fits'%(fields[i+1][m]), 
 						          im='%s-initmodel.fits'%(fields[i+1][m]),
 						          snr=10.0)
-						os.system('%s -name %s-initmodel -reorder -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1][m],msinfo['FIELD']['fieldtoID'][fields[i+1][m]],msfile))
+						os.system('%s -name %s-initmodel -reorder -predict -weight natural %s -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1][m],mtmfs_wsclean, msinfo['FIELD']['fieldtoID'][fields[i+1][m]],msfile))
 			if params['phase_referencing']['imager'] == 'tclean':
 				delims = []
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
