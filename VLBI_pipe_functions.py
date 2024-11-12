@@ -1330,6 +1330,7 @@ def clip_fitsfile(model,im,snr):
 	im_head = im_hdu['PRIMARY'].header
 	rms = np.std(im_hdu['PRIMARY'].data.squeeze()[0:int(im_head['NAXIS1']/4.),0:int(im_head['NAXIS2']/4.)])
 	im_hdu.close()
+	model_data[model_data<0] = 0
 	model_data[model_data<float(snr)*rms] = 0
 	model_hdu.flush()
 	model_hdu.close()

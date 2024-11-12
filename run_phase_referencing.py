@@ -1,5 +1,4 @@
-import inspect, os, sys, json, re
-from collections import OrderedDict
+import inspect, os, sys, glob
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
 sys.path.append(os.path.dirname(os.path.realpath(filename)))
@@ -237,7 +236,7 @@ for i in range(len(fields)):
 		weight = 'natural'
 		if msinfo['SPECTRAL_WINDOW']['bwidth']/msinfo['SPECTRAL_WINDOW']['cfreq'] > 0.1:
 			deconvolver_tclean = ['mtmfs',2]
-			mtmfs_wsclean = '-join-channels -channels-out %d -fit-spectral-pol 2 -deconvolution-channels %d'%(msinfo['SPECTRAL_WINDOW']['nchan']/4,msinfo['SPECTRAL_WINDOW']['nchan']/8)
+			mtmfs_wsclean = '-join-channels -channels-out 4 -fit-spectral-pol 2'
 			mtmfs=True
 		else:
 			deconvolver_tclean = ['clark',1]
@@ -259,9 +258,17 @@ for i in range(len(fields)):
 						mtmfs_wsclean,
 						msinfo['FIELD']['fieldtoID'][fields[i][k]],
 						msfile))
-				clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i][k],cal_type[i][j],j), 
-					          im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
-					          snr=10.0)
+				if mtmfs==True:
+					model_list = glob.glob('%s-%s%s-*-model.fits'%(fields[i][k],cal_type[i][j],j))
+					for i in model_list:
+						clip_fitsfile(model=i, 
+								im='%s-image.fits'%i.split('-model.fits')[0],
+								snr=5.0)
+				else:
+					clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i][k],cal_type[i][j],j), 
+								im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
+								snr=10.0)
+
 				os.system('%s -name %s-%s%s -reorder -predict -weight natural -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i][k],cal_type[i][j],j,msinfo['FIELD']['fieldtoID'][fields[i][k]],msfile))
 				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
