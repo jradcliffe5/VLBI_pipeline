@@ -82,6 +82,18 @@ applycal(vis=msfile,
 	     gainfield=gaintables['gainfield'],
 	     spwmap=gaintables['spwmap'],
 	     parang=gaintables['parang'])
+flagdata(vis=msfile,
+		mode='clip',
+		datacolumn='corrected',
+		clipminmax=[0,1e6])
+tb = casatools.table()
+tb.open(msfile) 
+weight=tb.getcol('WEIGHT')
+tb.close()
+flagdata(vis=msfile,
+		mode='clip',
+		datacolumn='WEIGHT',
+		clipminmax=[0,np.median(weight)+6*np.std(weight)])
 
 
 for i in range(len(fields)):
@@ -99,6 +111,7 @@ for i in range(len(fields)):
 			action='apply',
 			display='',
 			flagbackup=False)
+
 	for j in range(len(cal_type[i])):
 		if len(fields[i]) < 2:
 			fields[i] = list(fields[i])
@@ -269,7 +282,15 @@ for i in range(len(fields)):
 								im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
 								snr=10.0)
 
-				os.system('%s -name %s-%s%s -reorder -predict -weight natural %s -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i][k],cal_type[i][j],mtmfs_wsclean,j,msinfo['FIELD']['fieldtoID'][fields[i][k]],msfile))
+				os.system('%s -name %s-%s%s -reorder -predict -weight %s %s -field %s %s'%
+				(";".join(params['global']["wsclean_command"]),
+				fields[i][k],
+				cal_type[i][j],
+				j,
+				weight,
+				mtmfs_wsclean,
+				msinfo['FIELD']['fieldtoID'][fields[i][k]],
+				msfile))
 				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
 						os.system('%s -name %s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
@@ -285,7 +306,13 @@ for i in range(len(fields)):
 						clip_fitsfile(model='%s-initmodel.fits'%(fields[i+1][m]), 
 						          im='%s-initmodel.fits'%(fields[i+1][m]),
 						          snr=10.0)
-						os.system('%s -name %s-initmodel -reorder -predict -weight natural %s -field %s %s'%(";".join(params['global']["wsclean_command"]),fields[i+1][m],mtmfs_wsclean, msinfo['FIELD']['fieldtoID'][fields[i+1][m]],msfile))
+						os.system('%s -name %s-initmodel -reorder -predict -weight %s %s -field %s %s'%
+						(";".join(params['global']["wsclean_command"]),
+						fields[i+1][m],
+						weight,
+						mtmfs_wsclean,
+						msinfo['FIELD']['fieldtoID'][fields[i+1][m]],
+						msfile))
 			if params['phase_referencing']['imager'] == 'tclean':
 				delims = []
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
