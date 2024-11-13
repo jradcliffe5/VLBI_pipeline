@@ -86,14 +86,14 @@ flagdata(vis=msfile,
 		mode='clip',
 		datacolumn='corrected',
 		clipminmax=[0,1e6])
-tb = casatools.table()
-tb.open(msfile) 
-weight=tb.getcol('WEIGHT')
-tb.close()
+#tb = casatools.table()
+#tb.open(msfile) 
+#weight=tb.getcol('WEIGHT')
+#tb.close()
 flagdata(vis=msfile,
 		mode='clip',
 		datacolumn='WEIGHT',
-		clipminmax=[0,np.median(weight)+6*np.std(weight)])
+		clipminmax=[0,1e60])
 
 
 for i in range(len(fields)):
