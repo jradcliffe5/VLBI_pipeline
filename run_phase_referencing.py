@@ -273,24 +273,23 @@ for i in range(len(fields)):
 						msfile))
 				if mtmfs==True:
 					model_list = glob.glob('%s-%s%s-*-model.fits'%(fields[i][k],cal_type[i][j],j))
-					for i in model_list:
-						clip_fitsfile(model=i, 
-								im='%s-image.fits'%i.split('-model.fits')[0],
-								snr=5.0)
+					for q in model_list:
+						clip_fitsfile(model=q, 
+									 im='%s-image.fits'%q.split('-model.fits')[0],
+									 snr=5.0)
 				else:
 					clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i][k],cal_type[i][j],j), 
 								im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
 								snr=10.0)
-
-				os.system('%s -name %s-%s%s -reorder -predict -weight %s %s -field %s %s'%
-				(";".join(params['global']["wsclean_command"]),
-				fields[i][k],
-				cal_type[i][j],
-				j,
-				weight,
-				mtmfs_wsclean,
-				msinfo['FIELD']['fieldtoID'][fields[i][k]],
-				msfile))
+				os.system('%s -name %s-%s%s -weight %s -predict %s -field %s %s'%
+					(";".join(params['global']["wsclean_command"]),
+						fields[i][k],
+						cal_type[i][j],
+						j,
+						weight,
+						mtmfs_wsclean,
+						msinfo['FIELD']['fieldtoID'][fields[i][k]],
+						msfile))
 				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
 						os.system('%s -name %s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
