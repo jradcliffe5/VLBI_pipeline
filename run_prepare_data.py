@@ -142,9 +142,9 @@ if (params["prepare_data"]["replace_antab"] == True)|(gc_fits==False):
 	rmdirs(['%s/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 	casalog.post(origin=filename,message='Generating gaincurve information - %s.gc'%params['global']['project_code'],priority='INFO')
 	if telescop == 'EVN':
-		convert_gaincurve(antab=antabfile, gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
+		convert_gaincurve(antab=antabfile, gc='%s/caltables/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
 	elif telescop == 'VLBA':
-		convert_gaincurve(antab='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path']), gc='%s/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
+		convert_gaincurve(antab='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path']), gc='%s/caltables/%s.gc'%(params['global']['cwd'],params['global']['project_code']), min_elevation=params['prepare_data']['gaincurve']['min_elevation'], max_elevation=params['prepare_data']['gaincurve']['max_elevation'])
 	else:
 		casalog.post(origin=filename,message='Unknown array!'%params['global']['project_code'],priority='INFO')
 		sys.exit()

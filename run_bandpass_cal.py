@@ -30,11 +30,11 @@ cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
-if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
 	msinfo = get_ms_info(msfile)
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+	save_json(filename='%s/%s_msinfo.json'%(cwd,p_c), array=get_ms_info('%s/%s.ms'%(cwd,p_c)), append=False)
 else:
-	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+	msinfo = load_json('%s/%s_msinfo.json'%(cwd,p_c))
 
 refant = find_refants(params['global']['refant'],msinfo)
 
@@ -61,7 +61,7 @@ applycal(vis=msfile,
 	     spwmap=gaintables['spwmap'],
 	     parang=gaintables['parang'])
 
-rmdirs(['%s/%s.bpass'%(cwd,p_c)])
+rmdirs(['%s/caltables/%s.bpass'%(cwd,p_c)])
 if params['bandpass_cal']['same_as_sbd_cal'] == True:
 	substep='sub_band_delay'
 else:
@@ -80,7 +80,7 @@ for i in range(len(params[substep]['select_calibrators'])):
 		fields=",".join(params[substep]['select_calibrators'][i])
 		
 	bandpass(vis=msfile,
-			 caltable='%s/%s.bpass'%(cwd,p_c),
+			 caltable='%s/caltables/%s.bpass'%(cwd,p_c),
 			 field=fields,
 			 solint=params['bandpass_cal']['sol_interval'],
 			 antenna='',
@@ -100,8 +100,8 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 parang=gaintables['parang'])
 
 #interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=False,fringecal=False)
-remove_flagged_scans('%s/%s.bpass'%(cwd,p_c))
-interpgain(caltable='%s/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
+remove_flagged_scans('%s/caltables/%s.bpass'%(cwd,p_c))
+interpgain(caltable='%s/caltables/%s.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 
 
 
@@ -116,7 +116,7 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 	if npol>2:
 		npol=2
 	tb.close()
-	tb.open('%s/%s.auto.bpass'%(cwd,p_c))
+	tb.open('%s/caltables/%s.auto.bpass'%(cwd,p_c))
 	for i in range(len(msinfo['ANTENNAS']['anttoID'])):
 		for j in range(msinfo['SPECTRAL_WINDOW']['nspws']):
 			subt = tb.query('ANTENNA1==%s and SPECTRAL_WINDOW_ID==%s'%(i,j))
@@ -129,7 +129,7 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 					data[k,:,(spw==j)&(ant==i)] = subdata
 					flags[k,:,(spw==j)&(ant==i)] = subflg
 	tb.close()
-	tb.open('%s/%s.bpass'%(cwd,p_c),nomodify=False)
+	tb.open('%s/caltables/%s.bpass'%(cwd,p_c),nomodify=False)
 	tb.putcol('CPARAM',data)
 	tb.putcol('FLAG',flags)
 	tb.close()
@@ -138,10 +138,10 @@ if '%s/%s.auto.bpass'%(cwd,p_c) in gaintab:
 if casa6 == True:
 	for i in ['amp','phase']:
 		for j in ['freq','time']:
-			plotcaltable(caltable='%s/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s-bpass_%s_vs_%s.pdf'%(p_c,i,j))
+			plotcaltable(caltable='%s/caltables/%s.bpass'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-bpass_%s_vs_%s.pdf'%(cwd,p_c,i,j))
 
-gaintables = append_gaintable(gaintables,['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
-gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gaintables = append_gaintable(gaintables,['%s/caltables/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gt_r['bandpass_cal'] = append_gaintable(gt_r['bandpass_cal'],['%s/caltables/%s.bpass'%(cwd,p_c),'',[],'linear,linear'])
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)

@@ -44,11 +44,11 @@ cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
-if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
 	msinfo = get_ms_info(msfile)
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+	save_json(filename='%s/%s_msinfo.json'%(cwd,p_c), array=get_ms_info('%s/%s.ms'%(cwd,p_c)), append=False)
 else:
-	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+	msinfo = load_json('%s/%s_msinfo.json'%(cwd,p_c))
 
 
 refant = find_refants(params['global']['refant'],msinfo)
@@ -66,7 +66,7 @@ if steps_run['phase_referencing'] == 1:
 	clearcal(vis=msfile)
 	if params['global']['use_initial_model'] != {}:
 		for i in params['global']['use_initial_model'].keys():
-			ft(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
+			ft(vis='%s/%s.ms'%(cwd,p_c),
 				field=i,
 				nterms=len(params['global']['use_initial_model'][i]),
 				model=params['global']['use_initial_model'][i],usescratch=True)
@@ -115,7 +115,7 @@ for i in range(len(fields)):
 	for j in range(len(cal_type[i])):
 		if len(fields[i]) < 2:
 			fields[i] = list(fields[i])
-		caltable = '%s/%s-%s.%s%s'%(cwd,p_c,'_'.join(fields[i]),cal_type[i][j],j)
+		caltable = '%s/caltables/%s-%s.%s%s'%(cwd,p_c,'_'.join(fields[i]),cal_type[i][j],j)
 		rmdirs([caltable])
 		if cal_type[i][j] == 'f':
 			if params['phase_referencing']['do_disp_delays'] == True:
@@ -170,10 +170,10 @@ for i in range(len(fields)):
 					xax = ['freq','time']
 				else:
 					xax = ['time']
-				for k in ['delay','phase']:
+				for k in ['delay','phase','rate']:
 					try:
 						for l in xax:
-							plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
+							plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable,k,l))
 					except:
 						pass
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
@@ -214,7 +214,7 @@ for i in range(len(fields)):
 					yax = ['phase']
 				for k in yax:
 					for l in xax:
-						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s-%s_vs_%s.pdf'%(caltable,k,l))
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable,k,l))
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be f - fringe fit, p - phase, ap - amp and phase, a - amp, or k - delay')
 			sys.exit()
@@ -276,7 +276,7 @@ for i in range(len(fields)):
 					for q in model_list:
 						clip_fitsfile(model=q, 
 									 im='%s-image.fits'%q.split('-model.fits')[0],
-									 snr=5.0)
+									 snr=1.0)
 				else:
 					clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i][k],cal_type[i][j],j), 
 								im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),

@@ -57,16 +57,16 @@ else:
 
 if doaccor==True:
 	## DiFX correlator sampling corrections
-	rmdirs(['%s/%s.accor'%(cwd,p_c)])
+	rmdirs(['%s/caltables/%s.accor'%(cwd,p_c)])
 	accor(vis=msfile,
-	      caltable='%s/%s.accor'%(cwd,p_c),
+	      caltable='%s/caltables/%s.accor'%(cwd,p_c),
 	      solint=params['apriori_cal']['accor_options']['solint'])
-	gaintables = append_gaintable(gaintables,['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
-	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
+	gaintables = append_gaintable(gaintables,['%s/caltables/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
+	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.accor'%(cwd,p_c),'',[],params['apriori_cal']['accor_options']['interp']])
 	if params['apriori_cal']['accor_options']['smooth'] == True:
 		smoothcal(vis=msfile,
-		          tablein='%s/%s.accor'%(cwd,p_c),
-		          caltable='%s/%s.accor'%(cwd,p_c),
+		          tablein='%s/caltables/%s.accor'%(cwd,p_c),
+		          caltable='%s/caltables/%s.accor'%(cwd,p_c),
 			   smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
 
 ### Run prior-cals
@@ -83,85 +83,87 @@ gencal(vis=msfile,\
        caltype='tsys',\
        spw='',\
        antenna='',\
-       caltable='%s/%s.tsys'%(cwd,p_c),\
+       caltable='%s/caltables/%s.tsys'%(cwd,p_c),\
        uniform=False)
 
 if casa6 == True:
-	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_time.pdf'%p_c)
-	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsys_vs_freq.pdf'%p_c)
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsys_vs_time.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsys_vs_freq.pdf'%(cwd,p_c))
 
-gaintables = append_gaintable(gaintables,['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
-gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
+gaintables = append_gaintable(gaintables,['%s/caltables/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
+gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
 
 if params['apriori_cal']['tsys_options']['interp_flags'] == True:
-	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
 if params['apriori_cal']['tsys_options']['smooth'] == True:
-	rmdirs(['%s/%s.tsys_original'%(cwd,p_c)])
-	os.system('cp -r %s/%s.tsys %s/%s.tsys_original'%(cwd,p_c,cwd,p_c))
-	filter_tsys_auto(caltable='%s/%s.tsys'%(cwd,p_c),nsig=params['apriori_cal']['tsys_options']['outlier_SN'],jump_pc=params['apriori_cal']['tsys_options']['jump_ident_pc'])
-	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-	interpgain(caltable='%s/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+	rmdirs(['%s/caltables/%s.tsys_original'%(cwd,p_c)])
+	os.system('cp -r %s/caltables/%s.tsys %s/caltables/%s.tsys_original'%(cwd,p_c,cwd,p_c))
+	filter_tsys_auto(caltable='%s/caltables/%s.tsys'%(cwd,p_c),nsig=params['apriori_cal']['tsys_options']['outlier_SN'],jump_pc=params['apriori_cal']['tsys_options']['jump_ident_pc'])
+	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
 if casa6 == True:
-	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-tsysfiltered_vs_time.pdf'%p_c)
-	plotcaltable(caltable='%s/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-tsysfiltered_vs_freq.pdf'%p_c)
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsysfiltered_vs_time.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsysfiltered_vs_freq.pdf'%(cwd,p_c))
 
 if params['apriori_cal']["make_gaincurve"] == True:
-	rmdirs(['%s/%s.gcal'%(cwd,p_c)])
+	rmdirs(['%s/caltables/%s.gcal'%(cwd,p_c)])
 	gencal(vis=msfile,\
 	       caltype='gc',\
 	       spw='',\
 	       antenna='',\
-	       caltable='%s/%s.gcal'%(cwd,p_c),\
-	       infile='%s/%s.gc'%(cwd,p_c))
+	       caltable='%s/caltables/%s.gcal'%(cwd,p_c),\
+	       infile='%s/caltables/%s.gc'%(cwd,p_c))
 
-	gaintables = append_gaintable(gaintables,['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
-	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.gcal'%(cwd,p_c),'',[],'nearest'])
+	gaintables = append_gaintable(gaintables,['%s/caltables/%s.gcal'%(cwd,p_c),'',[],'nearest'])
+	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 
 if params['apriori_cal']['do_eops'] == True:
 	if ((version[0]*100)+(version[1]*10)+(version[2]))>664:
-		rmdirs(['%s/%s.eop'%(cwd,p_c)])
-		rmfiles(['usno_finals.erp'])
+		rmdirs(['%s/caltables/%s.eop'%(cwd,p_c)])
+		rmfiles(['%s/usno_finals.erp'%cwd])
 		os.system('curl -u anonymous:daip@nrao.edu --ftp-ssl ftp://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/usno_finals.erp > %s/usno_finals.erp' %cwd)
 		if os.path.exists('%s/usno_finals.erp'%cwd):
 			gencal(vis=msfile, 
-				caltable='%s/%s.eop'%(cwd,p_c),
+				caltable='%s/caltables/%s.eop'%(cwd,p_c),
 				caltype='eop', 
 				infile='%s/usno_finals.erp'%(cwd))
-			gaintables = append_gaintable(gaintables,['%s/%s.eop'%(cwd,p_c),'',[],''])
-			gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.eop'%(cwd,p_c),'',[],''])
+			gaintables = append_gaintable(gaintables,['%s/caltables/%s.eop'%(cwd,p_c),'',[],''])
+			gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.eop'%(cwd,p_c),'',[],''])
 		else:
 			casalog.post(priority='SEVERE',origin=filename,message='EOP parameters have failed. Please ensure that curl is installed on your system')
 			pass
 
 if params['apriori_cal']['ionex_options']['run'] == True:
-	rmdirs(['%s/%s.tecim'%(cwd,p_c),
+	rmdirs(['%s/caltables/%s.tecim'%(cwd,p_c),
 		    '%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
 		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
-	tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile,doplot=True)
+	tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile,doplot=False)
 	if casa6 == True:
 		try:
 			plot_tec_maps(msfile=msfile,
 				          tec_image=tec_image,
-				          plotfile='%s/%s_TEC.pdf'%(cwd,p_c))
+				          plotfile='%s/plots/%s_TEC.pdf'%(cwd,p_c))
 			plot_tec_maps(msfile=msfile,
 				          tec_image=tec_rms_image,
-				          plotfile='%s/%s_TEC_RMS.pdf'%(cwd,p_c))
+				          plotfile='%s/plots/%s_TEC_RMS.pdf'%(cwd,p_c))
 		except:
-			print('error')
+			print('TEC correction failed')
 			pass
 
 
 	gencal(vis=msfile, 
-		caltable='%s/%s.tecim'%(cwd,p_c),
+		   caltable='%s/caltables/%s.tecim'%(cwd,p_c),
 	       caltype='tecim', 
 	       infile=tec_image+'/',
 	       uniform=False)
-	gaintables = append_gaintable(gaintables,['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
-	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/%s.tecim'%(cwd,p_c),'',[],'linear'])
+	rmdirs(['%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
+		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
+	gaintables = append_gaintable(gaintables,['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
+	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
 applycal(vis=msfile,
 	     field='',

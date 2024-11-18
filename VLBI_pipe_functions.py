@@ -1184,18 +1184,16 @@ def scipy_clipper(data):
 	y = signal.filtfilt(b,a, data)
 	return y
 
-def fit_autocorrelations(epoch, msinfo, calibrators,calc_auto='mean', renormalise='none', filter_RFI=True):
+def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean', renormalise='none', filter_RFI=True):
 	'''
 	This function will fit to the autocorrelations of each antenna on a spw by spw and pol basis
 	'''
 	func_name = inspect.stack()[0][3]
 
-	msfile = '%s.ms'%epoch
-
-	rmdirs(['%s.auto.bpass'%(epoch)])
+	rmdirs([caltable])
 	cb = casatools.calibrater()
 	cb.open(msfile,False,False,False)
-	cb.createcaltable('%s.auto.bpass'%(epoch), 'Complex', 'B Jones', False)
+	cb.createcaltable(caltable, 'Complex', 'B Jones', False)
 	cb.close()
 
 	tb = casatools.table()

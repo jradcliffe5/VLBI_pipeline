@@ -27,14 +27,13 @@ gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['fit_autocorrs'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
-msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
-if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
 	msinfo = get_ms_info(msfile)
-	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
+	save_json(filename='%s/%s_msinfo.json'%(cwd,p_c), array=get_ms_info('%s/%s.ms'%(cwd,p_c)), append=False)
 else:
-	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
+	msinfo = load_json('%s/%s_msinfo.json'%(cwd,p_c))
 
 refant = find_refants(params['global']['refant'], msinfo)
 
@@ -47,18 +46,18 @@ else:
 for i,j in enumerate(fields):
 	fields[i] = str(msinfo['FIELD']['fieldtoID'][j])
 
-fit_autocorrelations(epoch=params['global']['project_code'], msinfo=msinfo, calc_auto='median', calibrators=fields, renormalise='median60', filter_RFI=True)
+fit_autocorrelations(msfile='%s/%s.ms'%(cwd,p_c), caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c), msinfo=msinfo, calc_auto='median', calibrators=fields, renormalise='median60', filter_RFI=True)
 
 if params['fit_autocorrs']["interp_bad_solutions"] == True:
 	#interpgain(caltable='%s/%s.auto.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=False,fringecal=False)
-	interpgain(caltable='%s/%s.auto.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
+	interpgain(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=False)
 
 if casa6 == True:
-	plotcaltable(caltable='%s/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s-autobpass_amp_vs_freq.pdf'%p_c)
-	plotcaltable(caltable='%s/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s-autobpass_amp_vs_time.pdf'%p_c)
+	plotcaltable(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-autobpass_amp_vs_freq.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-autobpass_amp_vs_time.pdf'%(cwd,p_c))
 
-gaintables = append_gaintable(gaintables,['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
-gt_r['fit_autocorrs'] = append_gaintable(gt_r['fit_autocorrs'],['%s/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gaintables = append_gaintable(gaintables,['%s/caltables/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
+gt_r['fit_autocorrs'] = append_gaintable(gt_r['fit_autocorrs'],['%s/caltables/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)

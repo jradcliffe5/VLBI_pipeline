@@ -46,8 +46,9 @@ casalog.post(priority='INFO',origin=filename,message='Initialising VLBI pipeline
 
 if os.path.exists('%s/%s'%(params['global']['cwd'],'vp_steps_run.json')) == False:
 	casalog.post(priority='INFO',origin=filename,message='No previous steps have been run - creating logger')
-	rmdirs(['%s/%s'%(params['global']['cwd'],'logs')])
-	os.system('mkdir %s/%s'%(params['global']['cwd'],'logs'))
+	for j in ['logs','plots','caltables']:
+		rmdirs(['%s/%s'%(params['global']['cwd'],j)])
+		os.system('mkdir %s/%s'%(params['global']['cwd'],j))
 	init_pipe_run(steps,params)
 	steps_run=load_json('vp_steps_run.json')
 else:
