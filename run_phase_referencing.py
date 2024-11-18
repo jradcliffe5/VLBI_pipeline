@@ -276,7 +276,7 @@ for i in range(len(fields)):
 					model_list = glob.glob('%s/images/%s-%s%s-*-model.fits'%(cwd,fields[i][k],cal_type[i][j],j))
 					for q in model_list:
 						clip_fitsfile(model=q, 
-									 im='%s/images/%s-image.fits'%(cwd,q.split('-model.fits')[0]),
+									 im='%s-image.fits'%(q.split('-model.fits')[0]),
 									 snr=1.0)
 				else:
 					clip_fitsfile(model='%s/images/%s-%s%s-model.fits'%(cwd,fields[i][k],cal_type[i][j],j), 
