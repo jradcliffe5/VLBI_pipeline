@@ -259,8 +259,9 @@ for i in range(len(fields)):
 		for k in range(len(fields[i])):
 			if params['phase_referencing']["imager"] == 'wsclean':
 				rmfiles(['%s-%s%s-*'%(fields[i][k],cal_type[i][j],j)])
-				os.system('%s -name %s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+				os.system('%s -name %s/images/%s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
+	  					cwd,
 						fields[i][k],
 						cal_type[i][j],
 						j,
@@ -272,17 +273,18 @@ for i in range(len(fields)):
 						msinfo['FIELD']['fieldtoID'][fields[i][k]],
 						msfile))
 				if mtmfs==True:
-					model_list = glob.glob('%s-%s%s-*-model.fits'%(fields[i][k],cal_type[i][j],j))
+					model_list = glob.glob('%s/images/%s-%s%s-*-model.fits'%(cwd,fields[i][k],cal_type[i][j],j))
 					for q in model_list:
 						clip_fitsfile(model=q, 
-									 im='%s-image.fits'%q.split('-model.fits')[0],
+									 im='%s/images/%s-image.fits'%(cwd,q.split('-model.fits')[0]),
 									 snr=1.0)
 				else:
-					clip_fitsfile(model='%s-%s%s-model.fits'%(fields[i][k],cal_type[i][j],j), 
-								im='%s-%s%s-image.fits'%(fields[i][k],cal_type[i][j],j),
+					clip_fitsfile(model='%s/images/%s-%s%s-model.fits'%(cwd,fields[i][k],cal_type[i][j],j), 
+								im='%s/images/%s-%s%s-image.fits'%(cwd,fields[i][k],cal_type[i][j],j),
 								snr=10.0)
-				os.system('%s -name %s-%s%s -weight %s -predict %s -field %s %s'%
+				os.system('%s -name %s/images/%s-%s%s -weight %s -predict %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
+	  					cwd,
 						fields[i][k],
 						cal_type[i][j],
 						j,
@@ -292,8 +294,9 @@ for i in range(len(fields)):
 						msfile))
 				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
-						os.system('%s -name %s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+						os.system('%s -name %s/images/%s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 						(";".join(params['global']["wsclean_command"]),
+	   						cwd,
 							fields[i+1][m],
 							msinfo["IMAGE_PARAMS"][fields[i+1][m]],
 							imsize[0],
@@ -302,11 +305,12 @@ for i in range(len(fields)):
 							mtmfs_wsclean,
 							msinfo['FIELD']['fieldtoID'][fields[i+1][m]],
 							msfile))
-						clip_fitsfile(model='%s-initmodel.fits'%(fields[i+1][m]), 
-						          im='%s-initmodel.fits'%(fields[i+1][m]),
+						clip_fitsfile(model='%s/images/%s-initmodel.fits'%(cwd,fields[i+1][m]), 
+						          im='%s/images/%s-initmodel.fits'%(cwd,fields[i+1][m]),
 						          snr=10.0)
-						os.system('%s -name %s-initmodel -reorder -predict -weight %s %s -field %s %s'%
+						os.system('%s -name %s/%s-initmodel -reorder -predict -weight %s %s -field %s %s'%
 						(";".join(params['global']["wsclean_command"]),
+	   					cwd,
 						fields[i+1][m],
 						weight,
 						mtmfs_wsclean,
@@ -315,11 +319,11 @@ for i in range(len(fields)):
 			if params['phase_referencing']['imager'] == 'tclean':
 				delims = []
 				for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
-					delims.append('%s-%s%s%s'%(fields[i][k], cal_type[i][j], j,z))
+					delims.append('%s/images/%s-%s%s%s'%(cwd,fields[i][k], cal_type[i][j], j,z))
 				rmdirs(delims)
 				if params['phase_referencing']['masking'] == 'peak':
 					tclean(vis=msfile,
-					   imagename='%s-%s%s'%(fields[i][k], cal_type[i][j], j),
+					   imagename='%s/images/%s-%s%s'%(cwd,fields[i][k], cal_type[i][j], j),
 					   field='%s'%fields[i][k],
 					   stokes='pseudoI',
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
@@ -330,7 +334,7 @@ for i in range(len(fields)):
 					   weighting=weight,
 					   parallel=False
 					   )
-					imname='%s-%s%s.image'%(fields[i][k], cal_type[i][j], j)
+					imname='%s/images/%s-%s%s.image'%(cwd,fields[i][k], cal_type[i][j], j)
 					if mtmfs == True:
 						imname = imname+'.tt0'
 					peak = imstat(imagename=imname)
@@ -339,7 +343,7 @@ for i in range(len(fields)):
 					beam = np.ceil(1.2*(beam['restoringbeam']['major']['value']/7.2e3/(np.abs(beam['incr'][1])*(180/np.pi)))).astype(int)
 					masking=['user','circle[[%spix, %spix], %spix]'%(peak[0],peak[1],beam),4.0,1.0]
 					for z in ['.psf','.image','.sumwt','.mask','.residual','.pb','.model']:
-						delims.append('%s-%s%s%s'%(fields[i][k], cal_type[i][j], j,z))
+						delims.append('%s/images/%s-%s%s%s'%(cwd,fields[i][k], cal_type[i][j], j,z))
 					rmdirs(delims)
 				elif params['phase_referencing']['masking'] == 'auto':
 					masking = ['auto-multithresh','',4.0,1.0]
@@ -353,7 +357,7 @@ for i in range(len(fields)):
 					shift=2.0
 					phasecenter = "J2000 %srad %srad"%(direction[0],direction[1]+((shift/3600.)*(np.pi/180.)))
 					tclean(vis=msfile,
-					   imagename='%s-%s%s_rms'%(fields[i][k], cal_type[i][j], j),
+					   imagename='%s/images/%s-%s%s_rms'%(cwd,fields[i][k], cal_type[i][j], j),
 					   field='%s'%fields[i][k],
 					   stokes='pseudoI',
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
@@ -365,7 +369,7 @@ for i in range(len(fields)):
 					   weighting=weight,
 					   parallel=False
 					   )
-					imname='%s-%s%s_rms.image'%(fields[i][k], cal_type[i][j], j)
+					imname='%s/images/%s-%s%s_rms.image'%(cwd,fields[i][k], cal_type[i][j], j)
 					if mtmfs == True:
 						imname = imname+'.tt0'
 					threshold = imstat(imagename=imname)['rms'][0] 
@@ -374,7 +378,7 @@ for i in range(len(fields)):
 					nsigma=1.2
 					threshold = 0.0
 				tclean(vis=msfile,
-					   imagename='%s-%s%s'%(fields[i][k], cal_type[i][j], j),
+					   imagename='%s/images/%s-%s%s'%(cwd,fields[i][k], cal_type[i][j], j),
 					   field='%s'%fields[i][k],
 					   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i][k]]/1000.),
 					   imsize=imsize,
@@ -396,11 +400,11 @@ for i in range(len(fields)):
 				if deconvolver_tclean[1]>1:
 					model = []
 					for p in range(deconvolver_tclean[1]):
-						model.append('%s-%s%s.model.tt%s'%(fields[i][k], cal_type[i][j], j, p))
-						image = '%s-%s%s.model.tt0'%(fields[i][k], cal_type[i][j], j)
+						model.append('%s/images/%s-%s%s.model.tt%s'%(cwd,fields[i][k], cal_type[i][j], j, p))
+						image = '%s/images/%s-%s%s.model.tt0'%(cwd,fields[i][k], cal_type[i][j], j)
 				else:
-					model = '%s-%s%s.model'%(fields[i][k], cal_type[i][j], j)
-					image = '%s-%s%s.image'%(fields[i][k], cal_type[i][j], j)
+					model = '%s/images/%s-%s%s.model'%(cwd,fields[i][k], cal_type[i][j], j)
+					image = '%s/images/%s-%s%s.image'%(cwd,fields[i][k], cal_type[i][j], j)
 				if deconvolver_tclean[1]==1:
 					clip_model(model=model, 
 						          im=image,
@@ -414,7 +418,7 @@ for i in range(len(fields)):
 					for m in range(len(fields[i+1])):
 						delims = []
 						for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
-							delims.append('%s-initmodel%s'%(fields[i+1][m],z))
+							delims.append('%s/images/%s-initmodel%s'%(cwd,fields[i+1][m],z))
 						rmdirs(delims)
 						if params['phase_referencing']['pass_ants'][i] != []:
 							antennas = ''
@@ -424,7 +428,7 @@ for i in range(len(fields)):
 								antennas = antennas[:-1]
 						if params['phase_referencing']['masking'] == 'peak':
 							tclean(vis=msfile,
-							       imagename='%s-initmodel'%(fields[i+1][m]),
+							       imagename='%s/images/%s-initmodel'%(cwd,fields[i+1][m]),
 								   field='%s'%fields[i+1][m],
 					   		       stokes='pseudoI',
 							       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
@@ -435,7 +439,7 @@ for i in range(len(fields)):
 							       weighting=weight,
 							       parallel=False
 							   )
-							imname = '%s-initmodel.image'%(fields[i+1][m])
+							imname = '%s/images/%s-initmodel.image'%(cwd,fields[i+1][m])
 							if mtmfs == True:
 								imname = imname+'.tt0'
 							peak = imstat(imagename=imname)
@@ -454,7 +458,7 @@ for i in range(len(fields)):
 							shift=2.0
 							phasecenter = "J2000 %srad %srad"%(direction[0],direction[1]+((shift/3600.)*(np.pi/180.)))
 							tclean(vis=msfile,
-							       imagename='%s-initmodel'%(fields[i+1][m]),
+							       imagename='%s/images/%s-initmodel'%(cwd,fields[i+1][m]),
 								   field='%s'%fields[i+1][m],
 								   stokes='pseudoI',
 							       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
@@ -466,7 +470,7 @@ for i in range(len(fields)):
 							       weighting=weight,
 							       parallel=False
 							   )
-							imname='%s-initmodel.image'%(fields[i+1][m])
+							imname='%s/images/%s-initmodel.image'%(cwd,fields[i+1][m])
 							if mtmfs == True:
 								imname = imname+'.tt0'
 							threshold = imstat(imagename=imname)['rms'][0] 
@@ -475,7 +479,7 @@ for i in range(len(fields)):
 							nsigma=1.2
 							threshold = 0.0
 						tclean(vis=msfile,
-							   imagename='%s-initmodel'%(fields[i+1][m]),
+							   imagename='%s/images/%s-initmodel'%(cwd,fields[i+1][m]),
 							   field='%s'%fields[i+1][m],
 							   stokes='pseudoI',
 							   cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
@@ -497,11 +501,11 @@ for i in range(len(fields)):
 						if deconvolver_tclean[1]>1:
 							model = []
 							for p in range(deconvolver_tclean[1]):
-								model.append('%s-initmodel.model.tt%s'%(fields[i+1][m],p))
-								image = '%s-initmodel.image.tt0'%(fields[i+1][m])
+								model.append('%s/images/%s-initmodel.model.tt%s'%(cwd,fields[i+1][m],p))
+								image = '%s/images/%s-initmodel.image.tt0'%(cwd,fields[i+1][m])
 						else:
-							model = '%s-initmodel.model'%(fields[i+1][m])
-							image = '%s-initmodel.image'%(fields[i+1][m])
+							model = '%s/images/%s-initmodel.model'%(cwd,fields[i+1][m])
+							image = '%s/images/%s-initmodel.image'%(cwd,fields[i+1][m])
 						if deconvolver_tclean[1]==1:
 							clip_model(model=model, 
 								          im=image,
