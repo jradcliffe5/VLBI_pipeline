@@ -1303,7 +1303,7 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 				runc+=1
 	tb.close()
 
-	tb.open('%s.auto.bpass'%(epoch),nomodify=False)
+	tb.open(caltable,nomodify=False)
 	tb.addrows(tbnrows)
 	tb.putcol('TIME',TIME)
 	tb.putcol('CPARAM',CPARAM)
