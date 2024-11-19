@@ -50,7 +50,7 @@ if params['apriori_cal']['correlator'] !='default':
 	else:
 		doaccor=False
 else:
-	if msinfo['TELE_NAME'] == 'VLBA':
+	if (msinfo['TELE_NAME'] == 'VLBA')|(msinfo['TELE_NAME'] == 'LBA'):
 		doaccor=True
 	else:
 		doaccor=False
@@ -67,7 +67,7 @@ if doaccor==True:
 		smoothcal(vis=msfile,
 		          tablein='%s/caltables/%s.accor'%(cwd,p_c),
 		          caltable='%s/caltables/%s.accor'%(cwd,p_c),
-			   smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
+			      smoothtime=params['apriori_cal']['accor_options']['smoothtime'])
 
 ### Run prior-cals
 if params['apriori_cal']["do_observatory_flg"] == True:
@@ -114,8 +114,7 @@ if params['apriori_cal']["make_gaincurve"] == True:
 	       caltype='gc',\
 	       spw='',\
 	       antenna='',\
-	       caltable='%s/caltables/%s.gcal'%(cwd,p_c),\
-	       infile='%s/caltables/%s.gc'%(cwd,p_c))
+	       caltable='%s/caltables/%s.gcal'%(cwd,p_c))
 
 	gaintables = append_gaintable(gaintables,['%s/caltables/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.gcal'%(cwd,p_c),'',[],'nearest'])
@@ -162,6 +161,8 @@ if params['apriori_cal']['ionex_options']['run'] == True:
 	       uniform=False)
 	rmdirs(['%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
 		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
+	rmfiles(['%s/%s.ms.IGS_RMS_TEC.im.fits'%(cwd,p_c),
+		    '%s/%s.ms.IGS_TEC.im.fits'%(cwd,p_c)])
 	gaintables = append_gaintable(gaintables,['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
 	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
