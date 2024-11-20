@@ -1,10 +1,10 @@
 # Generic VLBI pipeline
 
-This is a generic VLBI pipeline for use on clusters (with job managers SLURM & PBS) but can also be used on your home machine. The pipeline is CASA-based and has been tested on the European VLBI Network (EVN) and Very Long Baseline Array (VLBA) data sets. Both CASA 5.5+ and CASA 6 versions are supported and has been tested on CASA versions 5.8.0 and 6.5.0.
+This is a generic VLBI pipeline for use on clusters (with job managers SLURM & PBS) but can also be used on your home machine. The CASA-based pipeline has been tested on the European VLBI Network (EVN) and Very Long Baseline Array (VLBA) data sets. Only CASA 6.3+ versions are now supported and tested up to CASA version 6.5.4.
 
-As of 03-05-2024, it will only calibrate continuum data-sets, but spectral line data-sets are planned to be implemented. The pipeline is still under development.
+As of 03-05-2024, it will only calibrate continuum data sets, but spectral line data sets are planned to be implemented. The pipeline is still under development.
 
-This README includes installation instructions and simple usage, but we advise that you read the [Wiki](../../wiki) before running or using the pipeline.
+This README includes installation instructions and simple usage, but we suggest you read the [Wiki](.. //wiki) before running or using the pipeline.
 
 ## Citing the pipeline
 
@@ -28,7 +28,7 @@ Jack Radcliffe, (2024). jradcliffe5/VLBI_pipeline: v1.1 (v1.1). Zenodo. https://
 
 ## Installation Instructions
 ### For self-contained CASA
-1. Install CASA from <https://casa.nrao.edu> and ensure that it is v 5.5+. Any earlier versions do not include the fringe-fitting capabilities.
+1. Install CASA from <https://casa.nrao.edu> and ensure that it is v6.3+. Any earlier versions do not include the fringe-fitting capabilities.
 2. Clone this repository in any directory desired. 
 
 ### For modular CASA
