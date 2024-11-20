@@ -171,11 +171,8 @@ for i in range(len(fields)):
 				else:
 					xax = ['time']
 				for k in ['delay','phase','rate']:
-					try:
-						for l in xax:
-							plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable,k,l))
-					except:
-						pass
+					for l in xax:
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable.split('/')[-1],k,l))
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
 				gaintype='K'
@@ -214,7 +211,7 @@ for i in range(len(fields)):
 					yax = ['phase']
 				for k in yax:
 					for l in xax:
-						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable,k,l))
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable.split("/")[-1],k,l))
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be f - fringe fit, p - phase, ap - amp and phase, a - amp, or k - delay')
 			sys.exit()
