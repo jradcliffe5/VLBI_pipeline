@@ -19,6 +19,7 @@ from scipy import signal
 from scipy.constants import c as speed_light
 from itertools import cycle
 from scipy.special import j1
+from os import environ
 try:
 	# CASA 6
 	import casatools
@@ -323,7 +324,7 @@ def write_hpc_headers(step,params):
 					}
 				}
 
-	hpc_header= ['#!/bin/bash']
+	hpc_header= ['#!%s'% environ['SHELL']]
 
 	if step == 'apply_to_all':
 		file = open("%s/target_files.txt"%params['global']['cwd'], "r")
@@ -505,7 +506,7 @@ def find_nestlist(mylist, char):
 	raise ValueError("'{char}' is not in list".format(char = char))
 
 def write_job_script(steps,job_manager):
-	commands=['#!/bin/bash', 'set -e']
+	commands=['#!%s'%environ['SHELL'], 'set -e']
 	for i,j in enumerate(steps):
 		if i==0:
 			depend=''
@@ -521,7 +522,7 @@ def write_job_script(steps,job_manager):
 		if job_manager=='slurm':
 			commands.append('%s=$(sbatch --parsable %s job_%s.slurm)'%(j,depend,j))
 		if job_manager=='bash':
-			commands.append('bash job_%s.bash'%(j))
+			commands.append('%s job_%s.bash'%(environ['SHELL'],j))
 	
 
 	with open('vp_runfile.bash','w') as f:
