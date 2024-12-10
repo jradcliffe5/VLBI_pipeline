@@ -2376,6 +2376,8 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 	#msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],prefix))
 	nspw = msinfo['SPECTRAL_WINDOW']['nspws']
 	npol = msinfo['SPECTRAL_WINDOW']['npol']
+	if npol > 2:
+		npol=2
 	nants = len(msinfo['ANTENNAS']['anttoID'])
 	calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
 
