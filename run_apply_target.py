@@ -97,7 +97,7 @@ for i in params['global']['targets']:
 	rmdirs(delims)
 	
 	tclean(vis='%s/%s_calibrated.ms'%(cwd,i),
-		   imagename='%s-initimage'%i,
+		   imagename='%s/images/%s-initimage'%(cwd,i),
 		   field='%s'%i,
 		   datacolumn='data',
 		   stokes='pseudoI',
