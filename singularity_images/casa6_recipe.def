@@ -1,30 +1,21 @@
 Bootstrap: library
 From: debian
-OSVersion: 8
-MirrorURL: http://vault.centos.org/
-Include: yum wget
-
-# If you want the updates (available at the bootstrap date) to be installed
-# inside the container during the bootstrap instead of the General Availability
-# point release (7.x) then uncomment the following line
-UpdateURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/updates/$basearch/
 
 %environment
 	export LC_ALL=C
 	export PATH=/opt/casa-6.6.5-31-py3.10.el8/bin/:$PATH
-        export CASASITECONFIG=/opt/casasiteconfig.py
+	export CASASITECONFIG=/opt/casasiteconfig.py
 %post
 	apt-get update 
 	apt-get -y install wget vim subversion git gcc cmake python 
-	#	libXrandr-dev* libXcursor-dev* libXinerama-dev* libfontconfig-dev* libfontconfig fontconfig-dev libXft* libGL* libGL-dev* fontconfig-dev* libSM-dev* libX11-dev* libXext-dev* libXi-dev* libXrender-dev*
 	apt-get -y install Xvfb* ghostscript* curl*
 	mkdir -p /opt 
 	cd /opt
-        wget -O- https://casa.nrao.edu/download/distro/casa/release/rhel/casa-6.6.5-31-py3.10.el8.tar.xz | tar -Jxvf -
+	wget -O- https://casa.nrao.edu/download/distro/casa/release/rhel/casa-6.6.5-31-py3.10.el8.tar.xz | tar -Jxvf -
 	/opt/casa-6.6.5-31-py3.10.el8/bin/pip3 install --upgrade astropy casadata
-        mkdir "/opt/casadata"
+	mkdir "/opt/casadata"
 	touch "/opt/casasiteconfig.py"
-        echo "data_auto_update = False" >> /opt/casasiteconfig.py
-        echo "measures_auto_update = False" >> /opt/casasiteconfig.py
+	echo "data_auto_update = False" >> /opt/casasiteconfig.py
+	echo "measures_auto_update = False" >> /opt/casasiteconfig.py
 	echo "measurespath = '/opt/casadata'" >> /opt/casasiteconfig.py
 	/opt/casa-6.6.5-31-py3.10.el8/bin/python3 -m casaconfig --update-all
