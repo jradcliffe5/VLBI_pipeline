@@ -145,7 +145,7 @@ if (params["prepare_data"]["replace_antab"] == True)|(gc_fits==False):
 		antabfile='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path'])
 	for i in idifiles:
 		if parallel == True:
-			cmd1 = "import inspect, os, sys; sys.path.append('%s'); from casavlbitools.fitsidi import append_tsys; append_gc(antabfile='%s', idifile='%s')"%(mpipath,antabfile,i)
+			cmd1 = "import inspect, os, sys; sys.path.append('%s'); from casavlbitools.fitsidi import append_gc; append_gc(antabfile='%s', idifile='%s')"%(mpipath,antabfile,i)
 			cmdId = client.push_command_request(cmd1,block=False)
 			cmd.append(cmdId[0])
 		else:
