@@ -97,12 +97,21 @@ if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
 	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
-if params['apriori_cal']['tsys_options']['smooth'] == True:
+if params['apriori_cal']['tsys_options']['algorithm'] != None:
 	rmdirs(['%s/caltables/%s.tsys_original'%(cwd,p_c)])
 	os.system('cp -r %s/caltables/%s.tsys %s/caltables/%s.tsys_original'%(cwd,p_c,cwd,p_c))
-	filter_tsys_auto(caltable='%s/caltables/%s.tsys'%(cwd,p_c),nsig=params['apriori_cal']['tsys_options']['outlier_SN'],jump_pc=params['apriori_cal']['tsys_options']['jump_ident_pc'])
-	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
-	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
+	if "smooth" in params['apriori_cal']['tsys_options']['algorithm']:
+		smoothcal(vis=msfile,
+				  tablein='%s/caltables/%s.tsys'%(cwd,p_c),
+				  smoothtype=params['apriori_cal']['tsys_options']["smooth_type"],
+				  smoothtime=params['apriori_cal']['tsys_options']["smooth_time"])
+	if "filt" in params['apriori_cal']['tsys_options']['algorithm']:
+		filter_tsys_auto(caltable='%s/caltables/%s.tsys'%(cwd,p_c),
+		nsig=params['apriori_cal']['tsys_options']["filt_outlierSN"],
+		jump_pc=params['apriori_cal']['tsys_options']["filt_jump_pc"])
+	if params['apriori_cal']['tsys_options']["interp_flags"] == True:
+		interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
+		interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
 if casa6 == True:
 	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsysfiltered_vs_time.pdf'%(cwd,p_c))

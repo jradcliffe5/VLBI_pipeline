@@ -83,13 +83,15 @@
             "interp"        : "linear"
         },
         "do_observatory_flg": true,
-        "do_eops"           : true,
+        "do_eops"           : false,
         "make_gaincurve"    : true,
         "tsys_options":{
             "interp_flags"  :  true,
-            "smooth"        :  true,
-            "outlier_SN"    : [2.5,2.0],
-            "jump_ident_pc" :  20,
+            "algorithm"     :  "smooth",
+            "smooth_type"   :  "mean",
+            "smooth_time"   :  1600,
+            "filt_outlierSN": [2.5,2.0],
+            "filt_jump_pc"  :  20,
             "interp"        : "linear,linear"
         },
         "ionex_options":{
