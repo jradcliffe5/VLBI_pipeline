@@ -73,10 +73,20 @@ if os.path.exists("%s/%s_backup.tar"%(params['global']['cwd'],params['global']['
 
 	idifiles= natural_sort(idifiles)
 	casalog.post(origin=filename,message='Importing fits into measurement set: %s.ms'%(params['global']['project_code']),priority='INFO')
-	importfitsidi(fitsidifile=idifiles,\
-				vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
-				constobsid=params['import_fitsidi']["const_obs_id"],\
-				scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+	
+	use_quick_constobs = True
+	if use_quick_constobs == False:
+		importfitsidi(fitsidifile=idifiles,\
+					  vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
+					  constobsid=params['import_fitsidi']["const_obs_id"],\
+					  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+	else:
+		importfitsidi(fitsidifile=idifiles,\
+					  vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),\
+					  constobsid=False,\
+					  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+		if params['import_fitsidi']["const_obs_id"] == True:
+			quick_constobs(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']))
 
 	append_pbcor_info(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 					params=params)
@@ -96,9 +106,9 @@ else:
 	file.extractall('%s/'%params['global']['cwd']) 
 	file.close() 
 
-clearcal(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),addmodel=True)
 
 if params['global']['use_initial_model'] != {}:
+	clearcal(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),addmodel=True)
 	for i in params['global']['use_initial_model'].keys():
 		ft(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
 			field=i,

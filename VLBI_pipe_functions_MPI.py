@@ -1795,6 +1795,67 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			check_arr = []
 			files = []
 			for i in os.listdir('%s'%target_dir):
+				if (os.path.isfile('%s%s'%(target_dir,i)) == True) and (i.startswith(project_code)) and (("IDI" in i) or i.endswith("tar.gz")):
+					files.append(i)
+					if ("IDI" in i) == True:
+						check_arr.append('IDI')
+					else:
+						check_arr.append('gz')
+			if np.all(np.array(check_arr)=='IDI') == True:
+				tar=False
+				unique_files = np.unique([i.split('.IDI')[0] for i in files])
+				for k in unique_files:
+					idifiles[k] = natural_sort(glob.glob('%s%s*'%(target_dir,k)))
+			elif np.all(np.array(check_arr)=='gz') == True:
+				tar=True
+				unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
+				for k in unique_files:
+					idifiles[k] = natural_sort(glob.glob('%s%s*'%(target_dir,k)))
+			else:
+				casalog.post(priority='SEVERE',origin=func_name,message='Target files must all be .tar.gz or .idi files .. not a mix')
+				sys.exit()
+		if telescope == 'VLBA':
+			check_arr = []
+			files = []
+			for i in os.listdir('%s'%target_dir):
+				if os.path.isfile('%s%s'%(target_dir,i)) == True:
+					files.append(i)
+					check_arr.append((project_code in i)&(i.endswith('.idifits')))
+			if np.all(check_arr) == True:
+				tar=False
+				unique_files = np.unique([i.split('.idifits')[0] for i in files])
+				for k in unique_files:
+					idifiles[k] = glob.glob('%s%s*'%(target_dir,k))
+			elif np.all(check_arr) == False:
+				check_arr = []
+				files = []
+				for i in os.listdir('%s'%target_dir):
+					if os.path.isfile('%s%s'%(target_dir,i)) == True:
+						files.append(i)
+						check_arr.append((project_code in i)&(i.endswith('.tar.gz')))
+				if np.all(check_arr) == True:
+					tar=True
+					unique_files = np.unique([i.split('.tar.gz')[0] for i in files])
+					for k in unique_files:
+						idifiles[k] = glob.glob('%s%s*'%(target_dir,k))
+				else:
+					casalog.post(priority='SEVERE',origin=func_name,message='Target files must all be .tar.gz or .idi files')
+					sys.exit()
+			else:
+				sys.exit()
+		idifiles['tar'] = tar
+		return idifiles
+	else:
+		return idifiles
+
+def get_target_files_2(target_dir='./',telescope='',project_code='',idifiles=[]):
+	func_name = inspect.stack()[0][3]
+	if idifiles == []:
+		idifiles={}
+		if telescope == 'EVN':
+			check_arr = []
+			files = []
+			for i in os.listdir('%s'%target_dir):
 				if os.path.isfile('%s%s'%(target_dir,i)) == True:
 					files.append(i)
 					check_arr.append(i.startswith(project_code)&('IDI'in i))
@@ -2124,17 +2185,18 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 	target_dir = params['apply_to_all']['target_path']
 
 	if part==0:
-
 		if tar == 'True':
 			files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
 		
 		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-		check_fits_ext(idifiles=files,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
-		check_fits_ext(idifiles=files,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
-		importfitsidi(fitsidifile=files,
+		#check_fits_ext(idifiles=files,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
+		#check_fits_ext(idifiles=files,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
+		importfitsidi(fitsidifile=files,\
 					  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
-					  constobsid=params['import_fitsidi']["const_obs_id"],
+					  constobsid=False,
 					  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
+		if params['import_fitsidi']["const_obs_id"] == True:
+			quick_constobs(vis='%s/%s_presplit.ms'%(params['global']['cwd'],params['global']['project_code']))
 		if tar == 'True':
 			rmfiles(files)
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
@@ -2691,3 +2753,44 @@ def combine_caltables(caltable='',subcaltables=[]):
 				tb.open(j)
 				tb.copyrows(outtable=caltable)
 			tb.close()
+
+def quick_constobs(vis=''):
+	constobsid=True
+	mytb = casatools.table()
+	if (constobsid):
+		mytb.open(vis+'/OBSERVATION', nomodify=False)
+		nobs = mytb.nrows()
+		cando = True
+		if nobs>1:
+			casalog.post('Trying to keep obsid constant == 0 for all input files', 'INFO')
+			# check if all observations are from the same telescope; if not warn and leave as is
+			tels = mytb.getcol('TELESCOPE_NAME')
+			for i in range(1,nobs):
+				if tels[i]!=tels[0]:
+					cando = False
+
+			if cando:
+				# get min and max time and write them into the first row;
+				casalog.post('Adjusting OBSERVATION table', 'INFO')
+				timeranges = mytb.getcol('TIME_RANGE')
+				newmin = min(timeranges[0])
+				newmax = max(timeranges[1])
+				mytb.putcell('TIME_RANGE', 0, [newmin,newmax])
+				# delete the other rows
+				mytb.removerows(list(range(1,nobs)))
+			else:
+				casalog.post('The input files stem from different telescopes. Need to give different obs id.', 'WARN')
+		mytb.close()
+
+		if cando:
+			# give the same obs id == 0 to the entire output MS
+			casalog.post('Setting observation ID of all integrations to 0', 'INFO')
+			ram_restrict = 100000
+			mytb.open(vis, nomodify=False)
+			ranger = list(range(0,mytb.nrows(),ram_restrict))
+			for j in ranger:
+				if j == ranger[-1]:
+					ram_restrict = mytb.nrows()%ram_restrict
+				a = mytb.getcol('OBSERVATION_ID',startrow=j, nrow=ram_restrict, rowincr=1)*0
+				mytb.putcol('OBSERVATION_ID',a,startrow=j, nrow=ram_restrict, rowincr=1)
+			mytb.close()

@@ -41,7 +41,7 @@ gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
-msfile= '%s.ms'%(params['global']['project_code'])
+msfile= '%s/%s.ms'%(cwd,params['global']['project_code'])
 p_c=params['global']['project_code']
 
 if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
@@ -82,14 +82,14 @@ applycal(vis=msfile,
 	     gainfield=gaintables['gainfield'],
 	     spwmap=gaintables['spwmap'],
 	     parang=gaintables['parang'])
+
+
 flagdata(vis=msfile,
 		mode='clip',
 		datacolumn='corrected',
 		clipminmax=[0,1e6])
-#tb = casatools.table()
-#tb.open(msfile) 
-#weight=tb.getcol('WEIGHT')
-#tb.close()
+
+
 flagdata(vis=msfile,
 		mode='clip',
 		datacolumn='WEIGHT',
@@ -97,6 +97,7 @@ flagdata(vis=msfile,
 
 
 for i in range(len(fields)):
+	
 	flagdata(vis=msfile,
 			mode='tfcrop',
 			field=','.join(fields[i]),
@@ -111,7 +112,7 @@ for i in range(len(fields)):
 			action='apply',
 			display='',
 			flagbackup=False)
-
+	
 	for j in range(len(cal_type[i])):
 		if len(fields[i]) < 2:
 			fields[i] = list(fields[i])
@@ -256,7 +257,21 @@ for i in range(len(fields)):
 		for k in range(len(fields[i])):
 			if params['phase_referencing']["imager"] == 'wsclean':
 				rmfiles(['%s-%s%s-*'%(fields[i][k],cal_type[i][j],j)])
+				casalog.post(origin=filename, priority='INFO',message='Running wsclean imaging of the dataset')
 				os.system('%s -name %s/images/%s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+					(";".join(params['global']["wsclean_command"]),
+	  					cwd,
+						fields[i][k],
+						cal_type[i][j],
+						j,
+						msinfo["IMAGE_PARAMS"][fields[i][k]],
+						imsize[0],
+						imsize[1],
+						weight,
+						mtmfs_wsclean,
+						msinfo['FIELD']['fieldtoID'][fields[i][k]],
+						msfile))
+				print('%s -name %s/images/%s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
 	  					cwd,
 						fields[i][k],
