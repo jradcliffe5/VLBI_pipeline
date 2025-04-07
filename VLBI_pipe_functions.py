@@ -2196,7 +2196,7 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 					  constobsid=False,
 					  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
 		if params['import_fitsidi']["const_obs_id"] == True:
-			quick_constobs(vis='%s/%s_presplit.ms'%(params['global']['cwd'],params['global']['project_code']))
+			quick_constobs(vis='%s/%s_presplit.ms'%(params['global']['cwd'],i))
 		if tar == 'True':
 			rmfiles(files)
 		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
