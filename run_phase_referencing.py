@@ -258,7 +258,7 @@ for i in range(len(fields)):
 			if params['phase_referencing']["imager"] == 'wsclean':
 				rmfiles(['%s-%s%s-*'%(fields[i][k],cal_type[i][j],j)])
 				casalog.post(origin=filename, priority='INFO',message='Running wsclean imaging of the dataset')
-				os.system('%s -name %s/images/%s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+				os.system('%s -name %s/images/%s-%s%s -reorder -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
 	  					cwd,
 						fields[i][k],
@@ -271,7 +271,7 @@ for i in range(len(fields)):
 						mtmfs_wsclean,
 						msinfo['FIELD']['fieldtoID'][fields[i][k]],
 						msfile))
-				print('%s -name %s/images/%s-%s%s -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+				print('%s -name %s/images/%s-%s%s -reorder -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.5 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
 	  					cwd,
 						fields[i][k],
@@ -294,7 +294,7 @@ for i in range(len(fields)):
 					clip_fitsfile(model='%s/images/%s-%s%s-model.fits'%(cwd,fields[i][k],cal_type[i][j],j), 
 								im='%s/images/%s-%s%s-image.fits'%(cwd,fields[i][k],cal_type[i][j],j),
 								snr=10.0)
-				os.system('%s -name %s/images/%s-%s%s -weight %s -predict %s -field %s %s'%
+				os.system('%s -name %s/images/%s-%s%s -reorder -weight %s -predict %s -field %s %s'%
 					(";".join(params['global']["wsclean_command"]),
 	  					cwd,
 						fields[i][k],
@@ -306,7 +306,7 @@ for i in range(len(fields)):
 						msfile))
 				if (j == (len(cal_type[i])-1)) and (i<(len(fields[i])-1)) and (k == (len(fields[i])-1)):
 					for m in range(len(fields[i+1])):
-						os.system('%s -name %s/images/%s-initmodel -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
+						os.system('%s -name %s/images/%s-initmodel -reorder -scale %.3fmas -size %d %d -weight %s -auto-threshold 0.1 -auto-mask 4 -niter 1000000 -mgain 0.8 %s -field %s %s'%
 						(";".join(params['global']["wsclean_command"]),
 	   						cwd,
 							fields[i+1][m],

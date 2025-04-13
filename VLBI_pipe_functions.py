@@ -242,7 +242,7 @@ def find_fitsidi(idifilepath="",cwd="",project_code=""):
 	### Try first with project code and end
 	fitsidifiles=[]
 	for i in os.listdir(idifilepath):
-		if (i.startswith(project_code.lower())|i.startswith(project_code.upper()))&(('IDI' in i)|(i.endswith("idifits"))):
+		if (i.startswith(project_code.lower())|i.startswith(project_code.upper()))&(('_1_1.IDI' in i)|(i.endswith("idifits"))):
 			fitsidifiles.append('%s/%s'%(idifilepath,i))
 			casalog.post(priority="INFO",origin=func_name,message='FOUND - %s'% i)
 	if fitsidifiles == []:
