@@ -185,14 +185,15 @@ def headless(inputfile):
 	''' Parse the list of inputs given in the specified file. (Modified from evn_funcs.py)'''
 	INPUTFILE = open(inputfile, "r")
 	control=collections.OrderedDict()
-	# a few useful regular expressions
+	# Compile a few useful regular expressions for lightweight parsing
 	newline = re.compile(r'\n')
 	space = re.compile(r'\s')
 	char = re.compile(r'\w')
 	comment = re.compile(r'#.*')
-	# parse the input file assuming '=' is used to separate names from values
+	# Parse lines as key=value pairs, ignoring comments and whitespace
 	for line in INPUTFILE:
 		if char.match(line):
+			# Strip trailing comments and quotes
 			line = comment.sub(r'', line)
 			line = line.replace("'", '')
 			(param, value) = line.split('=')
@@ -202,6 +203,7 @@ def headless(inputfile):
 			value = newline.sub(r'', value)
 			value = value.replace(' ','').strip()
 			valuelist = value.split(',')
+			# Coerce scalars to int when appropriate, else keep as str
 			if len(valuelist) == 1:
 				if valuelist[0] == '0' or valuelist[0]=='1' or valuelist[0]=='2':
 					control[param] = int(valuelist[0])
@@ -292,6 +294,7 @@ def write_hpc_headers(step,params):
 	"""Write scheduler header lines for PBS/SLURM/Bash into job script file."""
 	func_name = inspect.stack()[0][3]
 
+	# Collect scheduler options; per-step overrides fall back to global defaults
 	hpc_opts = {}
 	hpc_opts['job_manager'] = params['global']['job_manager']
 	hpc_opts['job_name'] = 'vp_%s'%step
@@ -305,6 +308,7 @@ def write_hpc_headers(step,params):
 		casalog.post(priority='SEVERE',origin=func_name, message='Incorrect job manager, please select from pbs, slurm or bash')
 		sys.exit()
 
+	# Resolve step-level resource settings or inherit from global defaults
 	for i in ['partition','walltime','nodetype']:
 		if params[step]["hpc_options"][i] == 'default':
 			hpc_opts[i] = params['global']['default_%s'%i]
@@ -357,6 +361,7 @@ def write_hpc_headers(step,params):
 					}
 				}
 
+	# Begin script with the invoking shell for portability
 	hpc_header= ['#!%s'% environ['SHELL']]
 
 	if step == 'apply_to_all':
@@ -376,6 +381,7 @@ def write_hpc_headers(step,params):
 		hpc_dict['bash']['array_job'] = ''
 		hpc_opts['array_job'] = -1
 
+	# Emit only non-empty directives for the selected scheduler
 	hpc_job = hpc_opts['job_manager']
 	for i in hpc_opts.keys():
 		if i != 'job_manager':
@@ -391,10 +397,12 @@ def write_hpc_headers(step,params):
 def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	"""Append the command payloads for a job script based on config."""
 	func_name = inspect.stack()[0][3]
+	# Accumulate shell lines to append to job script
 	commands=[]
 	casapath=params['global']['casapath']
 	vlbipipepath=params['global']["vlbipipe_path"]
 	if aoflag==False:
+		# Standard pipeline execution path (no AOFlagger pre/post)
 		if parallel == True:
 			mpicasapath = params['global']['mpicasapath']
 		else:
@@ -415,6 +423,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	elif aoflag=='both':
+		# Run AOFlagger on specified fields, then run the CASA step
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
@@ -457,6 +466,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 
 	elif aoflag==True:
+		# Only run AOFlagger (no subsequent CASA script run here)
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
@@ -477,6 +487,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'][i],msfile)
 
 	elif aoflag=='apply_to_all':
+		# Iterate over per-target lines in target_files.txt using array jobs
 		if (params['global']['job_manager'] == 'pbs'):
 			commands.append('cd %s'%params['global']['cwd'])
 			variable='${array[$a]}'
@@ -507,6 +518,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		if params["init_flag"]["run_AOflag"] == True:
+			# Optionally run AOFlagger on each target before/after CASA step
 			if (params['global']['job_manager'] == 'bash'):
 				commands.append('for a in \"${array[@]}\"')
 				commands.append('do')
@@ -542,17 +554,20 @@ def find_nestlist(mylist, char):
 
 def write_job_script(steps,job_manager):
 	"""Generate a simple runner that submits/links step job scripts with deps."""
+	# Start with shebang and "exit on error" for safer chaining
 	commands=['#!%s'%environ['SHELL'], 'set -e']
 	for i,j in enumerate(steps):
 		if i==0:
 			depend=''
 		else:
+			# Encode inter-step dependencies per scheduler
 			if job_manager=='pbs':
 				depend='-W depend=afterany:$%s'%(steps[i-1])
 			if job_manager=='slurm':
 				depend='--dependency=afterany:$%s'%(steps[i-1])
 			if job_manager=='bash':
 				depend=''
+		# Append appropriate submission command for each scheduler
 		if job_manager=='pbs':
 			commands.append("%s=$(qsub %s job_%s.pbs)"%(j,depend,j))
 		if job_manager=='slurm':
@@ -764,6 +779,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 		gaincol='CPARAM'
 	else:
 		gaincol='FPARAM'
+	# Open caltable for in-place edits
 	tb = casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -780,6 +796,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 	
 	k=1
 	numflag=0.0
+	# Walk through each antenna/SPW slice and fill edge flags with nearest neighbor
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
 					subflg=flg[:,:,(ant==k) & (dd==j)]
@@ -824,6 +841,7 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 		gaincol='CPARAM'
 	else:
 		gaincol='FPARAM'
+	# Open table to overwrite flagged entries by interpolation
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -840,6 +858,7 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 	
 	k=1
 	numflag=0.0
+	# Forward/backward pass to copy nearest unflagged neighbor
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
 					subflg=flg[:,:,(ant==k) & (dd==j)]
@@ -890,6 +909,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	updating `FPARAM` and `FLAG` in-place.
 	"""
 	func_name = inspect.stack()[0][3]
+	# Read caltable; operate on FPARAM delays/Tsys
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -902,6 +922,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
 	npol=gain.shape[0]
 	casalog.post(priority="INFO",origin=func_name,message='Editing and smoothing the tsys table')
+	# Process each polarization, antenna and SPW independently
 	for k in range(npol):
 		for i in np.unique(ant):
 			for j in np.unique(dd):
@@ -910,9 +931,12 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 				gain_uflg = gain_uflg2[flg_temp==0]
 				if len(gain_uflg) != 0:
 					t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
+					# Coarse Hampel filter pass to remove strong outliers
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
+					# Fine Hampel filter pass for residual spikes
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
 					#gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 5 ,n_sigmas=2.5)
+					# Detect abrupt jumps; if none, apply moving-average smoothing
 					gain_uflg, jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
 					if jump == False:
 						gain_uflg = smooth_series(gain_uflg, 21)
@@ -937,14 +961,14 @@ def smooth_series(y, box_pts):
 
 def hampel_filter(input_series, window_size, n_sigmas=3):
 	"""Hampel outlier filter; returns filtered series and indices of outliers."""
-	
+	# input_series[0] = time, input_series[1] = values
 	n = len(input_series[1])
 	new_series = input_series.copy()
-	k = 1.4826 # scale factor for Gaussian distribution
+	k = 1.4826 # scale factor for Gaussian distribution (MAD -> sigma)
 	
 	indices = []
 	
-	# possibly use np.nanmedian 
+	# Slide a window and replace points that exceed robust threshold by median
 	for i in range((window_size),(n - window_size)):
 		x0 = np.median(input_series[1][(i - window_size):(i + window_size)])
 		S0 = k * np.median(np.abs(input_series[1][(i - window_size):(i + window_size)] - x0))
@@ -964,6 +988,7 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 				indices.append(i)
 	
 	detected_outliers = np.array(indices)
+	# Interpolate across contiguous flagged segments to avoid flat spots
 	already_tagged=[]
 	for i in range(len(input_series[1])):
 		if ((i<input_series[0].shape[0]-1)&(i>0)):
@@ -990,10 +1015,12 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 
 def detect_jump_and_smooth(array,jump_pc):
 	"""Detect step-like jumps and locally smooth the region if found."""
+	# Convert threshold percentage to fraction for comparisons
 	jump_pc=jump_pc/100.
 	try:
 		for i,j in enumerate(array):
 			if i<array.shape[0]-2:
+				# Heuristic: 10% change indicates a jump; then grow region until stable
 				if (array[i+1] > 1.1*array[i])|(array[i+1]<0.9*array[i]):
 					jump=True
 					low=i
@@ -1005,6 +1032,7 @@ def detect_jump_and_smooth(array,jump_pc):
 							else:
 								i+=1
 					high=i+1
+					# Choose an odd window length around the jump to avoid bias
 					diff=int((high-low)/2.)
 					if diff%2 == 0:
 						diff=diff+1
@@ -1097,13 +1125,16 @@ def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
 	flag = tb.getcol('FLAG')
 	time_a = tb.getcol('TIME')
 	time = np.unique(tb.getcol('TIME'))
+	# Bucket times into half-solint bins for robust comparison
 	time = np.unique(np.floor(time/TOL).astype(int))*TOL
 	field_id = tb.getcol('FIELD_ID')
+	# Total number of valid solutions per time across antennas
 	solns = np.sum(table_array[0],axis=0)
 	for z in fid.keys():
 		maxsoln = np.max(solns[fid[z][0]:fid[z][1]])
 		for j in range(fid[z][0],fid[z][1]+1):
 			result = np.isclose(time_a, time[j], atol=TOL,rtol=1e-10)
+			# Flag windows with too few solutions relative to best in the field
 			if solns[j] < passmark*maxsoln:
 				flag[:,0,(result)] = True
 	
@@ -1114,6 +1145,7 @@ def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
 def interpolate_spw(table_array, passmark, caltable, solint):
 	"""Interpolate across SPWs with sufficient solutions; flag otherwise."""
 	table_array=table_array[0]/table_array[1]
+	# Identify SPW/time cells suitable for interpolation (non-trivial but pass)
 	interp_spw = np.where((table_array>=passmark)&(table_array!=1.0))
 	tb = casatools.table()
 	TOL = solint/2.01
@@ -1127,13 +1159,14 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 	field_id = tb.getcol('FIELD_ID')
 	tb.close()
 
+	# Interpolate per-pol within selected antenna/time bins
 	for j,i in enumerate(interp_spw[1]):
 		k=interp_spw[0][j]
 		result = np.isclose(time_a, time[i], atol =TOL,rtol=1e-10)
 		for z in range(value.shape[0]):
 			value_t=value[z,0,(result)&(ant==k)]
 			flag_t=flag[z,0,(result)&(ant==k)]
-			x=np.arange(0,8,1)
+			x=np.arange(0,8,1)  # channel index within SPW
 			yp = value_t[flag_t==False]
 			xp = x[flag_t==False]
 			inter = np.interp(x=x,xp=xp,fp=yp)
@@ -1141,6 +1174,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 			flag[z,0,(result)&(ant==k)] = False
 
 	nointerp_spw = np.where((table_array<passmark)&(table_array!=0.0))
+	# If too few solutions, conservatively flag the bin
 	for j,i in enumerate(nointerp_spw[1]):
 		k=nointerp_spw[0][j]
 		result = np.isclose(time_a, time[i], atol=TOL,rtol=1e-10)
@@ -1307,6 +1341,7 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 	'''
 	func_name = inspect.stack()[0][3]
 
+	# Create a fresh caltable for autocorrelation-based bandpass-like terms
 	rmdirs([caltable])
 	cb = casatools.calibrater()
 	cb.open(msfile,False,False,False)
@@ -1336,8 +1371,10 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 	FLAG = np.zeros((npol,nchan,tbnrows))
 	SNR =  np.ones((npol,nchan,tbnrows))
 
+	# Row counter into the output caltable
 	runc=0
 	tb.open(msfile)
+	# Iterate: calibrator field -> SPW -> antenna -> pol
 	for h in range(len(calibrators)):
 		subt=tb.query('ANTENNA1==ANTENNA2 and FIELD_ID==%s'%(calibrators[h]))
 		t_cal = np.average(subt.getcol('TIME'))
@@ -1350,13 +1387,14 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 						subt = tb.query('ANTENNA1==%s and ANTENNA2==%s and FIELD_ID==%s and DATA_DESC_ID==%s'%(i,i,calibrators[h],j))
 						flag = subt.getcol('FLAG')
 						data = np.abs(subt.getcol('DATA'))
-						data[flag==True] = np.nan
+						data[flag==True] = np.nan  # ignore flagged visibilities
 						if calc_auto == 'mean':
 							data_median = np.sqrt(np.nanmean(data,axis=2)[l])
 						elif calc_auto=='median':
 							data_median = np.sqrt(np.nanmedian(data,axis=2)[l])
 						else:
 							sys.exit()
+						# Plotting aids (colors/markers) retained for potential diagnostics
 						polcol=['r','k']
 						polmar=['o','^']
 						if filter_RFI == True:
@@ -1453,9 +1491,11 @@ def clip_fitsfile(model,im,snr):
  
 def append_pbcor_info(vis, params):
 	"""Augment MS ANTENNA table with primary-beam metadata for pbcor tasks."""
+	# Read primary beam reference parameters from packaged JSON
 	pb_data = load_json('%s/data/primary_beams.json'%params['global']['vlbipipe_path'])
 	tb = casatools.table()
 
+	# Determine observing band from spectral window center frequency
 	tb.open('%s/SPECTRAL_WINDOW'%vis)
 	bwidth = np.sum(tb.getcol('TOTAL_BANDWIDTH'))
 	freq_range = [tb.getcol('CHAN_FREQ')[0][0],tb.getcol('CHAN_FREQ')[0][0]+bwidth]
@@ -1476,6 +1516,7 @@ def append_pbcor_info(vis, params):
 			band=k
 
 
+	# Add per-antenna PB metadata columns and values
 	tb.open('%s/ANTENNA'%vis,nomodify=False)
 	name = tb.getcol('NAME')
 	station = tb.getcol('STATION')
@@ -1567,6 +1608,7 @@ def append_pbcor_info(vis, params):
 
 def pad_antennas(caltable='',ants=[],gain=False):
 	"""Ensure specified antennas have unflagged entries with neutral values."""
+	# Open table to clear flags and insert neutral gains for target antennas
 	tb = casatools.table()
 	tb.open('%s'%caltable,nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -1653,6 +1695,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
+	# Build a PDF with one panel per SPW and markers per pol
 	with PdfPages('%s'%figfile) as pdf:
 		if xaxis == 'time':
 			time=tb.getcol('TIME')
@@ -1889,35 +1932,35 @@ def clip_model(model, im, snr):
 		ia.close()
 
 def make_tarfile(output_filename, source_dir):
-    """
-    Create a gzip-compressed tar archive from one or more source paths.
+	"""
+	Create a gzip-compressed tar archive from one or more source paths.
 
-    Parameters
-    - output_filename: Path to the output `.tar.gz` file to write.
-    - source_dir: Iterable of file/dir paths to include in the archive. If a
-      single string is provided, it is treated as an iterable of characters, so
-      this function coerces non-list inputs to a list to avoid that pitfall.
+	Parameters
+	- output_filename: Path to the output `.tar.gz` file to write.
+	- source_dir: Iterable of file/dir paths to include in the archive. If a
+	  single string is provided, it is treated as an iterable of characters, so
+	  this function coerces non-list inputs to a list to avoid that pitfall.
 
-    Notes
-    - Each provided path is added with `arcname=os.path.basename(path)`, which
-      flattens directory structure inside the archive and may overwrite if two
-      different inputs share the same basename.
-    - Emits progress to CASA's logger.
-    """
-    func_name = inspect.stack()[0][3]
+	Notes
+	- Each provided path is added with `arcname=os.path.basename(path)`, which
+	  flattens directory structure inside the archive and may overwrite if two
+	  different inputs share the same basename.
+	- Emits progress to CASA's logger.
+	"""
+	func_name = inspect.stack()[0][3]
 
-    # Ensure we always iterate over paths, not characters from a string.
-    if not isinstance(source_dir, list):
-        source_dir = list(source_dir)
+	# Ensure we always iterate over paths, not characters from a string.
+	if not isinstance(source_dir, list):
+		source_dir = list(source_dir)
 
-    # Log what will be archived.
-    casalog.post(priority='INFO', origin=func_name,
-                 message='Tarring %s to form %s' % (", ".join(source_dir), output_filename))
+	# Log what will be archived.
+	casalog.post(priority='INFO', origin=func_name,
+				 message='Tarring %s to form %s' % (", ".join(source_dir), output_filename))
 
-    # Write gzip-compressed tar file; add each item using its basename inside.
-    with tarfile.open(output_filename, "w:gz") as tar:
-        for k in source_dir:
-            tar.add(k, arcname=os.path.basename(k))
+	# Write gzip-compressed tar file; add each item using its basename inside.
+	with tarfile.open(output_filename, "w:gz") as tar:
+		for k in source_dir:
+			tar.add(k, arcname=os.path.basename(k))
   
 def extract_tarfile(tar_file,cwd,delete_tar):
 	"""Extract a tar archive under `cwd`; optionally delete the tar file.
@@ -1941,6 +1984,7 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 	func_name = inspect.stack()[0][3]
 	if idifiles == []:
 		idifiles={}
+		# EVN packaging: either multiple *.IDI* files or .tar.gz bundles
 		if telescope == 'EVN':
 			check_arr = []
 			files = []
@@ -1964,6 +2008,7 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			else:
 				casalog.post(priority='SEVERE',origin=func_name,message='Target files must all be .tar.gz or .idi files .. not a mix')
 				sys.exit()
+		# VLBA packaging: either *.idifits files or .tar.gz bundles
 		if telescope == 'VLBA':
 			check_arr = []
 			files = []
@@ -2069,6 +2114,7 @@ def get_target_files_2(target_dir='./',telescope='',project_code='',idifiles=[])
 def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, append, minsnr, msinfo, gaintable_dict, casa6):
 	"""Run scan-wise fringefit per reference antenna; use MPI if available."""
 	try:
+		# CASA6 uses casampi; CASA5 used mpi4casa. Try to engage servers
 		if casa6 == True:	
 			from casampi.MPICommandClient import MPICommandClient
 			from casampi import MPIEnvironment
@@ -2087,6 +2133,7 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		cmd = []
 	except:
 		parallel=False
+	# Build a shuffled preference order per reference antenna
 	refants = []
 	err_array = []
 	for i in msinfo['ANTENNAS']['anttoID'].keys():
@@ -2113,6 +2160,7 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 			append=True
 			for j in range(len(scans)):
 				#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
+				# Form the fringefit call string for the current refant/scan
 				cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s, scan='%s');"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, refants[i][0], zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'],scans[j])
 				cmd2 = "import os; os.system('touch %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
 				try:
@@ -2251,6 +2299,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 		selection0='OBSERVATION_ID=='+obsid+'&&FIELD_ID=='+field
 
 	tb = casatools.table()
+	# Open table and preselect rows for observation/field
 	tb.open(caltable,nomodify=False)
 	
 	subt=tb.query(selection0)
@@ -2274,7 +2323,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 				for p in range(gainshape[0]):
 					for ch in range(gainshape[1]):
 						if (np.sum(flag[p,ch])>0) & (np.sum(flag[p,ch])<=len(timecol)-2):
-							# interpolate amp and phase separately
+							# Interpolate amplitude and unwrapped phase separately
 
 							amp   = np.abs(cparam[p,ch])
 							phase = np.angle(cparam[p,ch])
@@ -2926,6 +2975,7 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 	shorthand = 'False'
 
 	def write_catalog_pybdsf(input_image,detection_threshold,shorthand):
+		"""Process an image with PyBDSF and write source catalogs and images."""
 		if shorthand == 'True':
 			name = input_image.split('_MSSC')[0]
 		else:
@@ -2944,6 +2994,7 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 
 
 	def combine_pybdsf(shorthand,postfix,catalog_list):
+		"""Combine individual .srl catalogs into a single CSV (optional shorthand)."""
 		os.system('rm catalogue_PYBDSF_%s.csv' % postfix)
 		if os.path.isfile('catalogue_pybdsf_%s.csv' % postfix) == False:
 			s = 'Name_{0}, Source_id_{0}, Isl_id_{0}, RA_{0}, E_RA_{0}, DEC_{0}, E_DEC_{0}, Total_flux_{0}, E_Total_flux_{0}, Peak_flux_{0}, E_Peak_flux_{0}, RA_max_{0}, E_RA_max_{0}, DEC_max_{0}, E_DEC_max_{0}, Maj_{0}, E_Maj_{0}, Min_{0}, E_Min_{0}, PA_{0}, E_PA_{0}, Maj_img_plane_{0}, E_Maj_img_plane_{0}, Min_img_plane_{0}, E_Min_img_plane_{0}, PA_img_plane_{0}, E_PA_img_plane_{0}, DC_Maj_{0}, E_DC_Maj_{0}, DC_Min_{0}, E_DC_Min_{0}, DC_PA_{0}, E_DC_PA_{0}, DC_Maj_img_plane_{0}, E_DC_Maj_img_plane_{0}, DC_Min_img_plane_{0}, E_DC_Min_img_plane_{0}, DC_PA_img_plane_{0}, E_DC_PA_img_plane_{0}, Isl_Total_flux_{0}, E_Isl_Total_flux_{0}, Isl_rms_{0}, Isl_mean_{0}, Resid_Isl_rms_{0}, Resid_Isl_mean_{0}, S_Code_{0}\n'.format(postfix)
@@ -3005,6 +3056,7 @@ def remove_flagged_scans(caltable):
 def filter_smooth_delay(caltable,nsig=[2.5,2.]):
 	"""Filter and smooth delay terms in FPARAM using Hampel filtering."""
 	func_name = inspect.stack()[0][3]
+	# Operate over delay terms (FPARAM index 1 + polarization offset)
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -3268,6 +3320,12 @@ def importfitsidi_2(fitsidifile,vis,constobsid=None,scanreindexgap_s=None,specfr
 		shutil.rmtree(vis+'_importfitsidi_tmp_', ignore_errors=True)
 
 def fix_fields(vis):
+	"""Deduplicate FIELD names and remap DATA.FIELD_IDs to the kept rows.
+
+	Removes duplicate rows from the `FIELD` subtable and updates the main
+	table's `FIELD_ID` column so that all integrations reference the remaining
+	unique FIELD rows.
+	"""
 	mytb = casatools.table()
 	## fix the field table
 	mytb.open(vis+'/FIELD',nomodify=False)
