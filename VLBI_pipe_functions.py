@@ -1,3 +1,11 @@
+"""
+VLBI pipeline helper functions.
+
+This module bundles CASA-based utilities for importing, flagging, calibration,
+packaging, and imaging of VLBI data products. Functions are designed to be
+scriptable in batch environments (PBS/SLURM/Bash) and log via CASA's logger.
+"""
+
 import re, os, json, inspect, sys, copy, glob, tarfile, random, math, shutil, ast
 import collections
 from collections import OrderedDict
@@ -46,7 +54,10 @@ except:
 	import pyfits as fits
 
 class NpEncoder(json.JSONEncoder):
+	"""JSON encoder that safely serializes numpy scalars and arrays."""
+
 	def default(self, obj):
+		"""Return JSON-serializable forms for numpy types, otherwise defer."""
 		if isinstance(obj, np.integer):
 			return int(obj)
 		elif isinstance(obj, np.floating):
@@ -57,18 +68,21 @@ class NpEncoder(json.JSONEncoder):
 			return super(NpEncoder, self).default(obj)
 
 def json_load_byteified(file_handle):
+	"""Load JSON from an open handle and byteify keys/values for py2/py3 mix."""
 	return _byteify(
 		json.load(file_handle, object_hook=_byteify),
 		ignore_dicts=True
 	)
 
 def json_loads_byteified(json_text):
+	"""Parse JSON text and byteify keys/values for py2/py3 compatibility."""
 	return _byteify(
 		json.loads(json_text, object_hook=_byteify),
 		ignore_dicts=True
 	)
 
 def json_load_byteified_dict(file_handle,casa6):
+	"""Load JSON as OrderedDict with byteified keys; adapt for CASA version."""
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.load(file_handle, object_hook=_byteify, object_pairs_hook=OrderedDict),
@@ -79,6 +93,7 @@ def json_load_byteified_dict(file_handle,casa6):
 			ignore_dicts=True))
 
 def json_loads_byteified_dict(json_text,casa6):
+	"""Parse JSON text into an OrderedDict with byteified keys/values."""
 	if casa6==True:
 		return convert_temp(_byteify(
 			json.loads(json_text, object_hook=_byteify, object_pairs_hook=OrderedDict),
@@ -89,6 +104,7 @@ def json_loads_byteified_dict(json_text,casa6):
 			ignore_dicts=True))
 
 def convert(data):
+	"""Recursively convert unicode to str within mappings and iterables (CASA5)."""
 	if isinstance(data, basestring):
 		return str(data)
 	elif isinstance(data, Mapping):
@@ -99,6 +115,7 @@ def convert(data):
 		return data
 
 def convert_temp(data):
+	"""Recursively convert to str within mappings and iterables (CASA6)."""
 	if isinstance(data, str):
 		return str(data)
 	elif isinstance(data, Mapping):
@@ -109,6 +126,7 @@ def convert_temp(data):
 		return data
 
 def _byteify(data, ignore_dicts=False):
+	"""Helper to coerce unicode/bytes to str for nested JSON structures."""
 	# if this is a unicode string, return its string representation
 	try:
 		if isinstance(data, unicode):
@@ -136,6 +154,13 @@ def _byteify(data, ignore_dicts=False):
 	return data
 
 def load_json(filename,Odict=False,casa6=False):
+	"""Load JSON from `filename`; optionally return an OrderedDict for CASA.
+
+	Parameters
+	- filename: Path to JSON file.
+	- Odict: If True, preserve key order using OrderedDict.
+	- casa6: When `Odict` is True, choose conversion path for CASA6 vs CASA5.
+	"""
 	if Odict==False:
 		with open(filename, "r") as f:
 			json_data = json_load_byteified(f)
@@ -147,6 +172,7 @@ def load_json(filename,Odict=False,casa6=False):
 	return json_data
 
 def save_json(filename,array,append=False):
+	"""Write `array` as JSON to `filename` with stable formatting."""
 	if append==False:
 		write_mode='w'
 	else:
@@ -159,14 +185,15 @@ def headless(inputfile):
 	''' Parse the list of inputs given in the specified file. (Modified from evn_funcs.py)'''
 	INPUTFILE = open(inputfile, "r")
 	control=collections.OrderedDict()
-	# a few useful regular expressions
+	# Compile a few useful regular expressions for lightweight parsing
 	newline = re.compile(r'\n')
 	space = re.compile(r'\s')
 	char = re.compile(r'\w')
 	comment = re.compile(r'#.*')
-	# parse the input file assuming '=' is used to separate names from values
+	# Parse lines as key=value pairs, ignoring comments and whitespace
 	for line in INPUTFILE:
 		if char.match(line):
+			# Strip trailing comments and quotes
 			line = comment.sub(r'', line)
 			line = line.replace("'", '')
 			(param, value) = line.split('=')
@@ -176,6 +203,7 @@ def headless(inputfile):
 			value = newline.sub(r'', value)
 			value = value.replace(' ','').strip()
 			valuelist = value.split(',')
+			# Coerce scalars to int when appropriate, else keep as str
 			if len(valuelist) == 1:
 				if valuelist[0] == '0' or valuelist[0]=='1' or valuelist[0]=='2':
 					control[param] = int(valuelist[0])
@@ -186,6 +214,7 @@ def headless(inputfile):
 	return control
 
 def rmfiles(files):
+	"""Remove files matching the given paths or globs, logging via CASA."""
 	func_name = inspect.stack()[0][3]
 	for i in files:
 		if "*" in i:
@@ -194,6 +223,7 @@ def rmfiles(files):
 			for j in files_to_die:
 				if os.path.exists(j) == True:
 					casalog.post(priority="INFO",origin=func_name,message='File %s found - deleting'% j)
+					# Use shell rm to handle both files and CASA artifacts uniformly
 					os.system('rm %s'%j)
 				else:
 					pass
@@ -205,6 +235,7 @@ def rmfiles(files):
 	return
 
 def rmdirs(dirs):
+	"""Remove directories or tables recursively; supports simple globs."""
 	func_name = inspect.stack()[0][3]
 	for i in dirs:
 		if "*" in i:
@@ -213,6 +244,7 @@ def rmdirs(dirs):
 			for j in files_to_die:
 				if os.path.exists(j) == True:
 					casalog.post(priority="INFO",origin=func_name,message='Directory/table %s found - deleting'% j)
+					# Use recursive removal for CASA tables and folders
 					os.system('rm -r %s'%j)
 				else:
 					pass
@@ -224,6 +256,7 @@ def rmdirs(dirs):
 	return
 
 def init_pipe_run(inputs,params):
+	"""Initialise bookkeeping JSONs for pipeline step tracking and gaintables."""
 	inputs2=OrderedDict({})
 	for a,b in zip(inputs.keys(),inputs.values()):
 		inputs2[a]=b
@@ -237,6 +270,7 @@ def init_pipe_run(inputs,params):
 	save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=OrderedDict({}), append=False)
 
 def find_fitsidi(idifilepath="",cwd="",project_code=""):
+	"""Locate FITS-IDI files in a directory, optionally filtering by code."""
 	func_name = inspect.stack()[0][3]
 	casalog.post(priority="INFO",origin=func_name,message='Will attempt to find fitsidifiles in %s'%idifilepath)
 	### Try first with project code and end
@@ -257,8 +291,10 @@ def find_fitsidi(idifilepath="",cwd="",project_code=""):
 		return fitsidifiles
 
 def write_hpc_headers(step,params):
+	"""Write scheduler header lines for PBS/SLURM/Bash into job script file."""
 	func_name = inspect.stack()[0][3]
 
+	# Collect scheduler options; per-step overrides fall back to global defaults
 	hpc_opts = {}
 	hpc_opts['job_manager'] = params['global']['job_manager']
 	hpc_opts['job_name'] = 'vp_%s'%step
@@ -272,6 +308,7 @@ def write_hpc_headers(step,params):
 		casalog.post(priority='SEVERE',origin=func_name, message='Incorrect job manager, please select from pbs, slurm or bash')
 		sys.exit()
 
+	# Resolve step-level resource settings or inherit from global defaults
 	for i in ['partition','walltime','nodetype']:
 		if params[step]["hpc_options"][i] == 'default':
 			hpc_opts[i] = params['global']['default_%s'%i]
@@ -324,6 +361,7 @@ def write_hpc_headers(step,params):
 					}
 				}
 
+	# Begin script with the invoking shell for portability
 	hpc_header= ['#!%s'% environ['SHELL']]
 
 	if step == 'apply_to_all':
@@ -343,6 +381,7 @@ def write_hpc_headers(step,params):
 		hpc_dict['bash']['array_job'] = ''
 		hpc_opts['array_job'] = -1
 
+	# Emit only non-empty directives for the selected scheduler
 	hpc_job = hpc_opts['job_manager']
 	for i in hpc_opts.keys():
 		if i != 'job_manager':
@@ -356,11 +395,14 @@ def write_hpc_headers(step,params):
 			filehandle.write('%s\n' % listitem)
 
 def write_commands(step,inputs,params,parallel,aoflag,casa6):
+	"""Append the command payloads for a job script based on config."""
 	func_name = inspect.stack()[0][3]
+	# Accumulate shell lines to append to job script
 	commands=[]
 	casapath=params['global']['casapath']
 	vlbipipepath=params['global']["vlbipipe_path"]
 	if aoflag==False:
+		# Standard pipeline execution path (no AOFlagger pre/post)
 		if parallel == True:
 			mpicasapath = params['global']['mpicasapath']
 		else:
@@ -381,6 +423,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 	elif aoflag=='both':
+		# Run AOFlagger on specified fields, then run the CASA step
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
@@ -423,6 +466,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 
 	elif aoflag==True:
+		# Only run AOFlagger (no subsequent CASA script run here)
 		strategies = params[step]['AO_flag_strategy']
 		fields=params[step]['AO_flag_fields']
 		if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
@@ -443,6 +487,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands[-1] = commands[-1]+'-strategy %s %s'%(params[step]['AO_flag_strategy'][i],msfile)
 
 	elif aoflag=='apply_to_all':
+		# Iterate over per-target lines in target_files.txt using array jobs
 		if (params['global']['job_manager'] == 'pbs'):
 			commands.append('cd %s'%params['global']['cwd'])
 			variable='${array[$a]}'
@@ -473,6 +518,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		if params["init_flag"]["run_AOflag"] == True:
+			# Optionally run AOFlagger on each target before/after CASA step
 			if (params['global']['job_manager'] == 'bash'):
 				commands.append('for a in \"${array[@]}\"')
 				commands.append('do')
@@ -500,23 +546,28 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			filehandle.write('%s\n' % listitem)
 
 def find_nestlist(mylist, char):
+	"""Return (i,j) indices where `char` appears inside nested list `mylist`."""
 	for sub_list in mylist:
 		if char in sub_list:
 			return (mylist.index(sub_list), sub_list.index(char))
 	raise ValueError("'{char}' is not in list".format(char = char))
 
 def write_job_script(steps,job_manager):
+	"""Generate a simple runner that submits/links step job scripts with deps."""
+	# Start with shebang and "exit on error" for safer chaining
 	commands=['#!%s'%environ['SHELL'], 'set -e']
 	for i,j in enumerate(steps):
 		if i==0:
 			depend=''
 		else:
+			# Encode inter-step dependencies per scheduler
 			if job_manager=='pbs':
 				depend='-W depend=afterany:$%s'%(steps[i-1])
 			if job_manager=='slurm':
 				depend='--dependency=afterany:$%s'%(steps[i-1])
 			if job_manager=='bash':
 				depend=''
+		# Append appropriate submission command for each scheduler
 		if job_manager=='pbs':
 			commands.append("%s=$(qsub %s job_%s.pbs)"%(j,depend,j))
 		if job_manager=='slurm':
@@ -531,87 +582,124 @@ def write_job_script(steps,job_manager):
 	f.close()
 
 def get_ms_info(msfile):
+	"""
+	Extract metadata and useful information from a CASA Measurement Set (MS).
+
+	Parameters
+	----------
+	msfile : str
+		Path to the Measurement Set (MS) directory.
+
+	Returns
+	-------
+	dict
+		Dictionary containing:
+			- 'ANTENNAS' : dict
+				Maps antenna names ↔ antenna IDs.
+			- 'SPECTRAL_WINDOW' : dict
+				SPW information (bandwidth, central frequency,
+				number of channels, polarization setup, etc.).
+			- 'FIELD' : dict
+				Maps field names ↔ field IDs (possibly filtered).
+			- 'SCANS' : dict
+				Mapping from FieldId to a list of scan IDs.
+			- 'TELE_NAME' : str
+				Telescope name from the OBSERVATION table.
+			- 'IMAGE_PARAMS' : dict
+				Per-field simple estimate of image cell size in arcseconds.
+	"""
+	# Create CASA table and ms tool instances
 	tb = casatools.table()
 	ms = casatools.ms() 
-	msinfo={}
-	## antenna information
-	tb.open('%s/ANTENNA'%msfile)
-	ants = tb.getcol('NAME')
-	ant={}
-	ant['anttoID'] =dict(zip(ants, np.arange(0,len(ants),1)))
-	ant['IDtoant'] = dict(zip(np.arange(0,len(ants),1).astype(str),ants))
-	msinfo['ANTENNAS']=ant
+	msinfo = {}
+
+	# -------------------------
+	# ANTENNA information
+	# -------------------------
+	tb.open('%s/ANTENNA' % msfile)
+	ants = tb.getcol('NAME')  # list of antenna names
+	ant = {}
+	# Map antenna name → ID
+	ant['anttoID'] = dict(zip(ants, np.arange(0, len(ants), 1)))
+	# Map ID → antenna name
+	ant['IDtoant'] = dict(zip(np.arange(0, len(ants), 1).astype(str), ants))
+	msinfo['ANTENNAS'] = ant
 	tb.close()
 
-	## get spw information
-	tb.open('%s/SPECTRAL_WINDOW'%msfile)
-	spw={}
+	# -------------------------
+	# SPECTRAL WINDOW information
+	# -------------------------
+	tb.open('%s/SPECTRAL_WINDOW' % msfile)
+	spw = {}
+	# Number of SPWs
 	spw['nspws'] = len(tb.getcol('TOTAL_BANDWIDTH'))
+	# Total bandwidth summed across SPWs
 	spw['bwidth'] = np.sum(tb.getcol('TOTAL_BANDWIDTH'))
-	spw['spw_bw'] = spw['bwidth']/spw['nspws']
-	spw['freq_range'] = [tb.getcol('CHAN_FREQ')[0][0],tb.getcol('CHAN_FREQ')[0][0]+spw['bwidth']]
+	# Average bandwidth per SPW
+	spw['spw_bw'] = spw['bwidth'] / spw['nspws']
+	# Frequency range (start to start+bandwidth)
+	spw['freq_range'] = [tb.getcol('CHAN_FREQ')[0][0],
+						 tb.getcol('CHAN_FREQ')[0][0] + spw['bwidth']]
+	# Central frequency
 	spw['cfreq'] = np.average(spw['freq_range'])
-	if ((np.max(tb.getcol('CHAN_WIDTH')) == np.min(tb.getcol('CHAN_WIDTH')))&(np.max(tb.getcol('NUM_CHAN')) == np.min(tb.getcol('NUM_CHAN')))) == True:
+	# Check if all SPWs have same channelization
+	if ((np.max(tb.getcol('CHAN_WIDTH')) == np.min(tb.getcol('CHAN_WIDTH')))
+		& (np.max(tb.getcol('NUM_CHAN')) == np.min(tb.getcol('NUM_CHAN')))) == True:
 		spw['same_spws'] = True
 		spw['nchan'] = np.max(tb.getcol('NUM_CHAN'))
 	else:
 		spw['same_spws'] = False
 		spw['nchan'] = tb.getcol('NUM_CHAN')
+	# Channel width (either single or average)
 	if spw['same_spws'] == True:
 		spw['chan_width'] = tb.getcol('CHAN_WIDTH')[0][0]
 	else:
 		spw['chan_width'] = np.average(tb.getcol('CHAN_WIDTH'))
 	tb.close()
-	tb.open('%s/POLARIZATION'%msfile)
+
+	# -------------------------
+	# POLARIZATION information
+	# -------------------------
+	tb.open('%s/POLARIZATION' % msfile)
+	# Number of correlations
 	spw['npol'] = tb.getcol('NUM_CORR')[0]
+	# Correlation type IDs
 	polariz = tb.getcol('CORR_TYPE').flatten()
-	ID_to_pol={'0': 'Undefined',
-			 '1': 'I',
-			 '2': 'Q',
-			 '3': 'U',
-			 '4': 'V',
-			 '5': 'RR',
-			 '6': 'RL',
-			 '7': 'LR',
-			 '8': 'LL',
-			 '9': 'XX',
-			 '10': 'XY',
-			 '11': 'YX',
-			 '12': 'YY',
-			 '13': 'RX',
-			 '14': 'RY',
-			 '15': 'LX',
-			 '16': 'LY',
-			 '17': 'XR',
-			 '18': 'XL',
-			 '19': 'YR',
-			 '20': 'YL',
-			 '21': 'PP',
-			 '22': 'PQ',
-			 '23': 'QP',
-			 '24': 'QQ',
-			 '25': 'RCircular',
-			 '26': 'LCircular',
-			 '27': 'Linear',
-			 '28': 'Ptotal',
-			 '29': 'Plinear',
-			 '30': 'PFtotal',
-			 '31': 'PFlinear',
-			 '32': 'Pangle'}
-	pol2=[]
-	for i,j in enumerate(polariz):
+	# Map CASA correlation codes → human-readable strings
+	ID_to_pol = {
+		'0': 'Undefined', '1': 'I', '2': 'Q', '3': 'U', '4': 'V',
+		'5': 'RR', '6': 'RL', '7': 'LR', '8': 'LL',
+		'9': 'XX', '10': 'XY', '11': 'YX', '12': 'YY',
+		'13': 'RX', '14': 'RY', '15': 'LX', '16': 'LY',
+		'17': 'XR', '18': 'XL', '19': 'YR', '20': 'YL',
+		'21': 'PP', '22': 'PQ', '23': 'QP', '24': 'QQ',
+		'25': 'RCircular', '26': 'LCircular', '27': 'Linear',
+		'28': 'Ptotal', '29': 'Plinear', '30': 'PFtotal',
+		'31': 'PFlinear', '32': 'Pangle'
+	}
+	pol2 = []
+	for i, j in enumerate(polariz):
 		pol2.append(ID_to_pol[str(j)])
 	spw['spw_pols'] = pol2
 	tb.close()
 	msinfo['SPECTRAL_WINDOW'] = spw
-	## Get field information
-	tb.open('%s/FIELD'%msfile)
+
+	# -------------------------
+	# FIELD information
+	# -------------------------
+	tb.open('%s/FIELD' % msfile)
 	fields = tb.getcol('NAME')
 	field = {}
-	field['fieldtoID'] =dict(zip(fields, np.arange(0,len(fields),1)))
-	field['IDtofield'] = dict(zip(np.arange(0,len(fields),1).astype(str),fields))
+	# Field name → ID
+	field['fieldtoID'] = dict(zip(fields, np.arange(0, len(fields), 1)))
+	indx_m = np.arange(0, len(fields), 1).astype(int)
+	# ID → field name
+	field['IDtofield'] = dict(zip(np.arange(0, len(fields), 1).astype(str), fields))
 	tb.close()
-	## scans
+
+	# -------------------------
+	# SCAN information
+	# -------------------------
 	ms.open(msfile)
 	scans = ms.getscansummary()
 	ms.close()
@@ -624,33 +712,57 @@ def get_ms_info(msfile):
 			vals = scan[fieldid]
 			scan[fieldid].append(i)
 	msinfo['SCANS'] = scan
-	## Get telescope_name
-	tb.open('%s/OBSERVATION'%msfile)
+
+	# -------------------------
+	# OBSERVATION information
+	# -------------------------
+	tb.open('%s/OBSERVATION' % msfile)
 	msinfo['TELE_NAME'] = tb.getcol('TELESCOPE_NAME')[0]
 	tb.close()
+
+	# -------------------------
+	# IMAGE PARAMETER estimates
+	# -------------------------
 	image_params = {}
-	high_freq = spw['freq_range'][1]
-	
+	high_freq = spw['freq_range'][1]  # use high end of band
+
 	ms.open(msfile)
 	f = []
 	indx = []
 	for i in field['fieldtoID'].keys():
-		ms.selecttaql('FIELD_ID==%s'%field['fieldtoID'][i])
+		# Select rows for this field
+		ms.selecttaql('FIELD_ID==%s' % field['fieldtoID'][i])
 		try:
+			# Get max baseline (uv distance)
 			max_uv = ms.getdata('uvdist')['uvdist'].max()
-			image_params[i] = ((speed_light/high_freq)/max_uv)*(180./np.pi)*(3.6e6/5.)
+			# Estimate cell size (arcsec) based on λ / Bmax
+			image_params[i] = ((speed_light / high_freq) / max_uv) * (180. / np.pi) * (3.6e6 / 5.)
 			f.append(i)
 			indx.append(field['fieldtoID'][i])
 		except:
+			# Skip if no data available
 			pass
 		ms.reset()
 	ms.close()
+
+	# Redefine field mapping using only valid fields
 	field = {}
-	field['fieldtoID'] =dict(zip(f, indx))
-	field['IDtofield'] =dict(zip(np.array(indx).astype(str),f))
+	field['fieldtoID'] = dict(zip(f, indx))
+	field['IDtofield'] = dict(zip(np.array(indx).astype(str), f))
 	msinfo['FIELD'] = field
 	msinfo["IMAGE_PARAMS"] = image_params
-	
+
+	'''
+	if clipfields == True:
+		tb.open('%s/FIELD' % msfile,nomodify=False)
+		indx = np.array(indx)
+		intersect = indx_m[np.isin(indx_m, indx)]
+		mask1 = np.searchsorted(indx_m, intersect)
+		indx_m = np.delete(indx_m, mask1)
+		tb.removerows(sorted(indx_m))
+		tb.flush()
+		tb.close()
+	'''
 	return msinfo
 
 def fill_flagged_soln(caltable='', fringecal=False):
@@ -667,6 +779,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 		gaincol='CPARAM'
 	else:
 		gaincol='FPARAM'
+	# Open caltable for in-place edits
 	tb = casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -683,6 +796,7 @@ def fill_flagged_soln(caltable='', fringecal=False):
 	
 	k=1
 	numflag=0.0
+	# Walk through each antenna/SPW slice and fill edge flags with nearest neighbor
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
 					subflg=flg[:,:,(ant==k) & (dd==j)]
@@ -727,6 +841,7 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 		gaincol='CPARAM'
 	else:
 		gaincol='FPARAM'
+	# Open table to overwrite flagged entries by interpolation
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -743,6 +858,7 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 	
 	k=1
 	numflag=0.0
+	# Forward/backward pass to copy nearest unflagged neighbor
 	for k in range(maxant+1):
 			for j in range (maxdd+1):
 					subflg=flg[:,:,(ant==k) & (dd==j)]
@@ -787,7 +903,13 @@ def fill_flagged_soln2(caltable='', fringecal=False):
 	tb.done()
 
 def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
+	"""Median-filter and smooth Tsys table to suppress RFI and jumps.
+
+	Applies Hampel filtering and optional smoothing per antenna/SPW/pol,
+	updating `FPARAM` and `FLAG` in-place.
+	"""
 	func_name = inspect.stack()[0][3]
+	# Read caltable; operate on FPARAM delays/Tsys
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -800,6 +922,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	dd=tb.getcol('SPECTRAL_WINDOW_ID')
 	npol=gain.shape[0]
 	casalog.post(priority="INFO",origin=func_name,message='Editing and smoothing the tsys table')
+	# Process each polarization, antenna and SPW independently
 	for k in range(npol):
 		for i in np.unique(ant):
 			for j in np.unique(dd):
@@ -808,9 +931,12 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 				gain_uflg = gain_uflg2[flg_temp==0]
 				if len(gain_uflg) != 0:
 					t_temp=t[((ant==i)&(dd==j))][flg_temp==0] 
+					# Coarse Hampel filter pass to remove strong outliers
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 41 ,n_sigmas=nsig[0])
+					# Fine Hampel filter pass for residual spikes
 					gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 10 ,n_sigmas=nsig[1])
 					#gain_uflg,detected_outliers = hampel_filter(np.array([t_temp,gain_uflg]), 5 ,n_sigmas=2.5)
+					# Detect abrupt jumps; if none, apply moving-average smoothing
 					gain_uflg, jump = detect_jump_and_smooth(gain_uflg,jump_pc=jump_pc)
 					if jump == False:
 						gain_uflg = smooth_series(gain_uflg, 21)
@@ -826,6 +952,7 @@ def filter_tsys_auto(caltable,nsig=[2.5,2.],jump_pc=20):
 	tb.close()
 
 def smooth_series(y, box_pts):
+	"""Smooth a 1D array with a simple moving average of `box_pts` width."""
 	box = np.ones(box_pts)/box_pts
 	y_smooth = np.convolve(y, box, mode='valid')
 	y_smooth = np.hstack([np.ones(np.floor(box_pts/2.).astype(int))*y_smooth[0],y_smooth])
@@ -833,14 +960,15 @@ def smooth_series(y, box_pts):
 	return y_smooth
 
 def hampel_filter(input_series, window_size, n_sigmas=3):
-	
+	"""Hampel outlier filter; returns filtered series and indices of outliers."""
+	# input_series[0] = time, input_series[1] = values
 	n = len(input_series[1])
 	new_series = input_series.copy()
-	k = 1.4826 # scale factor for Gaussian distribution
+	k = 1.4826 # scale factor for Gaussian distribution (MAD -> sigma)
 	
 	indices = []
 	
-	# possibly use np.nanmedian 
+	# Slide a window and replace points that exceed robust threshold by median
 	for i in range((window_size),(n - window_size)):
 		x0 = np.median(input_series[1][(i - window_size):(i + window_size)])
 		S0 = k * np.median(np.abs(input_series[1][(i - window_size):(i + window_size)] - x0))
@@ -860,6 +988,7 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 				indices.append(i)
 	
 	detected_outliers = np.array(indices)
+	# Interpolate across contiguous flagged segments to avoid flat spots
 	already_tagged=[]
 	for i in range(len(input_series[1])):
 		if ((i<input_series[0].shape[0]-1)&(i>0)):
@@ -885,10 +1014,13 @@ def hampel_filter(input_series, window_size, n_sigmas=3):
 	return input_series[1],detected_outliers
 
 def detect_jump_and_smooth(array,jump_pc):
+	"""Detect step-like jumps and locally smooth the region if found."""
+	# Convert threshold percentage to fraction for comparisons
 	jump_pc=jump_pc/100.
 	try:
 		for i,j in enumerate(array):
 			if i<array.shape[0]-2:
+				# Heuristic: 10% change indicates a jump; then grow region until stable
 				if (array[i+1] > 1.1*array[i])|(array[i+1]<0.9*array[i]):
 					jump=True
 					low=i
@@ -900,6 +1032,7 @@ def detect_jump_and_smooth(array,jump_pc):
 							else:
 								i+=1
 					high=i+1
+					# Choose an odd window length around the jump to avoid bias
 					diff=int((high-low)/2.)
 					if diff%2 == 0:
 						diff=diff+1
@@ -914,12 +1047,14 @@ def detect_jump_and_smooth(array,jump_pc):
 		return array, jump
 
 def append_gaintable(gaintables,caltable_params):
+	"""Append caltable parameters into gaintable dict, preserving parang field."""
 	for i,j in enumerate(gaintables.keys()):
 		if j != 'parang':
 			gaintables[j].append(caltable_params[i])
 	return gaintables
 
 def load_gaintables(params,casa6):
+	"""Load or initialize persistent gaintables bookkeeping JSON."""
 	cwd=params['global']['cwd']
 	if os.path.exists('%s/vp_gaintables.json'%(cwd)) == False:
 		gaintables=OrderedDict({})
@@ -930,6 +1065,7 @@ def load_gaintables(params,casa6):
 	return gaintables
 
 def find_refants(pref_ant,msinfo):
+	"""Return a comma-separated list of preferred reference antennas present."""
 	antennas = msinfo['ANTENNAS']['anttoID'].keys()
 	refant=[]
 	for i in pref_ant:
@@ -938,6 +1074,7 @@ def find_refants(pref_ant,msinfo):
 	return ",".join(refant)
 
 def calc_edge_channels(value,nspw,nchan):
+	"""Convert edge-channel spec (count or percent string) into integer count."""
 	func_name = inspect.stack()[0][3]
 	if (type(value) == str):
 		if value.endswith('%'):
@@ -956,6 +1093,7 @@ def calc_edge_channels(value,nspw,nchan):
 	return ",".join(flag_chans)
 
 def time_convert(mytime, myunit='s'):
+	"""Convert scalar/list of times to human-readable strings using CASA quanta."""
 	qa = casatools.quanta()
 	if type(mytime) != list: 
 		mytime=[mytime]
@@ -973,10 +1111,12 @@ def time_convert(mytime, myunit='s'):
 	return myTimestr
 
 def split_str(strng, sep, pos):
+	"""Split `strng` on `sep` and return tuple (pre,pos) and (post,pos)."""
 	strng = strng.split(sep)
 	return sep.join(strng[:pos]), sep.join(strng[pos:])
 
 def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
+	"""Flag time slots with poor solution counts relative to best within field."""
 	TOL=solint/2.01
 	tb = casatools.table()
 	tb.open(caltable)
@@ -985,13 +1125,16 @@ def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
 	flag = tb.getcol('FLAG')
 	time_a = tb.getcol('TIME')
 	time = np.unique(tb.getcol('TIME'))
+	# Bucket times into half-solint bins for robust comparison
 	time = np.unique(np.floor(time/TOL).astype(int))*TOL
 	field_id = tb.getcol('FIELD_ID')
+	# Total number of valid solutions per time across antennas
 	solns = np.sum(table_array[0],axis=0)
 	for z in fid.keys():
 		maxsoln = np.max(solns[fid[z][0]:fid[z][1]])
 		for j in range(fid[z][0],fid[z][1]+1):
 			result = np.isclose(time_a, time[j], atol=TOL,rtol=1e-10)
+			# Flag windows with too few solutions relative to best in the field
 			if solns[j] < passmark*maxsoln:
 				flag[:,0,(result)] = True
 	
@@ -1000,7 +1143,9 @@ def clip_bad_solutions(fid, table_array, caltable, solint, passmark):
 	tb.close()
 
 def interpolate_spw(table_array, passmark, caltable, solint):
+	"""Interpolate across SPWs with sufficient solutions; flag otherwise."""
 	table_array=table_array[0]/table_array[1]
+	# Identify SPW/time cells suitable for interpolation (non-trivial but pass)
 	interp_spw = np.where((table_array>=passmark)&(table_array!=1.0))
 	tb = casatools.table()
 	TOL = solint/2.01
@@ -1014,13 +1159,14 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 	field_id = tb.getcol('FIELD_ID')
 	tb.close()
 
+	# Interpolate per-pol within selected antenna/time bins
 	for j,i in enumerate(interp_spw[1]):
 		k=interp_spw[0][j]
 		result = np.isclose(time_a, time[i], atol =TOL,rtol=1e-10)
 		for z in range(value.shape[0]):
 			value_t=value[z,0,(result)&(ant==k)]
 			flag_t=flag[z,0,(result)&(ant==k)]
-			x=np.arange(0,8,1)
+			x=np.arange(0,8,1)  # channel index within SPW
 			yp = value_t[flag_t==False]
 			xp = x[flag_t==False]
 			inter = np.interp(x=x,xp=xp,fp=yp)
@@ -1028,6 +1174,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 			flag[z,0,(result)&(ant==k)] = False
 
 	nointerp_spw = np.where((table_array<passmark)&(table_array!=0.0))
+	# If too few solutions, conservatively flag the bin
 	for j,i in enumerate(nointerp_spw[1]):
 		k=nointerp_spw[0][j]
 		result = np.isclose(time_a, time[i], atol=TOL,rtol=1e-10)
@@ -1039,6 +1186,7 @@ def interpolate_spw(table_array, passmark, caltable, solint):
 	tb.close()
 
 def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
+	"""Compute per-antenna flagged/total solution counts per time; optional plot."""
 	TOL = solint/(2.01)
 	tb = casatools.table()
 	qa = casatools.quanta()
@@ -1124,6 +1272,7 @@ def get_caltable_flag_stats(caltable, msinfo, solint, plotonly, plotfile):
 		return flag_stats, fid_t
 
 def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
+	"""Auto-tune SBD caltable by filling/flagging and interpolating across SPWs."""
 	msinfo = get_ms_info(msfile)
 
 	if solint[-1] == 's':
@@ -1180,6 +1329,7 @@ def auto_modify_sbdcal(msfile,caltable,solint,spw_pass, bad_soln_clip, plot):
 	'''
 
 def scipy_clipper(data):
+	"""Light low-pass filter via Butterworth for 1D data smoothing."""
 	x = np.arange(0,len(data),1)
 	b, a = signal.butter(1, 0.25)
 	y = signal.filtfilt(b,a, data)
@@ -1191,6 +1341,7 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 	'''
 	func_name = inspect.stack()[0][3]
 
+	# Create a fresh caltable for autocorrelation-based bandpass-like terms
 	rmdirs([caltable])
 	cb = casatools.calibrater()
 	cb.open(msfile,False,False,False)
@@ -1220,8 +1371,10 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 	FLAG = np.zeros((npol,nchan,tbnrows))
 	SNR =  np.ones((npol,nchan,tbnrows))
 
+	# Row counter into the output caltable
 	runc=0
 	tb.open(msfile)
+	# Iterate: calibrator field -> SPW -> antenna -> pol
 	for h in range(len(calibrators)):
 		subt=tb.query('ANTENNA1==ANTENNA2 and FIELD_ID==%s'%(calibrators[h]))
 		t_cal = np.average(subt.getcol('TIME'))
@@ -1234,13 +1387,14 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 						subt = tb.query('ANTENNA1==%s and ANTENNA2==%s and FIELD_ID==%s and DATA_DESC_ID==%s'%(i,i,calibrators[h],j))
 						flag = subt.getcol('FLAG')
 						data = np.abs(subt.getcol('DATA'))
-						data[flag==True] = np.nan
+						data[flag==True] = np.nan  # ignore flagged visibilities
 						if calc_auto == 'mean':
 							data_median = np.sqrt(np.nanmean(data,axis=2)[l])
 						elif calc_auto=='median':
 							data_median = np.sqrt(np.nanmedian(data,axis=2)[l])
 						else:
 							sys.exit()
+						# Plotting aids (colors/markers) retained for potential diagnostics
 						polcol=['r','k']
 						polmar=['o','^']
 						if filter_RFI == True:
@@ -1317,6 +1471,7 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 	tb.close()
 
 def clip_fitsfile(model,im,snr):
+	"""Zero out model FITS pixels below `snr` times image RMS; keep non-negative."""
 	try:
 		from astropy.io import fits
 	except:
@@ -1335,9 +1490,12 @@ def clip_fitsfile(model,im,snr):
 	model_hdu.close()
  
 def append_pbcor_info(vis, params):
+	"""Augment MS ANTENNA table with primary-beam metadata for pbcor tasks."""
+	# Read primary beam reference parameters from packaged JSON
 	pb_data = load_json('%s/data/primary_beams.json'%params['global']['vlbipipe_path'])
 	tb = casatools.table()
 
+	# Determine observing band from spectral window center frequency
 	tb.open('%s/SPECTRAL_WINDOW'%vis)
 	bwidth = np.sum(tb.getcol('TOTAL_BANDWIDTH'))
 	freq_range = [tb.getcol('CHAN_FREQ')[0][0],tb.getcol('CHAN_FREQ')[0][0]+bwidth]
@@ -1358,6 +1516,7 @@ def append_pbcor_info(vis, params):
 			band=k
 
 
+	# Add per-antenna PB metadata columns and values
 	tb.open('%s/ANTENNA'%vis,nomodify=False)
 	name = tb.getcol('NAME')
 	station = tb.getcol('STATION')
@@ -1448,6 +1607,8 @@ def append_pbcor_info(vis, params):
 	tb.close()
 
 def pad_antennas(caltable='',ants=[],gain=False):
+	"""Ensure specified antennas have unflagged entries with neutral values."""
+	# Open table to clear flags and insert neutral gains for target antennas
 	tb = casatools.table()
 	tb.open('%s'%caltable,nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -1470,9 +1631,11 @@ def pad_antennas(caltable='',ants=[],gain=False):
 	tb.close()
 
 def empty_f(x,mult=1.):
+	"""Simple identity scaling helper used for plotting transforms."""
 	return x*mult
 
 def correct_phases(x,units):
+	"""Wrap phases to [-pi,pi] and output in radians or degrees."""
 	x = (x+ np.pi) % (2 * np.pi) - np.pi
 	if units =='deg':
 		return x*(180./np.pi)
@@ -1482,6 +1645,7 @@ def correct_phases(x,units):
 		sys.exit()
 
 def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile='temp.pdf'):
+	"""Plot selected y vs x from a CASA caltable to a multi-page PDF."""
 	func_name = inspect.stack()[0][3]
 	plt.clf()
 	tb=casatools.table()
@@ -1531,6 +1695,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 
 	casalog.post(priority='INFO',origin=func_name,message='Plotting %s vs %s from cal table - %s to file %s'%(yaxis,xaxis,caltable,figfile))
 
+	# Build a PDF with one panel per SPW and markers per pol
 	with PdfPages('%s'%figfile) as pdf:
 		if xaxis == 'time':
 			time=tb.getcol('TIME')
@@ -1743,6 +1908,7 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 		tb.close()
 
 def clip_model(model, im, snr):
+	"""Zero model image outside a small box around peak; threshold negatives."""
 	ia = casatools.image()
 	ia.open(im)
 	image_data = ia.getchunk().squeeze()
@@ -1766,15 +1932,41 @@ def clip_model(model, im, snr):
 		ia.close()
 
 def make_tarfile(output_filename, source_dir):
+	"""
+	Create a gzip-compressed tar archive from one or more source paths.
+
+	Parameters
+	- output_filename: Path to the output `.tar.gz` file to write.
+	- source_dir: Iterable of file/dir paths to include in the archive. If a
+	  single string is provided, it is treated as an iterable of characters, so
+	  this function coerces non-list inputs to a list to avoid that pitfall.
+
+	Notes
+	- Each provided path is added with `arcname=os.path.basename(path)`, which
+	  flattens directory structure inside the archive and may overwrite if two
+	  different inputs share the same basename.
+	- Emits progress to CASA's logger.
+	"""
 	func_name = inspect.stack()[0][3]
+
+	# Ensure we always iterate over paths, not characters from a string.
 	if not isinstance(source_dir, list):
 		source_dir = list(source_dir)
-	casalog.post(priority='INFO',origin=func_name,message='Tarring %s to form %s' % (", ".join(source_dir),output_filename))
+
+	# Log what will be archived.
+	casalog.post(priority='INFO', origin=func_name,
+				 message='Tarring %s to form %s' % (", ".join(source_dir), output_filename))
+
+	# Write gzip-compressed tar file; add each item using its basename inside.
 	with tarfile.open(output_filename, "w:gz") as tar:
 		for k in source_dir:
 			tar.add(k, arcname=os.path.basename(k))
   
 def extract_tarfile(tar_file,cwd,delete_tar):
+	"""Extract a tar archive under `cwd`; optionally delete the tar file.
+
+	Returns a list of extracted paths (absolute) for convenience.
+	"""
 	func_name = inspect.stack()[0][3]
 	tar = tarfile.open("%s"%tar_file)
 	files = tar.getnames()
@@ -1788,9 +1980,11 @@ def extract_tarfile(tar_file,cwd,delete_tar):
 	return files
 
 def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
+	"""Detect and group IDI/FITS-IDI or tarballs for EVN/VLBA by project code."""
 	func_name = inspect.stack()[0][3]
 	if idifiles == []:
 		idifiles={}
+		# EVN packaging: either multiple *.IDI* files or .tar.gz bundles
 		if telescope == 'EVN':
 			check_arr = []
 			files = []
@@ -1814,6 +2008,7 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 			else:
 				casalog.post(priority='SEVERE',origin=func_name,message='Target files must all be .tar.gz or .idi files .. not a mix')
 				sys.exit()
+		# VLBA packaging: either *.idifits files or .tar.gz bundles
 		if telescope == 'VLBA':
 			check_arr = []
 			files = []
@@ -1849,6 +2044,7 @@ def get_target_files(target_dir='./',telescope='',project_code='',idifiles=[]):
 		return idifiles
 
 def get_target_files_2(target_dir='./',telescope='',project_code='',idifiles=[]):
+	"""Alternate file grouping for legacy directory layouts; same return shape."""
 	func_name = inspect.stack()[0][3]
 	if idifiles == []:
 		idifiles={}
@@ -1916,7 +2112,9 @@ def get_target_files_2(target_dir='./',telescope='',project_code='',idifiles=[])
 		return idifiles
 
 def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, append, minsnr, msinfo, gaintable_dict, casa6):
+	"""Run scan-wise fringefit per reference antenna; use MPI if available."""
 	try:
+		# CASA6 uses casampi; CASA5 used mpi4casa. Try to engage servers
 		if casa6 == True:	
 			from casampi.MPICommandClient import MPICommandClient
 			from casampi import MPIEnvironment
@@ -1935,6 +2133,7 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		cmd = []
 	except:
 		parallel=False
+	# Build a shuffled preference order per reference antenna
 	refants = []
 	err_array = []
 	for i in msinfo['ANTENNAS']['anttoID'].keys():
@@ -1961,6 +2160,7 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 			append=True
 			for j in range(len(scans)):
 				#cmd0 = "import os; os.system('touch eb_ff_error.%s');"%(refants[i][0])
+				# Form the fringefit call string for the current refant/scan
 				cmd1 = "fringefit(vis='%s', caltable='%s_eb/%s_%s', field='%s', solint='%s', timerange='%s', refant='%s', zerorates=%s, niter=%d, append=%s, minsnr=%s, gaintable=%s, gainfield=%s, interp=%s, spwmap=%s, parang=%s, scan='%s');"%(vis, caltable, caltable, refants[i][0], field, solint, timerange, refants[i][0], zerorates, niter, append, minsnr, gaintable_dict['gaintable'],gaintable_dict['gainfield'],gaintable_dict['interp'],gaintable_dict['spwmap'],gaintable_dict['parang'],scans[j])
 				cmd2 = "import os; os.system('touch %s_eb/eb_ff_complete%s')"%(caltable,refants[i][0])
 				try:
@@ -1974,6 +2174,7 @@ def do_eb_fringefit(vis, caltable, field, solint, timerange, zerorates, niter, a
 		resultList = client.get_command_response(cmd,block=True)
 
 def generate_ff_full_table(msinfo):
+	"""Collect times across per-antenna EB fringe tables; debugging helper."""
 	tb = casatools.table()
 	t = np.array([])
 	for i in msinfo['ANTENNAS']['IDtoant'].values():
@@ -1988,6 +2189,7 @@ def generate_ff_full_table(msinfo):
 	times = np.unique(t)
 	
 def progressbar(it, prefix="", size=60, file=sys.stdout):
+	"""Yield items from iterable while writing a simple textual progress bar."""
 	count = len(it)
 	def show(j):
 		x = int(size*j/count)
@@ -2001,6 +2203,7 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 	file.flush()
 
 def plot_tec_maps(msfile,tec_image,plotfile):
+	"""Plot a sequence of global TEC maps with antenna positions overlaid."""
 	try:
 		from casatasks.private import simutil
 	except:
@@ -2070,6 +2273,11 @@ def plot_tec_maps(msfile,tec_image,plotfile):
 
 def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 
+	"""Interpolate missing gain or fringe solutions along time per ant/SPW.
+
+	Overwrites the input caltable, with optional extrapolation beyond bounds.
+	"""
+
 	#
 	#    interpgain
 	# 
@@ -2091,6 +2299,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 		selection0='OBSERVATION_ID=='+obsid+'&&FIELD_ID=='+field
 
 	tb = casatools.table()
+	# Open table and preselect rows for observation/field
 	tb.open(caltable,nomodify=False)
 	
 	subt=tb.query(selection0)
@@ -2114,7 +2323,7 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 				for p in range(gainshape[0]):
 					for ch in range(gainshape[1]):
 						if (np.sum(flag[p,ch])>0) & (np.sum(flag[p,ch])<=len(timecol)-2):
-							# interpolate amp and phase separately
+							# Interpolate amplitude and unwrapped phase separately
 
 							amp   = np.abs(cparam[p,ch])
 							phase = np.angle(cparam[p,ch])
@@ -2172,110 +2381,257 @@ def interpgain(caltable,obsid,field,interp,extrapolate,fringecal=False):
 	
 	tb.done()
 
-def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
+def apply_to_all(	prefix,
+					files,
+					tar,
+					params,
+					casa6,
+					parallel,
+					part):
+	"""
+	apply_to_all()
+
+	Purpose:
+	This function processes VLBI data using CASA. It performs initial data import,
+	calibration, flagging, and final dataset output.
+
+	Workflow:
+	1. Load configuration and gain tables.
+	2. If part == 0:
+		- Unpack tar file (if needed)
+		- Import FITS-IDI to Measurement Set
+		- Partition MS if parallel processing is enabled
+		- Apply various flags (observatory, edge, autocorr, manual, quack)
+		- Apply calibration tables
+		- Optionally perform tfcrop flagging
+	3. If part != 0:
+		- Load MS and calibration info
+		- Optionally apply primary beam correction
+		- Re-apply calibration tables
+		- Perform statistical reweighting
+		- Final split of corrected visibilities into output MS
+	"""
+
+	# Get the function name
 	func_name = inspect.stack()[0][3]
 
+	# Load global paths and configuration
 	cwd = params['global']['cwd']
-	p_c=params['global']['project_code']
-	calibrators = np.unique(params['global']['fringe_finders']+params['global']['phase_calibrators'])
+	p_c = params['global']['project_code']
+	calibrators = np.unique(
+		params['global']['fringe_finders'] + params['global']['phase_calibrators']
+	)
 	i = prefix
-	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
-	steps_run = load_json('%s/vp_steps_run.json'%params['global']['cwd'])
-	gaintables = load_gaintables(params, casa6=casa6)
+
+	# Load Measurement Set metadata and previously run steps
+	msinfo = load_json(
+		f'{cwd}/{p_c}_msinfo.json'
+	)
+	steps_run = load_json(
+		f'{cwd}/vp_steps_run.json'
+	)
+
+	# Load calibration gain tables
+	gaintables = load_gaintables(
+		params,
+		casa6=casa6
+	)
+
+	# Define target directory for data
 	target_dir = params['apply_to_all']['target_path']
 
-	if part==0:
+	# PART 0: Initial import and calibration
+	if part == 0:
+		# If file is tar archive, extract its contents
 		if tar == 'True':
-			files = extract_tarfile(tar_file='%s'%files[0],cwd=target_dir,delete_tar=False)
+			files = extract_tarfile(
+				tar_file=f'{files[0]}',
+				cwd=target_dir,
+				delete_tar=False
+			)
+
+		# Clean up any previous MS and flag directories
+		rmdirs([
+			f'{cwd}/{i}_presplit.ms',
+			f'{cwd}/{i}_presplit.ms.flagversions'
+		])
+
+		# Import FITS-IDI file into CASA MS format
+		importfitsidi_2(
+			fitsidifile=files,
+			vis=f'{cwd}/{i}_presplit.ms',
+			constobsid=False,
+			scanreindexgap_s=params['import_fitsidi']["scan_gap"]
+		)
+
+		# Assign a constant observation ID if configured
+		if params['import_fitsidi']["const_obs_id"]:
+			quick_constobs(
+				vis=f'{cwd}/{i}_presplit.ms'
+			)
 		
-		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
-		#check_fits_ext(idifiles=files,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
-		#check_fits_ext(idifiles=files,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
-		importfitsidi(fitsidifile=files,\
-					  vis='%s/%s_presplit.ms'%(params['global']['cwd'],i),
-					  constobsid=False,
-					  scanreindexgap_s=params['import_fitsidi']["scan_gap"])
-		if params['import_fitsidi']["const_obs_id"] == True:
-			quick_constobs(vis='%s/%s_presplit.ms'%(params['global']['cwd'],i))
+		fix_fields(
+			vis=f'{cwd}/{i}_presplit.ms'
+		)
+
+		# Remove original files if tar was extracted
 		if tar == 'True':
 			rmfiles(files)
-		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
-		
-		if parallel == True:
-			msfile2='%s/%s_presplit2.ms'%(params['global']['cwd'],i)
-			os.system('mv %s %s'%(msfile,msfile2))
-			partition(vis=msfile2,
-			 		  separationaxis=params['make_mms']['separationaxis'],
-					  outputvis=msfile)
+
+		msfile = f'{cwd}/{i}_presplit.ms'
+
+		# If running in parallel mode, partition MS
+		if parallel:
+			msfile2 = f'{cwd}/{i}_presplit2.ms'
+			os.system(f'mv {msfile} {msfile2}')
+			partition(
+				vis=msfile2,
+				separationaxis=params['make_mms']['separationaxis'],
+				outputvis=msfile
+			)
 			rmdirs([msfile2])
 
-		msinfo_target = get_ms_info('%s/%s_presplit.ms'%(params['global']['cwd'],i))
-		save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],i), array=msinfo_target, append=False)
-		
-		targets=[]
+		# Save information about the newly imported MS
+		msinfo_target = get_ms_info(msfile)
+		save_json(
+			filename=f'{cwd}/{i}_msinfo.json',
+			array=msinfo_target,
+			append=False
+		)
+
+		# Identify science target fields (not calibrators)
+		targets = []
 		for k in msinfo_target['FIELD']['fieldtoID'].keys():
-			if (k not in calibrators)|(k in params['global']['targets']):
+			if (k not in calibrators) or (k in params['global']['targets']):
 				targets.append(k)
 
-		if params['apriori_cal']["do_observatory_flg"] == True:
-			if os.path.exists('%s/%s_casa.flags'%(cwd,params['global']['project_code'])):
-				flagdata(vis=msfile,mode='list',inpfile='%s/%s_casa.flags'%(cwd,params['global']['project_code']))
-		if params['init_flag']['flag_edge_chans']['run'] == True:
+		# Apply observatory flag file if available
+		if params['apriori_cal']["do_observatory_flg"]:
+			flag_path = f'{cwd}/{p_c}_casa.flags'
+			if os.path.exists(flag_path):
+				flagdata(
+					vis=msfile,
+					mode='list',
+					inpfile=flag_path
+				)
 
-			ec=calc_edge_channels(value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
-								  nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
-								  nchan=msinfo['SPECTRAL_WINDOW']['nchan'])
+		# Flag edge channels using configuration
+		if params['init_flag']['flag_edge_chans']['run']:
+			ec = calc_edge_channels(
+				value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
+				nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
+				nchan=msinfo['SPECTRAL_WINDOW']['nchan']
+			)
+			flagdata(
+				vis=msfile,
+				mode='manual',
+				spw=ec
+			)
 
-			flagdata(vis=msfile,
-					 mode='manual',
-					 spw=ec)
+		# Flag autocorrelations
+		flagdata(
+			vis=msfile,
+			mode='manual',
+			autocorr=True
+		)
 
-		if params['init_flag']['flag_autocorrs'] == True:
-			if steps_run['init_flag'] == 1:
-				flagmanager(vis=msfile,
-							mode='restore',
-							versionname='autocorrelations')
-			else:
-				flagmanager(vis=msfile,
-							mode='save',
-							versionname='autocorrelations')
-			flagdata(vis=msfile,
-					 mode='manual',
-					 autocorr=True)
-		
-		if params['init_flag']['manual_flagging']['run'] == True:
-			flagdata(vis=msfile,
-					 mode='list',
-					 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
+		# Apply user-supplied manual flag file
+		if params['init_flag']['manual_flagging']['run']:
+			flagdata(
+				vis=msfile,
+				mode='list',
+				inpfile=f'{cwd}/{params["init_flag"]["manual_flagging"]["flag_file"]}'
+			)
 
-		if params['init_flag']['quack_data']['run'] == True:
+		# Apply quack flagging (drops leading integrations)
+		if params['init_flag']['quack_data']['run']:
 			quack_ints = params['init_flag']['quack_data']['quack_time']
 			quack_mode = params['init_flag']['quack_data']['quack_mode']
-			if type(quack_ints)==dict:
+			if isinstance(quack_ints, dict):
 				for j in quack_ints.keys():
 					if j == '*':
-						flagdata(vis=msfile,
-								 field=j,
-								 mode='quack',
-								 quackinterval=quack_ints[j],
-								 quackmode=quack_mode)
-			elif type(quack_ints)==float:
-				flagdata(vis=msfile,
-						 mode='quack',
-						 quackinterval=quack_ints,
-						 quackmode=quack_mode)
-		
-		append_pbcor_info(vis='%s/%s_presplit.ms'%(cwd,i),params=params)
-		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
-				 field=",".join(targets),
-				 gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'])
+						flagdata(
+							vis=msfile,
+							field=j,
+							mode='quack',
+							quackinterval=quack_ints[j],
+							quackmode=quack_mode
+						)
+			elif isinstance(quack_ints, float):
+				flagdata(
+					vis=msfile,
+					mode='quack',
+					quackinterval=quack_ints,
+					quackmode=quack_mode
+				)
 
-		if params['apply_target']['flag_target'] == True:
-			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
+		# Store primary beam metadata (for future correction)
+		append_pbcor_info(
+			vis=msfile,
+			params=params
+		)
+
+		# Apply calibration tables to the target fields
+		#applycal(
+		#	vis=msfile,
+		#	field=",".join(targets),
+		#	gaintable=gaintables['gaintable'],
+		#	gainfield=gaintables['gainfield'],
+		#	interp=gaintables['interp'],
+		#	spwmap=gaintables['spwmap'],
+		#	parang=gaintables['parang']
+		#)
+		
+
+	# PART 1: Final application and output
+	else:
+		msfile = f'{cwd}/{i}_presplit.ms'
+		msinfo_target = load_json(
+			f'{cwd}/{i}_msinfo.json'
+		)
+
+		# Re-identify targets
+		targets = []
+		for k in msinfo_target['FIELD']['fieldtoID'].keys():
+			if (k not in calibrators) or (k in params['global']['targets']):
+				targets.append(k)
+
+		# Apply primary beam correction if enabled
+		if params['apply_to_all']['pbcor']['run']:
+			pbcor_table = primary_beam_correction(
+				msfile=msfile,
+				prefix=i,
+				params=params,
+				msinfo=msinfo_target
+			)
+			gaintables = append_gaintable(
+				gaintables,
+				[pbcor_table, '', [], 'linear']
+			)
+
+			# Archive calibration table if backup is enabled
+			if params['apply_to_all']['pbcor']['backup_caltables']:
+				archive = tarfile.open(f"{p_c}_caltables.tar", "a")
+				archive.add(
+					pbcor_table,
+					arcname=pbcor_table.split('/')[-1]
+				)
+				archive.close()
+
+		# Apply all calibration tables
+		applycal(
+			vis=msfile,
+			field=",".join(targets),
+			gaintable=gaintables['gaintable'],
+			gainfield=gaintables['gainfield'],
+			interp=gaintables['interp'],
+			spwmap=gaintables['spwmap'],
+			parang=gaintables['parang']
+		)
+
+		if params['apply_target']['flag_target']:
+			flagdata(
+				vis=msfile,
 				mode='tfcrop',
 				field=",".join(targets),
 				datacolumn='corrected',
@@ -2288,60 +2644,60 @@ def apply_to_all(prefix,files,tar,params,casa6,parallel,part):
 				extendflags=False,
 				action='apply',
 				display='',
-				flagbackup=False)
-	else:
-		msfile = '%s/%s_presplit.ms'%(params['global']['cwd'],i)
-		msinfo_target = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],i))
-		targets=[]
-		for k in msinfo_target['FIELD']['fieldtoID'].keys():
-			if (k not in calibrators)|(k in params['global']['targets']):
-				targets.append(k)
-		if params['apply_to_all']['pbcor']['run'] == True:
-			pbcor_table = primary_beam_correction(msfile=msfile,prefix=i,params=params,msinfo=msinfo_target)
-			gaintables = append_gaintable(gaintables,[pbcor_table,'',[],'linear'])
-			if params['apply_to_all']['pbcor']['backup_caltables'] == True:
-				archive = tarfile.open("%s_caltables.tar"%p_c, "a")
-				archive.add(pbcor_table, arcname=pbcor_table.split('/')[-1])
-				archive.close()
-		
-		applycal(vis='%s/%s_presplit.ms'%(cwd,i),
-				 field=",".join(targets),
-				 gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'])
+				flagbackup=False
+			)
 
-		rmdirs(['%s/%s.ms'%(cwd,i),'%s/%s.ms.flagversions'%(cwd,i)])
-		if len(targets)> 1:
-			fd = ",".join(targets)
-		else:
-			fd = targets[0]
-		
-		if params['apply_target']['statistical_reweigh']['run'] == True: 
-			statwt(vis='%s/%s_presplit.ms'%(cwd,i),
-		    	   minsamp=params['apply_target']["statistical_reweigh"]["minsamp"])
+		# Remove old MS output
+		rmdirs([
+			f'{cwd}/{i}.ms',
+			f'{cwd}/{i}.ms.flagversions'
+		])
+
+		# Prepare list of fields for final split
+		fd = ",".join(targets) if len(targets) > 1 else targets[0]
+
+		# Apply statistical reweighting if enabled
+		if params['apply_target']['statistical_reweigh']['run']:
+			statwt(
+				vis=msfile,
+				minsamp=params['apply_target']["statistical_reweigh"]["minsamp"]
+			)
 			tb = casatools.table()
-			tb.open('%s/%s_presplit.ms'%(cwd,i)) 
-			weight=tb.getcol('WEIGHT')
+			tb.open(msfile)
+			subt = tb.query('ANTENNA1!=ANTENNA2',columns="WEIGHT")
+			weight = subt.getcol('WEIGHT')
+			subt.close()
 			tb.close()
-			flagdata(vis='%s/%s_presplit.ms'%(cwd,i),
-		         mode='clip',
-				 datacolumn='WEIGHT',
-				 clipminmax=[0,np.median(weight)+6*np.std(weight)])
+			flagdata(
+				vis=msfile,
+				mode='clip',
+				datacolumn='WEIGHT',
+				clipminmax=[0, np.median(weight) + 6 * np.std(weight)]
+			)
 			del weight
-		split(vis='%s/%s_presplit.ms'%(cwd,i),
-			  field=fd,
-			  keepmms=False,
-			  datacolumn='corrected',
-			  outputvis='%s/%s.ms'%(cwd,i))
-		rmdirs(['%s/%s_presplit.ms'%(cwd,i),'%s/%s_presplit.ms.flagversions'%(cwd,i)])
 
-		
-		if (params['apply_to_all']['pbcor']['backup_caltables'] == True) & (params['apply_to_all']['pbcor']['run'] == True):
-			os.system('rm -r %s'%pbcor_table)
+		# Final split of corrected data
+		split(
+			vis=msfile,
+			field=fd,
+			keepmms=False,
+			datacolumn='corrected',
+			outputvis=f'{cwd}/{i}.ms'
+		)
+
+		# Clean up intermediate files
+		rmdirs([
+			f'{cwd}/{i}_presplit.ms',
+			f'{cwd}/{i}_presplit.ms.flagversions'
+		])
+
+		# Delete pbcor table if it was backed up
+		if (params['apply_to_all']['pbcor']['backup_caltables']
+			and params['apply_to_all']['pbcor']['run']):
+			os.system(f'rm -r {pbcor_table}')
 		
 def image_targets(prefix,params,parallel):
+	"""Produce quick-look images for targets in a given MS using tclean."""
 	func_name = inspect.stack()[0][3]
 
 	cwd = params['global']['cwd']
@@ -2374,6 +2730,7 @@ def image_targets(prefix,params,parallel):
 	return targets
 
 def apply_tar_output(prefix,params,targets):
+	"""Package outputs (MS and images) into tar.gz or move to outpath."""
 	i = prefix
 	cwd = os.path.join(params['global']['cwd'],"")
 	msfile ='%s/%s.ms'%(cwd,i)
@@ -2404,6 +2761,7 @@ def apply_tar_output(prefix,params,targets):
 						rmfiles(["%s%s_%s_initial.%s"%(cwd,i,k,j)])
 
 def angsep(ra1,dec1,ra2rad,dec2rad):
+	"""Angular separation in radians between (ra1,dec1) and (ra2,dec2)."""
 	qa = casatools.quanta()
 	dec1 = dec1.replace('\'','m').replace('\"','s')
 	ra1rad=qa.convert(qa.quantity(ra1),'rad')['value']
@@ -2427,6 +2785,7 @@ def angsep(ra1,dec1,ra2rad,dec2rad):
 	return rad
 	
 def primary_beam_correction(msfile,prefix,params,msinfo):
+	"""Generate per-antenna primary-beam correction table using uv-corr model."""
 	func_name = inspect.stack()[0][3]
 	import vex
 	cb = casatools.calibrater()
@@ -2571,6 +2930,7 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 	return '%s/%s.pbcor'%(cwd,prefix)
 
 def pb_model_uvcorr(parameters,model,obs_freq,angsep):
+	"""Compute primary beam attenuation factor for UV correction models."""
 	from scipy import constants as c
 	if model == 'G':
 		P = 1
@@ -2582,11 +2942,13 @@ def pb_model_uvcorr(parameters,model,obs_freq,angsep):
 	return np.sqrt(attenuation)
 
 def Bessel_pb(D,wl,sep):
+	"""Airy-pattern (Bessel) primary beam power response for dish diameter D."""
 	insert = ((D*np.pi)/wl)*np.sin(sep)
 	I = ((2*j1(insert))/insert)**2
 	return I
 
 def remove_gaintable(step,params,casa6):
+	"""Remove last-run gaintables for a step from persistent tracking JSON."""
 	cwd = params['global']['cwd']
 	gt = load_json('%s/vp_gaintables.json'%(params['global']['cwd']), Odict=True, casa6=casa6)
 	gt_r = load_json('%s/vp_gaintables.last.json'%(params['global']['cwd']), Odict=True, casa6=casa6)
@@ -2604,6 +2966,7 @@ def remove_gaintable(step,params,casa6):
 	save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gt, append=False)
 
 def run_cataloger_pybdsf(sn_ratio,postfix):
+	"""Run PyBDSF on FITS images in CWD; write catalogs and combined CSV."""
 	import bdsf
 
 	detection_threshold = sn_ratio
@@ -2612,6 +2975,7 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 	shorthand = 'False'
 
 	def write_catalog_pybdsf(input_image,detection_threshold,shorthand):
+		"""Process an image with PyBDSF and write source catalogs and images."""
 		if shorthand == 'True':
 			name = input_image.split('_MSSC')[0]
 		else:
@@ -2630,6 +2994,7 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 
 
 	def combine_pybdsf(shorthand,postfix,catalog_list):
+		"""Combine individual .srl catalogs into a single CSV (optional shorthand)."""
 		os.system('rm catalogue_PYBDSF_%s.csv' % postfix)
 		if os.path.isfile('catalogue_pybdsf_%s.csv' % postfix) == False:
 			s = 'Name_{0}, Source_id_{0}, Isl_id_{0}, RA_{0}, E_RA_{0}, DEC_{0}, E_DEC_{0}, Total_flux_{0}, E_Total_flux_{0}, Peak_flux_{0}, E_Peak_flux_{0}, RA_max_{0}, E_RA_max_{0}, DEC_max_{0}, E_DEC_max_{0}, Maj_{0}, E_Maj_{0}, Min_{0}, E_Min_{0}, PA_{0}, E_PA_{0}, Maj_img_plane_{0}, E_Maj_img_plane_{0}, Min_img_plane_{0}, E_Min_img_plane_{0}, PA_img_plane_{0}, E_PA_img_plane_{0}, DC_Maj_{0}, E_DC_Maj_{0}, DC_Min_{0}, E_DC_Min_{0}, DC_PA_{0}, E_DC_PA_{0}, DC_Maj_img_plane_{0}, E_DC_Maj_img_plane_{0}, DC_Min_img_plane_{0}, E_DC_Min_img_plane_{0}, DC_PA_img_plane_{0}, E_DC_PA_img_plane_{0}, Isl_Total_flux_{0}, E_Isl_Total_flux_{0}, Isl_rms_{0}, Isl_mean_{0}, Resid_Isl_rms_{0}, Resid_Isl_mean_{0}, S_Code_{0}\n'.format(postfix)
@@ -2660,19 +3025,22 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 			combine_pybdsf(shorthand=shorthand,postfix=i.split('.srl')[0],catalog_list=[i])
 
 def natural_sort(l): 
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
-    return sorted(l, key=alphanum_key)
+	"""Sort a list of strings in human order (e.g., file2 before file10)."""
+	convert = lambda text: int(text) if text.isdigit() else text.lower()
+	alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+	return sorted(l, key=alphanum_key)
 
 def backup_table(caltable):
-    try:
-        shutil.rmtree(caltable+'_backup_missing')
-    except OSError:
-        pass
-    shutil.copytree(caltable, caltable+'_backup_missing')
-    casalog.post(priority="INFO",message='Backup of table {0} to {1}'.format(caltable, caltable+'_backup_missing'))
+	"""Make a backup copy of a CASA table directory with _backup_missing suffix."""
+	try:
+		shutil.rmtree(caltable+'_backup_missing')
+	except OSError:
+		pass
+	shutil.copytree(caltable, caltable+'_backup_missing')
+	casalog.post(priority="INFO",message='Backup of table {0} to {1}'.format(caltable, caltable+'_backup_missing'))
 
 def remove_flagged_scans(caltable):
+	"""Delete rows from a caltable where all channels/pols are flagged."""
 	# Backup original table
 	backup_table(caltable)
 	tb = casatools.table()
@@ -2686,7 +3054,9 @@ def remove_flagged_scans(caltable):
 	tb.close()
 
 def filter_smooth_delay(caltable,nsig=[2.5,2.]):
+	"""Filter and smooth delay terms in FPARAM using Hampel filtering."""
 	func_name = inspect.stack()[0][3]
+	# Operate over delay terms (FPARAM index 1 + polarization offset)
 	tb=casatools.table()
 	tb.open(caltable, nomodify=False)
 	flg=tb.getcol('FLAG')
@@ -2724,6 +3094,7 @@ def filter_smooth_delay(caltable,nsig=[2.5,2.]):
 	tb.close()
 
 def check_fits_ext(idifiles=[],ext='',del_ext=False):
+	"""Check for presence of a FITS extension in files; optionally remove."""
 	tr = []
 	for i in idifiles:
 		hdu = fits.open(i,mode='update')
@@ -2743,6 +3114,7 @@ def check_fits_ext(idifiles=[],ext='',del_ext=False):
 		return False
 
 def combine_caltables(caltable='',subcaltables=[]):
+	"""Concatenate multiple CASA tables into a single table path."""
 	tb=casatools.table()
 	for j in subcaltables:
 		if os.path.exists(j):
@@ -2755,6 +3127,7 @@ def combine_caltables(caltable='',subcaltables=[]):
 			tb.close()
 
 def quick_constobs(vis=''):
+	"""Set a constant OBSERVATION_ID=0 and merge OBSERVATION rows where valid."""
 	constobsid=True
 	mytb = casatools.table()
 	if (constobsid):
@@ -2794,3 +3167,195 @@ def quick_constobs(vis=''):
 				a = mytb.getcol('OBSERVATION_ID',startrow=j, nrow=ram_restrict, rowincr=1)*0
 				mytb.putcol('OBSERVATION_ID',a,startrow=j, nrow=ram_restrict, rowincr=1)
 			mytb.close()
+
+def importfitsidi_2(fitsidifile,vis,constobsid=None,scanreindexgap_s=None,specframe=None):
+	"""Convert FITS-IDI visibility file into a CASA visibility file (MS).
+
+	Keyword arguments:
+	fitsidifile -- Name(s) of input FITS IDI file(s)
+		default: None; example='3C273XC1.IDI' or ['3C273XC1.IDI1', '3C273XC1.IDI2']
+	vis -- Name of output visibility file (MS)
+		default: None; example: vis='3C273XC1.ms'
+		
+	constobsid -- If True a constant obs id == 0  of is given to all input files 
+		default = False (new obs id for each input file)
+
+	scanreindexgap_s --  if > 0., a new scan is started whenever the gap between two
+		integrations is > the given value (seconds) or when a new field starts
+		or when the ARRAY_ID changes.
+		default = 0. (no reindexing)
+
+	specframe -- this frame will be used to set the spectral reference frame
+		for all spectral windows in the output MS
+		default = GEO (geocentric), other options: TOPO, LSRK, BARY
+		NOTE: if specframe is set to TOPO, the reference location will be taken from
+		the Observatories table in the CASA data repository for the given name of
+		the observatory. You can edit that table and add new rows.   
+
+	"""
+
+	#Python script
+
+	try:
+		casalog.origin('importfitsidi')
+		casalog.post("")
+		myms = casatools.ms()
+		mytb = casatools.table()
+
+		if type(specframe)==str and not specframe=='':
+			myspecframe=specframe.upper()
+		else:
+			myspecframe='GEO'
+
+		refframes = {'REST': 0, 'LSRK': 1, 'LSRD': 2, 'BARY': 3, 'GEO': 4, 'TOPO': 5} 
+		if myspecframe not in refframes:
+			raise ValueError('Value '+myspecframe+' of parameter specframe invalid. Possible values are REST, LSRK, LSRD, BARY, GEO, TOPO')
+
+		if(type(fitsidifile)==str):
+			casalog.post('### Reading file '+fitsidifile, 'INFO')
+			myms.fromfitsidi(vis,fitsidifile)
+			myms.close()
+		elif(type(fitsidifile)==list):
+			clist = fitsidifile
+			casalog.post('### Reading file '+clist[0], 'INFO')
+			myms.fromfitsidi(vis,clist[0])
+			myms.close()
+			clist.pop(0)
+			tname = vis+'_importfitsidi_tmp_'
+			shutil.rmtree(tname, ignore_errors=True)
+			for fidifile in clist:
+				casalog.post('### Reading file '+fidifile, 'INFO')
+				myms.fromfitsidi(tname,fidifile)
+				myms.close()
+				myms.open(vis, nomodify=False)
+				myms.concatenate(msfile=tname, freqtol='', dirtol='',respectname=True)
+				myms.close()
+				shutil.rmtree(tname, ignore_errors=True)
+		else:
+			raise ValueError('Parameter fitsidifile should be of type str or list')
+
+		if (constobsid):
+			mytb.open(vis+'/OBSERVATION', nomodify=False)
+			nobs = mytb.nrows()
+			cando = True
+			if nobs>1:
+				casalog.post('Trying to keep obsid constant == 0 for all input files', 'INFO')
+				# check if all observations are from the same telescope; if not warn and leave as is
+				tels = mytb.getcol('TELESCOPE_NAME')
+				for i in range(1,nobs):
+					if tels[i]!=tels[0]:
+						cando = False
+
+				if cando:
+					# get min and max time and write them into the first row;
+					casalog.post('Adjusting OBSERVATION table', 'INFO')
+					timeranges = mytb.getcol('TIME_RANGE')
+					ttr = timeranges.transpose()
+					newmin = min(ttr[0])
+					newmax = max(ttr[1])
+					mytb.putcell('TIME_RANGE', 0, [newmin,newmax])
+					# delete the other rows
+					mytb.removerows(list(range(1,nobs)))
+				else:
+					casalog.post('The input files stem from different telescopes. Need to give different obs id.', 'WARN')
+			mytb.close()
+			
+			if cando:
+				# give the same obs id == 0 to the entire output MS
+				casalog.post('Setting observation ID of all integrations to 0', 'INFO')
+				mytb.open(vis, nomodify=False)
+				for i in range(0, mytb.nrows()):
+					mytb.putcell('OBSERVATION_ID', i, 0)
+				mytb.close()
+
+
+		else: # don't want constant obs id
+			if(type(fitsidifile)==list and len(fitsidifile)>1):
+				casalog.post('Incrementing observation ID for each input file ...', 'INFO')
+			
+		if (scanreindexgap_s > 0.):
+			# reindex the scan column
+			mytb.open(vis, nomodify=False)
+			times = mytb.getcol('TIME')
+			fields = mytb.getcol('FIELD_ID')
+			arrayids = mytb.getcol('ARRAY_ID')
+			scannumbers = mytb.getcol('SCAN_NUMBER')
+
+			timesorted = np.argsort(np.array(times)) 
+
+			scannumber = 0
+			scannumber_field = len(fields) * [0]
+			prevtime = len(fields) * [0]
+			prevarrayid = arrayids[timesorted[0]]
+
+			for i in range(0,mytb.nrows()):
+				ii = timesorted[i]
+				timenow = times[ii]
+				fieldnow = fields[ii]
+				arrayidnow = arrayids[ii]
+				if (timenow-prevtime[fieldnow] > scanreindexgap_s) \
+						or (arrayidnow != prevarrayid):
+					scannumber += 1
+					scannumber_field[fieldnow] = scannumber
+					casalog.post("Starting new scan "+str(scannumber)+" at "+str(timenow)\
+								 +", field "+str(fieldnow)+", array_id "+str(arrayidnow), 'INFO')
+				scannumbers[ii] = scannumber_field[fieldnow]
+				prevtime[fieldnow] = timenow
+				prevarrayid = arrayidnow
+
+			mytb.putcol('SCAN_NUMBER', scannumbers) 
+			mytb.close()
+
+		if myspecframe in refframes:
+			casalog.post('Setting reference frame for all spectral windows to '+myspecframe, 'INFO')
+			if myspecframe == 'TOPO':
+				casalog.post('NOTE: reference position for TOPO frame will be the observatory location', 'WARN')
+			mytb.open(vis+'/SPECTRAL_WINDOW', nomodify=False)
+			refcol = mytb.getcol('MEAS_FREQ_REF')
+			refcol = [refframes[myspecframe]]*len(refcol)
+			mytb.putcol('MEAS_FREQ_REF', refcol)
+			mytb.close()
+
+	finally:
+		shutil.rmtree(vis+'_importfitsidi_tmp_', ignore_errors=True)
+
+def fix_fields(vis):
+	"""Deduplicate FIELD names and remap DATA.FIELD_IDs to the kept rows.
+
+	Removes duplicate rows from the `FIELD` subtable and updates the main
+	table's `FIELD_ID` column so that all integrations reference the remaining
+	unique FIELD rows.
+	"""
+	mytb = casatools.table()
+	## fix the field table
+	mytb.open(vis+'/FIELD',nomodify=False)
+	field = mytb.getcol('NAME')
+
+	# Keep first occurrence of each unique element
+	_, first_indices = np.unique(field, return_index=True)
+	kept_idx = np.sort(first_indices)
+	removed_idx = np.setdiff1d(np.arange(len(field)), kept_idx)
+
+	# Build mapping old → new
+	old_to_new = {}
+	for new_idx, old_idx in enumerate(kept_idx):
+		val = field[old_idx]
+		# All occurrences of this value map to the same new_idx
+		for i, v in enumerate(field):
+			if v == val:
+				old_to_new[i] = new_idx
+	mytb.removerows(removed_idx)
+	mytb.close()
+
+	## fix the data field_id
+	mytb.open(vis,nomodify=False)
+	ram_restrict = 100000
+	ranger = list(range(0,mytb.nrows(),ram_restrict))
+	for j in ranger:
+		if j == ranger[-1]:
+			ram_restrict = mytb.nrows()%ram_restrict
+		a = mytb.getcol('FIELD_ID',startrow=j, nrow=ram_restrict, rowincr=1)
+		for i in old_to_new.keys():
+			a[a==i] = old_to_new[i]
+		mytb.putcol('FIELD_ID',a,startrow=j, nrow=ram_restrict, rowincr=1)
+	mytb.close()
