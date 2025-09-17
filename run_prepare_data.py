@@ -114,11 +114,11 @@ if telescop == 'EVN':
 			casalog.post(origin=filename,message='Auto set antab file %s.antab does not exist ... exiting'%params['global']['project_code'],priority='SEVERE')
 			sys.exit()
 	else:
-		if os.path.exists('%s'%params['prepare_data']['antab']) == False:
-			casalog.post(origin=filename,message='Antab file %s does not exist, please correct ... exiting'%params['prepare_data']['antab'],priority='SEVERE')
+		if os.path.exists('%s'%params['prepare_data']['antab_file']) == False:
+			casalog.post(origin=filename,message='Antab file %s does not exist, please correct ... exiting'%params['prepare_data']['antab_file'],priority='SEVERE')
 			sys.exit()
 		else:
-			antabfile='%s'%params['prepare_data']['antab']
+			antabfile='%s'%params['prepare_data']['antab_file']
 
 ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
 if (params['prepare_data']['replace_antab'] == True)|(ts_fits==False):
