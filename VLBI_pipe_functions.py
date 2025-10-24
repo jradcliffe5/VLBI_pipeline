@@ -2606,7 +2606,7 @@ def apply_to_all(	prefix,
 			)
 			gaintables = append_gaintable(
 				gaintables,
-				[pbcor_table, '', [], 'linear']
+				[pbcor_table, '', [], 'nearest']
 			)
 
 			# Archive calibration table if backup is enabled
