@@ -470,7 +470,7 @@ for i in range(len(fields)):
 							shift=2.0
 							phasecenter = "J2000 %srad %srad"%(direction[0],direction[1]+((shift/3600.)*(np.pi/180.)))
 							tclean(vis=msfile,
-							       imagename='%s/images/%s-initmodel'%(cwd,fields[i+1][m]),
+							       imagename='%s/images/%s-initmodel_rms'%(cwd,fields[i+1][m]),
 								   field='%s'%fields[i+1][m],
 								   stokes='pseudoI',
 							       cell='%.6farcsec'%(msinfo["IMAGE_PARAMS"][fields[i+1][m]]/1000.),
