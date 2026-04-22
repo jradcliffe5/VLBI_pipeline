@@ -163,9 +163,9 @@ for i in range(len(fields)):
 				combine_caltables(caltable=caltable,subcaltables=subcaltable)
 				rmdirs(['%s_temp'%(caltable)])
 			remove_flagged_scans(caltable)
-			if i == 1:
-				filter_smooth_delay(caltable,nsig=[2.5,2.])
-				smoothcal(vis=msfile,tablein=caltable, smoothtime=6*60.0)
+			#if i == 1:
+				#filter_smooth_delay(caltable,nsig=[2.5,2.])
+				#smoothcal(vis=msfile,tablein=caltable, smoothtime=6*60.0)
 			if casa6 == True:
 				if 'spw' not in params['phase_referencing']['combine'][i][j]:
 					xax = ['freq','time']
