@@ -153,6 +153,15 @@ def _byteify(data, ignore_dicts=False):
 	# if it's anything else, return it in its original form
 	return data
 
+def strip_trailing_slashes(obj):
+	if isinstance(obj, dict):
+		return {k: strip_trailing_slashes(v) for k, v in obj.items()}
+	elif isinstance(obj, list):
+		return [strip_trailing_slashes(v) for v in obj]
+	elif isinstance(obj, str):
+		return obj.rstrip("/")
+	return obj
+
 def load_json(filename,Odict=False,casa6=False):
 	"""Load JSON from `filename`; optionally return an OrderedDict for CASA.
 
@@ -169,7 +178,7 @@ def load_json(filename,Odict=False,casa6=False):
 		with open(filename, "r") as f:
 			json_data = json_load_byteified_dict(f,casa6)
 		f.close()
-	return json_data
+	return strip_trailing_slashes(json_data)
 
 def save_json(filename,array,append=False):
 	"""Write `array` as JSON to `filename` with stable formatting."""
@@ -2606,7 +2615,7 @@ def apply_to_all(	prefix,
 			)
 			gaintables = append_gaintable(
 				gaintables,
-				[pbcor_table, '', [], 'linear']
+				[pbcor_table, '', [], 'nearest']
 			)
 
 			# Archive calibration table if backup is enabled
