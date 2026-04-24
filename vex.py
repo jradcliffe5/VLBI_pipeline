@@ -266,7 +266,7 @@ class Vex(object):
 		"""Function to find a variable 'vname' in a line.
 		"""
 		idx = line.find(vname)
-		if ((idx > 0 and line[idx - 1] == ' ') or idx == 0) and line[0] != '*':
+		if ((idx > 0 and line[idx - 1] in (' ', '\t')) or idx == 0) and line[0] != '*':
 			if idx + len(vname) == len(line):
 				return idx
 			if (line[idx + len(vname)] == '=' or

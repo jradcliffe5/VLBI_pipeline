@@ -2683,6 +2683,13 @@ def apply_to_all(	prefix,
 				datacolumn='WEIGHT',
 				clipminmax=[0, np.median(weight) + 6 * np.std(weight)]
 			)
+			statwt(
+				vis=msfile,
+				minsamp=params['apply_target']["statistical_reweigh"]["minsamp"],
+				timebin='30min',
+				slidetimebin=True,
+				statalg='fit-half'
+			)
 			del weight
 
 		# Final split of corrected data

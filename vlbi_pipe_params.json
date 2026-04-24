@@ -1,11 +1,11 @@
 {
     "global":{
-        "project_code"      :  "bd228l",
-        "cwd"               :  "/Users/jackradcliffe/Documents/BD228L",
-        "vlbipipe_path"     :  "VLBI_pipeline",
-        "job_manager"       :  "bash",
+        "project_code"      :  "eg078b",
+        "cwd"               :  "/home/jradcliffe5/scratch/EG078B",
+        "vlbipipe_path"     :  "vlbi_pipeline",
+        "job_manager"       :  "slurm",
         "HPC_project_code"  :  "",
-        "default_partition" :  "Main",
+        "default_partition" :  "saphrapid_himem",
         "default_walltime"  :  "6:00:00",
         "default_nodes"     :     1,
         "default_cpus"      :    12,
@@ -13,17 +13,17 @@
         "default_mem"       :   "50G",
         "default_nodetype"  :  "haswell_reg",
         "email_progress"    :  "jack.f.radcliffe@gmail.com",
-        "mpicasapath"       :  "",
-        "casapath"          :  "casa --nologger --log2term -c",
+        "mpicasapath"       :  "/home/jradcliffe5/scratch/EG078B/casa-6.6.5-31-py3.10.el8/bin/mpicasa --oversubscribe",
+        "casapath"          :  "/home/jradcliffe5/scratch/EG078B/casa-6.6.5-31-py3.10.el8/bin/casa --nologger --log2term -c",
         "singularity"       :  false,
         "AOflag_command"    : ["/Users/jackradcliffe/Documents/anaconda3/envs/aoflag/bin/aoflagger"],
         "wsclean_command"   : ["/usr/bin/wsclean"],
-        "fitsidi_files"     : ["VLBA_BD228L_bd228lpass1_BIN0_SRC000_0_210216T230509.idifits"],
-        "fitsidi_path"      :  "raw_UV",
-        "refant"            : ["PT","BR","HN","KP","LA","MK","NL","OV","SC"],
-        "fringe_finders"    : ["4C39.25"],
-        "phase_calibrators" : ["J1011+0106"],
-        "targets"           : ["COSMOS-POINT"],
+        "fitsidi_files"     : ["auto"],
+        "fitsidi_path"      :  "data/phscal",
+        "refant"            : ["EF","SR","O8","WB","T6","IR","TR","SV","BD","JB","ZC","DA","PI","KN","JM","UR","DE","CM","HH"],
+        "fringe_finders"    : ["DA193","3C345"],
+        "phase_calibrators" : ["J1241+602","J1234+619"],
+        "targets"           : ["HDFC0155"],
         "use_initial_model" : {},
         "do_parang"         :  true
     },
@@ -32,6 +32,7 @@
         "antab_file"        :  "auto",
         "flag_file"         :  "auto",
         "gaincurve":{
+            "prep_type"     : "convert",
             "min_elevation" :   0.0,
             "max_elevation" :  90.0
         },
@@ -87,9 +88,9 @@
         "make_gaincurve"    : true,
         "tsys_options":{
             "interp_flags"  :  true,
-            "algorithm"     :  "smooth",
+            "algorithm"     :  "",
             "smooth_type"   :  "mean",
-            "smooth_time"   :  1600,
+            "smooth_time"   :  20,
             "filt_outlierSN": [2.5,2.0],
             "filt_jump_pc"  :  20,
             "interp"        : "linear,linear"
@@ -113,8 +114,8 @@
         "AO_flag_strategy"  :  ["vlbi_pipeline/aoflag_strategies/faint_sources.rfis"],
         "AO_flag_fields"    : [["COSMOS-POINT"]],
         "flag_edge_chans":{
-            "run"           :  false,
-            "edge_chan_flag":  "5%"
+            "run"           :  true,
+            "edge_chan_flag":  "2%"
         },
         "flag_autocorrs"    :  false,
         "quack_data":{
@@ -137,7 +138,7 @@
         }
     },
     "fit_autocorrs":{
-        "select_calibrators": ["4C39.25","J1011+0106"],
+        "select_calibrators": ["DA193","3C345"],
         "interp_bad_solutions": true, 
         "hpc_options":{
             "partition"     :  "default",
@@ -150,10 +151,10 @@
         }
     },
     "sub_band_delay":{
-        "select_calibrators": [["default"],["J1011+0106"]],
-        "time_range"        : ["","2021/01/14/12:07:04.0~12:07:52.0"],
-        "sol_interval"      : ["60s","inf"],
-        "min_snr"           : [5.0,5.0],
+        "select_calibrators": [["3C345,DA193"]],
+        "time_range"        : [""],
+        "sol_interval"      : ["60s"],
+        "min_snr"           : [5.0],
         "fringe_niter"      :  300,
         "do_disp_delays"    :  true,
         "extensive_search"  :  false,
@@ -174,7 +175,7 @@
     },
     "bandpass_cal":{
         "same_as_sbd_cal"   :  true,
-        "select_calibrators": [["4C39.25"]], 
+        "select_calibrators": [["3C345,DA193"]], 
         "time_range"        : [""],
         "bpass_combine"     : "scan",
         "sol_interval"      :  "inf",
@@ -190,13 +191,13 @@
         }
     },
     "phase_referencing":{        
-        "select_calibrators":  [["J1011+0106"]],
-        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap", "f",   "p"]],   
-        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","inf","1min"]],
-        "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw","",    ""]],
-        "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true, true]],
-        "pass_ants"         : [[]],
-        "do_disp_delays"    : true,
+        "select_calibrators":  [["J1241+602"],["J1234+619"]],
+        "cal_type"          : [[  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap", "f",   "p"], [  "f",  "f",  "f",  "p",   "p", "ap", "ap", "ap",  "ap", "f",   "p"]],   
+        "sol_interval"      : [["inf","inf","inf","inf","1min","inf","inf","inf","1min","inf","1min"], ["inf","inf","inf","inf","inf","inf","inf","inf","inf","inf","inf"]],
+        "combine"           : [["spw","spw",   "",   "",    "","spw",   "",   "", "spw","",    ""],["spw","spw","spw","spw", "spw","spw","spw","spw", "spw","spw","spw"]],
+        "interp_flagged"    : [[ true, true, true, true,  true, true, true, true,  true,  true, true],[ true, true, true, true,  true, true, true, true,  true,  true, true]],
+        "pass_ants"         : [["JB"],[""]],
+        "do_disp_delays"    : false,
         "cal_weights"       : true,
         "fringe_niter"      :  300,
         "min_snr"           :  5.0,
@@ -206,7 +207,7 @@
         "thresholding"      :  "offset",
         "hpc_options":{
             "partition"     :  "default",
-            "walltime"      :  "default",
+            "walltime"      :  "1-00:00:00",
             "nodes"         :    -1,
             "cpus"          :    -1,
             "mpiprocs"      :    -1,
@@ -236,15 +237,15 @@
         }
     },
     "apply_to_all":{  
-        "target_path"       : "/Users/jackradcliffe/Documents/BD228L/target_files",
-        "target_outpath"    : "/Users/jackradcliffe/Documents/BD228L/calibrated",
+        "target_path"       : "/home/jradcliffe5/scratch/EG078B/data",
+        "target_outpath"    : "/home/jradcliffe5/scratch/EG078B/output",
         "tar_output"        : true,
         "tar_ms_only"       : true,
         "mppc_parallel"     : false,
         "pbcor":{
             "run"           : true,
             "implementation": "uvcorr",
-            "vex_file"      : "",
+            "vex_file"      : "eg078b.vix",
             "pointing_centre"  : ["10h01m22.8650000s","+2d19m28.333s"],
             "backup_caltables"  : true
         },

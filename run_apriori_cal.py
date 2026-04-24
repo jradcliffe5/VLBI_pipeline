@@ -118,12 +118,20 @@ if casa6 == True:
 	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsysfiltered_vs_freq.pdf'%(cwd,p_c))
 
 if params['apriori_cal']["make_gaincurve"] == True:
-	rmdirs(['%s/caltables/%s.gcal'%(cwd,p_c)])
-	gencal(vis=msfile,\
-	       caltype='gc',\
-	       spw='',\
-	       antenna='',\
-	       caltable='%s/caltables/%s.gcal'%(cwd,p_c))
+	if params['prepare_data']['gaincurve']['prep_type'] == 'append':
+		rmdirs(['%s/caltables/%s.gcal'%(cwd,p_c)])
+		gencal(vis=msfile,
+			caltype='gc',
+			spw='',
+			antenna='',
+			caltable='%s/caltables/%s.gcal'%(cwd,p_c))
+	elif params['prepare_data']['gaincurve']['prep_type'] == 'convert':
+		gencal(vis=msfile,
+			   caltype='gc',
+			   spw='',
+			   antenna='',
+			   infile='%s/caltables/%s.gc'%(cwd,p_c),
+			   caltable='%s/caltables/%s.gcal'%(cwd,p_c))
 
 	gaintables = append_gaintable(gaintables,['%s/caltables/%s.gcal'%(cwd,p_c),'',[],'nearest'])
 	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.gcal'%(cwd,p_c),'',[],'nearest'])
