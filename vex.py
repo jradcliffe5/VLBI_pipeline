@@ -205,7 +205,7 @@ class Vex(object):
 					temp['mode'] = ret
 
 				ret = self.get_variable("source", line)
-				if len(ret) > 0:
+				if len(ret) > 0 and 'source' not in temp:
 					temp['source'] = ret
 
 				ret = self.get_variable("station", line)
@@ -216,8 +216,8 @@ class Vex(object):
 					s_st = float(sdur[0])  # start time in sec
 					s_en = float(sdur[1])  # end time in sec
 					d_size = float(sdur[2])  # data size(?) in GB
-					temp['scan'][cnt] = {'site': site_name, 'scan_sec_start': s_st,
-										 'scan_sec': s_en, 'data_size': d_size}
+					temp['scan'][cnt] = {'site': site_name, 'site_id': site_ID,
+										 'scan_sec_start': s_st, 'scan_sec': s_en, 'data_size': d_size}
 					cnt += 1
 
 				if line[0:7] == "endscan":
