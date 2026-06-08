@@ -97,7 +97,7 @@ flagdata(vis=msfile,
 
 
 for i in range(len(fields)):
-	
+	'''
 	flagdata(vis=msfile,
 			mode='tfcrop',
 			field=','.join(fields[i]),
@@ -112,7 +112,7 @@ for i in range(len(fields)):
 			action='apply',
 			display='',
 			flagbackup=False)
-	
+	'''
 	for j in range(len(cal_type[i])):
 		if len(fields[i]) < 2:
 			fields[i] = list(fields[i])
