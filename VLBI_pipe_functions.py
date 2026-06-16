@@ -2840,7 +2840,6 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 		rmdirs(['%s/%s.pbcor'%(cwd,prefix)])
 
 		if params['apply_to_all']['pbcor']['vex_file'] == '':
-			tbnrows = nspw*nants
 			run_vex = False
 		else:
 			run_vex = True
@@ -2851,13 +2850,7 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 				vex_params = vex.Vex(params['apply_to_all']['pbcor']['vex_file'])
 				scans = vex_params.sched
 				source = vex_params.source
-				re_sched = []
-				for i in range(len(scans)):
-					if scans[i]['source'] not in calibrators:
-						re_sched.append(scans[i])
-					else:
-						pass
-				tbnrows = nspw*nants*len(re_sched)
+				re_sched = [s for s in scans if s['source'] not in calibrators]
 
 		targets=[]
 		for i in msinfo['FIELD']['fieldtoID'].keys():
@@ -2876,9 +2869,8 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 			casalog.post(origin=func_name,message='Multiple targets .. it will mess up at the moment',priority='SEVERE')
 			sys.exit()
 
-
 		if run_vex == False:
-			casalog.post(origin=func_name,message='Non-vex implementation not written yet',priority='SEVERE')
+			## Single fixed pointing for all antennas — pointing_centre required
 			IDtoant = msinfo['ANTENNAS']['IDtoant']
 			offset = angsep(params['apply_to_all']['pbcor']['pointing_centre'][0],params['apply_to_all']['pbcor']['pointing_centre'][1],radec_target[0],radec_target[1])
 			antenna_list = list(msinfo['ANTENNAS']['anttoID'].values())
@@ -2890,58 +2882,48 @@ def primary_beam_correction(msfile,prefix,params,msinfo):
 					atten.append(attenuation)
 				gencal(vis=msfile, caltable='%s/%s.pbcor'%(cwd,prefix), caltype='amp', antenna=','.join(str(e) for e in antenna_list), spw='%d'%k, parameter=atten)
 		else:
+			## Per-antenna pointing from VEX: each station only gets entries for
+			## scans it participated in, using that scan's source as its pointing.
 			cb.open(msfile,False,False,False)
 			cb.createcaltable('%s/%s.pbcor'%(cwd,prefix), 'Complex', 'G Jones', True)
 			cb.close()
-			TIME = np.empty(tbnrows)
-			FIELD_ID = np.zeros(tbnrows)
-			SPECTRAL_WINDOW_ID = np.empty(tbnrows)
-			ANTENNA1 = np.empty(tbnrows)
-			ANTENNA2 = np.zeros(tbnrows)
-			INTERVAL = np.zeros(tbnrows)
-			OBSERVATION_ID = np.zeros(tbnrows)
-			CPARAM = np.empty((npol,1,tbnrows),dtype=complex)
-			PARAMERR = np.ones((npol,1,tbnrows))
-			FLAG = np.zeros((npol,1,tbnrows))
-			SNR =  np.ones((npol,1,tbnrows))
-			WEIGHT = np.empty(tbnrows)
-			runc=0
-			for i in range(len(re_sched)):
-				## get scan lengths and times
-				scan_l = []
-				for j in re_sched[i]['scan'].keys():
-					scan_l.append(re_sched[i]['scan'][j]['scan_sec'])
-				scan_l = np.average(scan_l)/2./3600.
-				time = (re_sched[i]['mjd_floor'] + (re_sched[i]['start_hr']+scan_l) / 24.)
-				q = qa.quantity('%s d'%time)
-				time = qa.convert(q,'s')['value']
-
-				radec_teles = source[re_sched[i]['source']]
-				offset = angsep(radec_teles['ra'],radec_teles['dec'],radec_target[0],radec_target[1])
-
-				## get pb_params
-				IDtoant = msinfo['ANTENNAS']['IDtoant']
-				for j in list(msinfo['ANTENNAS']['anttoID'].values()):
+			anttoID = msinfo['ANTENNAS']['anttoID']
+			IDtoant = msinfo['ANTENNAS']['IDtoant']
+			TIME_list = []
+			ANTENNA1_list = []
+			SPECTRAL_WINDOW_ID_list = []
+			CPARAM_list = []
+			for scan in re_sched:
+				scan_l = np.average([scan['scan'][j]['scan_sec'] for j in scan['scan']])/2./3600.
+				time = (scan['mjd_floor'] + (scan['start_hr'] + scan_l) / 24.)
+				time = qa.convert(qa.quantity('%s d'%time),'s')['value']
+				radec_teles = source[scan['source']]
+				offset = angsep(radec_teles['ra'], radec_teles['dec'], radec_target[0], radec_target[1])
+				for station in scan['scan'].values():
+					ant_name = station['site_id'].upper()
+					if ant_name not in anttoID:
+						continue
+					ant_id = anttoID[ant_name]
 					for k in range(msinfo['SPECTRAL_WINDOW']['nspws']):
 						obs_freq = msinfo['SPECTRAL_WINDOW']['freq_range'][0] + ((k+1)-0.5)*msinfo['SPECTRAL_WINDOW']['spw_bw']
-						attenuation = pb_model_uvcorr(parameters=pb_parameters[IDtoant[str(j)]]['params'],model=pb_parameters[IDtoant[str(j)]]['model'], obs_freq=obs_freq,angsep=offset)
-						ANTENNA1[runc] = int(j)
-						SPECTRAL_WINDOW_ID[runc] = int(k)
-						TIME[runc] = time
-						CPARAM[:,:,runc] = attenuation+0j
-						runc+=1
+						attenuation = pb_model_uvcorr(parameters=pb_parameters[ant_name]['params'],model=pb_parameters[ant_name]['model'], obs_freq=obs_freq,angsep=offset)
+						TIME_list.append(time)
+						ANTENNA1_list.append(ant_id)
+						SPECTRAL_WINDOW_ID_list.append(k)
+						CPARAM_list.append(attenuation)
 
+			tbnrows = len(TIME_list)
 			tb.open('%s/%s.pbcor'%(cwd,prefix),nomodify=False)
 			tb.addrows(tbnrows)
-			tb.putcol('TIME',TIME)
-			tb.putcol('CPARAM',CPARAM)
-			tb.putcol('PARAMERR',PARAMERR)
-			tb.putcol('FLAG',FLAG)
-			tb.putcol('SNR',SNR)
-			tb.putcol('ANTENNA1',ANTENNA1)
-			tb.putcol('ANTENNA2',ANTENNA2)
-			tb.putcol('SPECTRAL_WINDOW_ID',SPECTRAL_WINDOW_ID)
-			tb.putcol('FIELD_ID',FIELD_ID)
+			tb.putcol('TIME',           np.array(TIME_list))
+			tb.putcol('ANTENNA1',       np.array(ANTENNA1_list))
+			tb.putcol('ANTENNA2',       np.zeros(tbnrows))
+			tb.putcol('SPECTRAL_WINDOW_ID', np.array(SPECTRAL_WINDOW_ID_list))
+			tb.putcol('FIELD_ID',       np.zeros(tbnrows))
+			tb.putcol('CPARAM',         np.tile(np.array(CPARAM_list, dtype=complex), (npol,1,1)))
+			tb.putcol('PARAMERR',       np.ones((npol,1,tbnrows)))
+			tb.putcol('FLAG',           np.zeros((npol,1,tbnrows)))
+			tb.putcol('SNR',            np.ones((npol,1,tbnrows)))
 			tb.close()
 	return '%s/%s.pbcor'%(cwd,prefix)
 

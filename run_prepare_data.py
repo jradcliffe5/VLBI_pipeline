@@ -119,6 +119,8 @@ if telescop == 'EVN':
 			sys.exit()
 		else:
 			antabfile='%s'%params['prepare_data']['antab_file']
+else:
+	antabfile='%s'%params['prepare_data']['antab_file']
 
 ts_fits = check_fits_ext(idifiles=idifiles,ext='SYSTEM_TEMPERATURE',del_ext=params['prepare_data']['replace_antab'])
 if (params['prepare_data']['replace_antab'] == True)|(ts_fits==False):
@@ -137,18 +139,18 @@ else:
 	casalog.post(origin=filename,message='System temperature information already exists in the idifile',priority='INFO')
 
 ### Convert gaincurve
+gc_fits = check_fits_ext(idifiles=idifiles,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
 if params['prepare_data']['gaincurve']['prep_type'] == 'convert':
 	rmdirs(['%s/caltables/%s.gc'%(params['global']['cwd'],params['global']['project_code'])])
 	convert_gaincurve(antab=antabfile,
 				      gc='%s/caltables/%s.gc'%(params['global']['cwd'],params['global']['project_code']),
 					  min_elevation=params['prepare_data']['gaincurve']["min_elevation"], 
 					  max_elevation=params['prepare_data']['gaincurve']["max_elevation"])
-elif params['prepare_data']['gaincurve_type'] == 'append':
-	gc_fits = check_fits_ext(idifiles=idifiles,ext='GAIN_CURVE',del_ext=params['prepare_data']['replace_antab'])
+elif params['prepare_data']['gaincurve']['prep_type'] == 'append':
 	if (params["prepare_data"]["replace_antab"] == True)|(gc_fits==False):
 		casalog.post(origin=filename,message='Appending gaincurve information',priority='INFO')
-		if telescop == 'VLBA':
-			antabfile='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path'])
+		#if telescop == 'VLBA':
+		#	antabfile='%s/%s/data/VLBA_gains/vlba_gains.key'%(params['global']['cwd'],params['global']['vlbipipe_path'])
 		for i in idifiles:
 			if parallel == True:
 				cmd1 = "import inspect, os, sys; sys.path.append('%s'); from casavlbitools.fitsidi import append_gc; append_gc(antabfile='%s', idifile='%s')"%(mpipath,antabfile,i)
