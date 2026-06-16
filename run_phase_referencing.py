@@ -83,7 +83,7 @@ applycal(vis=msfile,
 	     spwmap=gaintables['spwmap'],
 	     parang=gaintables['parang'])
 
-
+'''
 flagdata(vis=msfile,
 		mode='clip',
 		datacolumn='corrected',
@@ -94,10 +94,10 @@ flagdata(vis=msfile,
 		mode='clip',
 		datacolumn='WEIGHT',
 		clipminmax=[0,1e60])
-
+'''
 
 for i in range(len(fields)):
-	
+	'''
 	flagdata(vis=msfile,
 			mode='tfcrop',
 			field=','.join(fields[i]),
@@ -112,7 +112,7 @@ for i in range(len(fields)):
 			action='apply',
 			display='',
 			flagbackup=False)
-	
+	'''
 	for j in range(len(cal_type[i])):
 		if len(fields[i]) < 2:
 			fields[i] = list(fields[i])
@@ -191,6 +191,7 @@ for i in range(len(fields)):
 					refant=refant,
 					gaintype=gaintype,
 					corrdepflags=True,
+					minblperant=2,
 					combine=params['phase_referencing']['combine'][i][j],
 					minsnr=params['phase_referencing']['min_snr'],
 					gaintable=gaintables['gaintable'],

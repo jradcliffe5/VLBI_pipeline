@@ -97,7 +97,8 @@ if params['apriori_cal']['tsys_options']['interp_flags'] == True:
 	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='linear',extrapolate=False,fringecal=True)
 	interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
-if params['apriori_cal']['tsys_options']['algorithm'] != None:
+if params['apriori_cal']['tsys_options']['algorithm'] != "":
+	print('test')
 	rmdirs(['%s/caltables/%s.tsys_original'%(cwd,p_c)])
 	os.system('cp -r %s/caltables/%s.tsys %s/caltables/%s.tsys_original'%(cwd,p_c,cwd,p_c))
 	if "smooth" in params['apriori_cal']['tsys_options']['algorithm']:
