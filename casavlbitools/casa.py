@@ -164,6 +164,10 @@ def gain_common(gain, antenna, band, bfreq, efreq, btime, etime,
 def convert_gaincurve(antab, gc, min_elevation=0.0, max_elevation=90.0):
     tb = casatools.table()
 
+    gc_dir = os.path.dirname(gc)
+    if gc_dir and not os.path.exists(gc_dir):
+        os.makedirs(gc_dir, exist_ok=True)
+
     outfp = tempfile.NamedTemporaryFile('w')
 
     t = time.strptime("2000y01d00h00m00s", "%Yy%jd%Hh%Mm%Ss")
