@@ -93,7 +93,6 @@ for i in range(len(params[substep]['select_calibrators'])):
 			 minblperant=2,
 			 fillgaps=16,
 			 minsnr=params['bandpass_cal']['min_snr'],
-			 minblperant=3,
 			 gaintable=gaintab,
 			 corrdepflags=True,
 			 gainfield=gaintables['gainfield'],
