@@ -1720,13 +1720,12 @@ def plotcaltable(caltable='',yaxis='',xaxis='',plotflag=False,msinfo='',figfile=
 				ax1.set_ylabel('%s'%(col_params[gaincol][yaxis][2]),labelpad=35)
 				ax1.set_xlabel('%s%s )'%(row_params[xaxis][0],time_convert(min_time)[0]),labelpad=25)
 				ax1.set_title('%s against %s for antenna %s (%d)'%(yaxis, xaxis, msinfo['ANTENNAS']['IDtoant'][str(ant[a])],ant[a]))
-				if len(spw) >1:
-					ax1.set_xticks([],minor=True)
-					ax1.set_xticks([])
-					ax1.set_xticklabels([])
-					ax1.set_yticks([],minor=True)
-					ax1.set_yticks([])
-					ax1.set_yticklabels([])
+				ax1.set_xticks([],minor=True)
+				ax1.set_xticks([])
+				ax1.set_xticklabels([])
+				ax1.set_yticks([],minor=True)
+				ax1.set_yticks([])
+				ax1.set_yticklabels([])
 				for s in range(len(spw)):
 					ax = fig.add_subplot(gs00[s])
 					try:
