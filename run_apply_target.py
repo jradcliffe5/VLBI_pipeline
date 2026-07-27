@@ -33,6 +33,7 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 if os.path.exists('%s/%s_msinfo.json'%(cwd,params['global']['project_code']))==False:
+	casalog.post(origin=filename,message='No cached msinfo found ... generating %s/%s_msinfo.json'%(cwd,params['global']['project_code']),priority='INFO')
 	msinfo = get_ms_info(msfile)
 	save_json(filename='%s/%s_msinfo.json'%(cwd,params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(cwd,params['global']['project_code'])), append=False)
 else:
@@ -44,6 +45,7 @@ else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_apply_target')
 
 ## Apply to standard files
+casalog.post(origin=filename,message='Applying %d gaintable(s) to target field(s): %s'%(len(gaintables['gaintable']),",".join(params['global']['targets'])),priority='INFO')
 applycal(vis='%s%s'%(cwd,msfile),
 	     field=",".join(params['global']['targets']),
 	     gaintable=gaintables['gaintable'],
@@ -53,9 +55,11 @@ applycal(vis='%s%s'%(cwd,msfile),
 		 parang=gaintables['parang'])
 
 for i in params['global']['targets']:
+	casalog.post(origin=filename,message='Processing target field: %s'%i,priority='INFO')
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
-	
+
 	if params['apply_target']["flag_target"] == True:
+		casalog.post(origin=filename,message='Running tfcrop flagging on calibrated target: %s'%i,priority='INFO')
 		flagdata(vis='%s%s'%(cwd,msfile),
 				mode='tfcrop',
 				field=i,
@@ -70,11 +74,13 @@ for i in params['global']['targets']:
 				action='apply',
 				display='',
 			    flagbackup=False)
+	casalog.post(origin=filename,message='Splitting calibrated target %s to %s/%s_calibrated.ms'%(i,cwd,i),priority='INFO')
 	split(vis='%s%s'%(cwd,msfile),
 		  field=i,
 		  outputvis='%s/%s_calibrated.ms'%(cwd,i))
-	
+
 	if params['apply_target']["statistical_reweigh"]['run'] == True:
+		casalog.post(origin=filename,message='Statistically reweighting %s_calibrated.ms'%i,priority='INFO')
 		statwt(vis='%s%s_calibrated.ms'%(cwd,i),
 			   minsamp=params['apply_target']["statistical_reweigh"]["minsamp"],
                datacolumn='data')
@@ -88,14 +94,15 @@ for i in params['global']['targets']:
 				 clipminmax=[0,np.median(weight)+6*np.std(weight)])
 		
 	elif params['apply_target']["weigh_by_ants"]['run'] == True:
-		print('not implemented yet')
+		casalog.post(origin=filename,message='weigh_by_ants is not implemented yet ... skipping reweighting for %s'%i,priority='WARN')
 	else:
 		pass
 	delims = []
 	for z in ['.psf','.image','.sumwt','.mask','.residual','.pb']:
 		delims.append('%s-initimage%s'%(i,z))
 	rmdirs(delims)
-	
+
+	casalog.post(origin=filename,message='Making initial image for target %s (%s/images/%s-initimage)'%(i,cwd,i),priority='INFO')
 	tclean(vis='%s/%s_calibrated.ms'%(cwd,i),
 		   imagename='%s/images/%s-initimage'%(cwd,i),
 		   field='%s'%i,
@@ -117,12 +124,14 @@ for i in params['global']['targets']:
 	#rmdirs(['%s/%s_calibrated.ms'%(cwd,i)])
 
 if params['apply_target']["backup_caltables"] == True:
+	casalog.post(origin=filename,message='Backing up caltables to %s_caltables.tar'%p_c,priority='INFO')
 	rmfiles(["%s_caltables.tar"%p_c])
 	archive = tarfile.open("%s_caltables.tar"%p_c, "w")
 	for i in gaintables['gaintable']:
 		archive.add(i, arcname=i.split('/')[-1])
 	archive.close()
 
+casalog.post(origin=filename,message='apply_target complete',priority='INFO')
 save_json(filename='%s/vp_gaintables.last.json'%(cwd), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(cwd), array=gaintables, append=False)
 steps_run['apply_target'] = 1

@@ -108,6 +108,7 @@ else:
 
 
 if params['global']['use_initial_model'] != {}:
+	casalog.post(origin=filename,message='Seeding MODEL_DATA from initial model for field(s): %s'%", ".join(params['global']['use_initial_model'].keys()),priority='INFO')
 	clearcal(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),addmodel=True)
 	for i in params['global']['use_initial_model'].keys():
 		ft(vis='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code']),
@@ -116,9 +117,10 @@ if params['global']['use_initial_model'] != {}:
 			model=params['global']['use_initial_model'][i],usescratch=True)
 
 
+casalog.post(origin=filename,message='Generating ms info for %s.ms'%(params['global']['project_code']),priority='INFO')
 save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 
-
+casalog.post(origin=filename,message='import_fitsidi complete',priority='INFO')
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 steps_run['import_fitsidi'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

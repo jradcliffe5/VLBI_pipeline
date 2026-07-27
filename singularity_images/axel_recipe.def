@@ -1,0 +1,26 @@
+Bootstrap: docker
+From: debian:stable
+
+%environment
+	export LC_ALL=C
+
+%post
+	apt-get update
+	apt-get -y install axel ca-certificates
+	apt-get clean
+	rm -rf /var/lib/apt/lists/*
+
+%runscript
+	exec axel "$@"
+
+%labels
+	Author ER047 VLBI pipeline
+	Software axel
+
+%help
+	Singularity container providing the axel multi-connection download
+	accelerator, for fast retrieval of ER047 data from the JIVE archive.
+
+	Usage:
+	  singularity run axel.sif -n 8 -o <dest> <url>
+	  singularity exec axel.sif axel -n 8 -o <dest> <url>

@@ -199,5 +199,6 @@ for k in ['gaintable','gainfield','spwmap','interp']:
 	gt_r['prepare_data'][k] = []
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 
+casalog.post(origin=filename,message='prepare_data complete',priority='INFO')
 steps_run['prepare_data'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)

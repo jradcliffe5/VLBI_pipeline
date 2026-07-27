@@ -19,7 +19,7 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-casalog.origin('vp_apply_to_all')
+casalog.origin('vp_mssc')
 
 try:
 	if casa6 == True:
@@ -48,6 +48,7 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 if os.path.exists('%s%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+	casalog.post(origin=filename,message='No cached msinfo found ... generating %s%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']),priority='INFO')
 	save_json(filename='%s%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 else:
 	msinfo = load_json('%s%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
@@ -59,8 +60,10 @@ else:
 
 reader = csv.reader(open("%starget_files.txt"%cwd), delimiter=" ")
 target_files = list(reader)
+casalog.post(origin=filename,message='Preparing %d target dataset(s) for source-subtracted self-cal (tar_ms_only=%s)'%(len(target_files),params["apply_to_all"]["tar_ms_only"]),priority='INFO')
 ## First step is to convert to fits
 for i in len(target_files):
+	casalog.post(origin=filename,message='Extracting pre-mssc images/data for target: %s'%target_files[i][1],priority='INFO')
 	if params["apply_to_all"]["tar_ms_only"] == True:
 		os.system("cp -r %s%s*_initial.image %s"%(target_outpath,target_files[i][1],cwd))
 		image = glob.glob('%s%s*image'%(cwd,target_files[i][1]))
@@ -77,8 +80,10 @@ for i in len(target_files):
 
 ## Then catalogue
 if params['mssc']['source_finder'] == "pybdsf":
+	casalog.post(origin=filename,message='Running PyBDSF source cataloguing (detection_thresh=%s)'%params['mssc']['detection_thresh'],priority='INFO')
 	run_cataloger_pybdsf(sn_ratio=params['mssc']['detection_thresh'],postfix='premssc')
 else:
+	casalog.post(origin=filename,message='Unsupported source_finder %s ... exiting'%params['mssc']['source_finder'],priority='SEVERE')
 	sys.exit()
 
 ## Then to image all of the data sets and uvsub the uv data

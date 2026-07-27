@@ -1382,9 +1382,11 @@ def fit_autocorrelations(msfile, caltable, msinfo, calibrators,calc_auto='mean',
 
 	# Row counter into the output caltable
 	runc=0
+	casalog.post(priority="INFO",origin=func_name,message='Fitting autocorrelations for %d calibrator field(s), %d spw(s), %d antenna(s)'%(len(calibrators),nspw,nants))
 	tb.open(msfile)
 	# Iterate: calibrator field -> SPW -> antenna -> pol
 	for h in range(len(calibrators)):
+		casalog.post(priority="INFO",origin=func_name,message='Fitting autocorrelations for calibrator field %s (%d/%d)'%(calibrators[h],h+1,len(calibrators)))
 		subt=tb.query('ANTENNA1==ANTENNA2 and FIELD_ID==%s'%(calibrators[h]))
 		t_cal = np.average(subt.getcol('TIME'))
 		for j in range(nspw):
@@ -2449,10 +2451,13 @@ def apply_to_all(	prefix,
 	# Define target directory for data
 	target_dir = params['apply_to_all']['target_path']
 
+	casalog.post(priority="INFO",origin=func_name,message='apply_to_all: target %s, part %s'%(i,part))
+
 	# PART 0: Initial import and calibration
 	if part == 0:
 		# If file is tar archive, extract its contents
 		if tar == 'True':
+			casalog.post(priority="INFO",origin=func_name,message='Extracting tarred fitsidi file(s) for target %s'%i)
 			files = extract_tarfile(
 				tar_file=f'{files[0]}',
 				cwd=target_dir,
@@ -2466,6 +2471,7 @@ def apply_to_all(	prefix,
 		])
 
 		# Import FITS-IDI file into CASA MS format
+		casalog.post(priority="INFO",origin=func_name,message='Importing fitsidi for target %s into %s/%s_presplit.ms'%(i,cwd,i))
 		importfitsidi_2(
 			fitsidifile=files,
 			vis=f'{cwd}/{i}_presplit.ms',
@@ -2491,6 +2497,7 @@ def apply_to_all(	prefix,
 
 		# If running in parallel mode, partition MS
 		if parallel:
+			casalog.post(priority="INFO",origin=func_name,message='Partitioning %s into a multi-MS for target %s'%(msfile,i))
 			msfile2 = f'{cwd}/{i}_presplit2.ms'
 			os.system(f'mv {msfile} {msfile2}')
 			partition(
@@ -2518,6 +2525,7 @@ def apply_to_all(	prefix,
 		if params['apriori_cal']["do_observatory_flg"]:
 			flag_path = f'{cwd}/{p_c}_casa.flags'
 			if os.path.exists(flag_path):
+				casalog.post(priority="INFO",origin=func_name,message='Applying observatory flags from %s to target %s'%(flag_path,i))
 				flagdata(
 					vis=msfile,
 					mode='list',
@@ -2526,6 +2534,7 @@ def apply_to_all(	prefix,
 
 		# Flag edge channels using configuration
 		if params['init_flag']['flag_edge_chans']['run']:
+			casalog.post(priority="INFO",origin=func_name,message='Flagging edge channels for target %s'%i)
 			ec = calc_edge_channels(
 				value=params['init_flag']['flag_edge_chans']['edge_chan_flag'],
 				nspw=msinfo['SPECTRAL_WINDOW']['nspws'],
@@ -2546,6 +2555,7 @@ def apply_to_all(	prefix,
 
 		# Apply user-supplied manual flag file
 		if params['init_flag']['manual_flagging']['run']:
+			casalog.post(priority="INFO",origin=func_name,message='Applying manual flag file to target %s'%i)
 			flagdata(
 				vis=msfile,
 				mode='list',
@@ -2554,6 +2564,7 @@ def apply_to_all(	prefix,
 
 		# Apply quack flagging (drops leading integrations)
 		if params['init_flag']['quack_data']['run']:
+			casalog.post(priority="INFO",origin=func_name,message='Quacking data for target %s'%i)
 			quack_ints = params['init_flag']['quack_data']['quack_time']
 			quack_mode = params['init_flag']['quack_data']['quack_mode']
 			if isinstance(quack_ints, dict):
@@ -2607,6 +2618,7 @@ def apply_to_all(	prefix,
 
 		# Apply primary beam correction if enabled
 		if params['apply_to_all']['pbcor']['run']:
+			casalog.post(priority="INFO",origin=func_name,message='Computing primary beam correction table for target %s'%i)
 			pbcor_table = primary_beam_correction(
 				msfile=msfile,
 				prefix=i,
@@ -2628,6 +2640,7 @@ def apply_to_all(	prefix,
 				archive.close()
 
 		# Apply all calibration tables
+		casalog.post(priority="INFO",origin=func_name,message='Applying %d gaintable(s) to target %s, field(s) %s'%(len(gaintables['gaintable']),i,",".join(targets)))
 		applycal(
 			vis=msfile,
 			field=",".join(targets),
@@ -2639,6 +2652,7 @@ def apply_to_all(	prefix,
 		)
 
 		if params['apply_target']['flag_target']:
+			casalog.post(priority="INFO",origin=func_name,message='Running tfcrop flagging on calibrated target %s'%i)
 			flagdata(
 				vis=msfile,
 				mode='tfcrop',
@@ -2667,6 +2681,7 @@ def apply_to_all(	prefix,
 
 		# Apply statistical reweighting if enabled
 		if params['apply_target']['statistical_reweigh']['run']:
+			casalog.post(priority="INFO",origin=func_name,message='Statistically reweighting target %s'%i)
 			statwt(
 				vis=msfile,
 				minsamp=params['apply_target']["statistical_reweigh"]["minsamp"]
@@ -2693,6 +2708,7 @@ def apply_to_all(	prefix,
 			del weight
 
 		# Final split of corrected data
+		casalog.post(priority="INFO",origin=func_name,message='Splitting calibrated target %s to %s/%s.ms'%(i,cwd,i))
 		split(
 			vis=msfile,
 			field=fd,
@@ -2711,6 +2727,8 @@ def apply_to_all(	prefix,
 		if (params['apply_to_all']['pbcor']['backup_caltables']
 			and params['apply_to_all']['pbcor']['run']):
 			os.system(f'rm -r {pbcor_table}')
+
+		casalog.post(priority="INFO",origin=func_name,message='apply_to_all complete for target %s (part %s)'%(i,part))
 		
 def image_targets(prefix,params,parallel):
 	"""Produce quick-look images for targets in a given MS using tclean."""
@@ -2728,6 +2746,7 @@ def image_targets(prefix,params,parallel):
 			targets.append(k)
 
 	for j in targets:
+		casalog.post(priority="INFO",origin=func_name,message='Imaging field %s of target %s'%(j,prefix))
 		tclean(vis='%s/%s.ms'%(cwd,prefix),
 			   field='%s'%j,
 			   imagename='%s_%s_initial'%(prefix,str(j)),
@@ -2747,10 +2766,12 @@ def image_targets(prefix,params,parallel):
 
 def apply_tar_output(prefix,params,targets):
 	"""Package outputs (MS and images) into tar.gz or move to outpath."""
+	func_name = inspect.stack()[0][3]
 	i = prefix
 	cwd = os.path.join(params['global']['cwd'],"")
 	msfile ='%s/%s.ms'%(cwd,i)
 	if params['apply_to_all']['tar_output'] == True:
+		casalog.post(priority="INFO",origin=func_name,message='Tarring output for target %s to %s.tar.gz'%(i,msfile))
 		if params["apply_to_all"]["image_target"]["run"] == True:
 			source_dir=['%s'%(msfile)] 
 			for k in targets:
@@ -2768,6 +2789,7 @@ def apply_tar_output(prefix,params,targets):
 			os.system('mv %s.tar.gz %s/'%(msfile,params['apply_to_all']['target_outpath']))
 	else:
 		if params['apply_to_all']['target_outpath'] !='':
+			casalog.post(priority="INFO",origin=func_name,message='Moving output for target %s to %s'%(i,params['apply_to_all']['target_outpath']))
 			os.system('mv %s %s/'%(msfile,params['apply_to_all']['target_outpath']))
 			if params["apply_to_all"]["image_target"]["run"] == True:
 				for k in targets:
@@ -2983,6 +3005,7 @@ def remove_gaintable(step,params,casa6):
 
 def run_cataloger_pybdsf(sn_ratio,postfix):
 	"""Run PyBDSF on FITS images in CWD; write catalogs and combined CSV."""
+	func_name = inspect.stack()[0][3]
 	import bdsf
 
 	detection_threshold = sn_ratio
@@ -3028,12 +3051,15 @@ def run_cataloger_pybdsf(sn_ratio,postfix):
 					text_file.write(names+names.join(lines[6:]))
 				os.system('rm %s' % file)
 	catalog_list = []
-	for i in os.listdir('./'):
-		if i.endswith('.fits'):
-			write_catalog_pybdsf(i,detection_threshold,shorthand)
+	fits_images = [i for i in os.listdir('./') if i.endswith('.fits')]
+	casalog.post(priority="INFO",origin=func_name,message='Running PyBDSF on %d fits image(s) (detection_threshold=%s)'%(len(fits_images),detection_threshold))
+	for i in fits_images:
+		casalog.post(priority="INFO",origin=func_name,message='Cataloguing %s'%i)
+		write_catalog_pybdsf(i,detection_threshold,shorthand)
 	for file in os.listdir('./'):
 			if file.endswith('.srl'):
 				catalog_list = catalog_list + [file]
+	casalog.post(priority="INFO",origin=func_name,message='Combining %d catalog(s) into catalogue_PYBDSF_%s.csv'%(len(catalog_list),postfix))
 	if split_catalogues == 'False':
 		combine_pybdsf(shorthand=shorthand,postfix=postfix,catalog_list=catalog_list)
 	else:

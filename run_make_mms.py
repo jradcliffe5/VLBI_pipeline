@@ -24,18 +24,22 @@ steps_run = load_json('vp_steps_run.json',Odict=True,casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
 gt_r['make_mms'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
+casalog.post(origin=filename,message='Removing any existing flagversions before repartitioning',priority='INFO')
 rmdirs(['%s/%s.ms.flagversions'%(params['global']['cwd'],params['global']['project_code'])])
 mmsfile='%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])
 msfile='%s_2.ms'%(mmsfile.split('.ms')[0])
 
 ## Make mms data-set
+casalog.post(origin=filename,message='Renaming %s to %s ahead of partitioning'%(mmsfile,msfile),priority='INFO')
 os.system('mv %s %s'%(mmsfile,msfile))
 
+casalog.post(origin=filename,message='Partitioning %s into multi-MS %s (separationaxis=%s, numsubms=%s)'%(msfile,mmsfile,params['make_mms']['separationaxis'],params['make_mms']['numsubms']),priority='INFO')
 partition(vis=msfile,\
 		  outputvis=mmsfile,
-		  separationaxis=params['make_mms']['separationaxis'], 
+		  separationaxis=params['make_mms']['separationaxis'],
      	  numsubms= params['make_mms']['numsubms'])
 rmdirs([msfile])
+casalog.post(origin=filename,message='make_mms complete: %s is now a multi-MS'%mmsfile,priority='INFO')
 
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 steps_run['make_mms'] = 1

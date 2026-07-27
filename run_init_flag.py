@@ -31,6 +31,7 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+	casalog.post(origin=filename,message='No cached msinfo found ... generating %s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']),priority='INFO')
 	msinfo = get_ms_info(msfile)
 	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 else:
@@ -38,6 +39,7 @@ else:
 
 
 if params['init_flag']['flag_edge_chans']['run'] == True:
+	casalog.post(origin=filename,message='Flagging edge channels (edge_chan_flag=%s)'%params['init_flag']['flag_edge_chans']['edge_chan_flag'],priority='INFO')
 	if steps_run['init_flag'] == 1:
 		flagmanager(vis=msfile,
 			 		mode='restore',
@@ -54,8 +56,11 @@ if params['init_flag']['flag_edge_chans']['run'] == True:
 	flagdata(vis=msfile,
 			 mode='manual',
 			 spw=ec)
+else:
+	casalog.post(origin=filename,message='Skipping edge channel flagging (flag_edge_chans.run=False)',priority='INFO')
 
 if params['init_flag']['flag_autocorrs'] == True:
+	casalog.post(origin=filename,message='Flagging autocorrelations',priority='INFO')
 	if steps_run['init_flag'] == 1:
 		flagmanager(vis=msfile,
 				    mode='restore',
@@ -67,8 +72,11 @@ if params['init_flag']['flag_autocorrs'] == True:
 	flagdata(vis=msfile,
 		     mode='manual',
 		     autocorr=True)
+else:
+	casalog.post(origin=filename,message='Skipping autocorrelation flagging (flag_autocorrs=False)',priority='INFO')
 
 if params['init_flag']['quack_data']['run'] == True:
+	casalog.post(origin=filename,message='Quacking data (quack_mode=%s)'%params['init_flag']['quack_data']['quack_mode'],priority='INFO')
 	if steps_run['init_flag'] == 1:
 		flagmanager(vis=msfile,
 			        mode='restore',
@@ -81,6 +89,7 @@ if params['init_flag']['quack_data']['run'] == True:
 	quack_mode = params['init_flag']['quack_data']['quack_mode']
 	if type(quack_ints)==dict:
 		for i in quack_ints.keys():
+			casalog.post(origin=filename,message='Quacking field %s with interval %s'%(i,quack_ints[i]),priority='INFO')
 			flagdata(vis=msfile,
 				     field=i,
 				     mode='quack',
@@ -94,6 +103,8 @@ if params['init_flag']['quack_data']['run'] == True:
 	else:
 		casalog.post(priority='SEVERE',origin=filename,message='quack can either be dictionary to map antenna to quacking time or float to apply to all telescopes')
 		sys.exit()
+else:
+	casalog.post(origin=filename,message='Skipping quack flagging (quack_data.run=False)',priority='INFO')
 
 if params['init_flag']['manual_flagging']['run'] == True:
 	if steps_run['init_flag'] == 1:
@@ -105,13 +116,17 @@ if params['init_flag']['manual_flagging']['run'] == True:
 			        mode='save',
 			        versionname='manual_flags')
 	if os.path.exists('%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))==True:
+		casalog.post(origin=filename,message='Applying manual flags from %s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']),priority='INFO')
 		flagdata(vis=msfile,
 				 mode='list',
 				 inpfile='%s/%s'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 	else:
 		casalog.post(priority='SEVERE',origin=filename,message='flag file %s/%s does not exist'%(params['global']['cwd'],params['init_flag']['manual_flagging']['flag_file']))
 		sys.exit()
+else:
+	casalog.post(origin=filename,message='Skipping manual flagging (manual_flagging.run=False)',priority='INFO')
 
+casalog.post(origin=filename,message='init_flag complete',priority='INFO')
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 steps_run['init_flag'] = 1

@@ -55,6 +55,7 @@ msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
 
 if os.path.exists('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))==False:
+	casalog.post(origin=filename,message='No cached msinfo found ... generating %s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']),priority='INFO')
 	save_json(filename='%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']), array=get_ms_info('%s/%s.ms'%(params['global']['cwd'],params['global']['project_code'])), append=False)
 else:
 	msinfo = load_json('%s/%s_msinfo.json'%(params['global']['cwd'],params['global']['project_code']))
@@ -68,6 +69,7 @@ if params['global']['job_manager'] == 'bash':
 		prefix.append(listWords[1])
 		tar.append(listWords[0])
 		target_files[listWords[1]] = listWords[2:]
+	casalog.post(origin=filename,message='Applying calibration to %d target dataset(s): %s (parallel=%s)'%(len(prefix),", ".join(prefix),(params['apply_to_all']["mppc_parallel"] and parallel)),priority='INFO')
 	for j in range(len(prefix)):
 		if (params['apply_to_all']["mppc_parallel"] == True)&(parallel==True):
 			if int(sys.argv[i]) == 1:
@@ -80,9 +82,11 @@ if params['global']['job_manager'] == 'bash':
 			cmdId = client.push_command_request(cmd1,block=False)
 			cmd.append(cmdId[0])
 		else:
+			casalog.post(origin=filename,message='Applying calibration to target %s (part=%s)'%(prefix[j],sys.argv[i]),priority='INFO')
 			apply_to_all(prefix=prefix[j],files=target_files[prefix[j]],tar=tar[j],params=params,casa6=casa6,parallel=parallel,part=int(sys.argv[i]))
 			if int(sys.argv[i]) == 1:
 				if params["apply_to_all"]["image_target"]["run"] == True:
+					casalog.post(origin=filename,message='Imaging target %s'%prefix[j],priority='INFO')
 					targets = image_targets(prefix=prefix[j],params=params,parallel=parallel)
 				else:
 					targets = []
@@ -90,25 +94,29 @@ if params['global']['job_manager'] == 'bash':
 				rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix[j])])
 
 	if parallel == True:
+		casalog.post(origin=filename,message='Waiting for %d MPI command(s) to complete'%len(cmd),priority='INFO')
 		resultList = client.get_command_response(cmd,block=True)
 else:
 	target_files = {}
 	prefix = sys.argv[i+2]
 	tar = sys.argv[i+1]
 	target_files[prefix] = sys.argv[i+3:]
-	
+
+	casalog.post(origin=filename,message='Applying calibration to target %s (part=%s)'%(prefix,sys.argv[i]),priority='INFO')
 	if sys.argv[i] == '0':
 		apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=0)
 	if sys.argv[i] == '1':
 		if params["apply_to_all"]["image_target"]["run"] == True:
 			apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=1)
+			casalog.post(origin=filename,message='Imaging target %s'%prefix,priority='INFO')
 			targets = image_targets(prefix=prefix,params=params,parallel=parallel)
 		else:
 			apply_to_all(prefix=prefix,files=target_files[prefix],tar=tar,params=params,casa6=casa6,parallel=parallel,part=1)
 			targets = []
 		apply_tar_output(prefix=prefix,params=params,targets=targets)
 		rmfiles(['%s/%s_msinfo.json'%(params['global']['cwd'],prefix)])
-	
+
+casalog.post(origin=filename,message='apply_to_all complete',priority='INFO')
 save_json(filename='%s/vp_gaintables.last.json'%(params['global']['cwd']), array=gt_r, append=False)
 steps_run['apply_to_all'] = 1
 save_json(filename='%s/vp_steps_run.json'%(params['global']['cwd']), array=steps_run, append=False)
