@@ -279,7 +279,10 @@ def read_fitsidi(idifiles, scan_gap=30.0):
 		## DATE holds the integer Julian day, TIME the fraction of a day
 		file_times = (np.asarray(uv['DATE'], dtype=np.float64)
 					  + np.asarray(uv['TIME'], dtype=np.float64))
-		file_sids = np.asarray(uv['SOURCE_ID'], dtype=np.int32)
+		## Some FITS-IDI writers name this random parameter 'SOURCE' rather
+		## than 'SOURCE_ID'; both are valid per the FITS-IDI convention.
+		sid_col = 'SOURCE_ID' if 'SOURCE_ID' in uv.columns.names else 'SOURCE'
+		file_sids = np.asarray(uv[sid_col], dtype=np.int32)
 		times.append(file_times)
 		source_ids.append(file_sids)
 		## Keep the (small) time/source/baseline columns so that --estimate-snr
@@ -1248,6 +1251,29 @@ def build_parset(template, info, roles, args):
 						 'solve at SNR %.0f'
 						 % (i + 1, len(dropped), ','.join(dropped),
 							weakest_name, threshold))
+
+		## Once every step is stretched to what the data can support, adjacent
+		## steps of the same cal type can end up at the same solution interval
+		## - re-solving at an interval that has not changed refines nothing.
+		## Merge those runs into one step, keeping the most permissive combine
+		## setting of the group so nothing is lost by dropping the repeats.
+		merged, merged_out = [keep[0]], []
+		for j in keep[1:]:
+			prev = merged[-1]
+			if (phaseref['cal_type'][i][j] == phaseref['cal_type'][i][prev] and
+				phaseref['sol_interval'][i][j] == phaseref['sol_interval'][i][prev]):
+				if phaseref['combine'][i][j] and not phaseref['combine'][i][prev]:
+					phaseref['combine'][i][prev] = phaseref['combine'][i][j]
+				merged_out.append(phaseref['cal_type'][i][j])
+				continue
+			merged.append(j)
+		if merged_out:
+			notes.append('pass %d: merged %d redundant step(s) (%s) tuned to '
+						 'the same solution interval as the preceding step'
+						 % (i + 1, len(merged_out), ','.join(merged_out)))
+		keep = merged
+
+		if len(keep) < len(phaseref['cal_type'][i]):
 			for key in ('cal_type', 'sol_interval', 'combine', 'interp_flagged'):
 				phaseref[key][i] = [phaseref[key][i][j] for j in keep]
 
