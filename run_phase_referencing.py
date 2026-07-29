@@ -38,7 +38,7 @@ params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
-gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
+gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[],'cal_fields':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s/%s.ms'%(cwd,params['global']['project_code'])
@@ -60,6 +60,7 @@ else:
 
 
 cal_type = params['phase_referencing']["cal_type"]
+calibrator_groups = params.get('phase_referencing', {}).get('calibrator_groups', {})
 
 if steps_run['phase_referencing'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_phase_referencing')
@@ -221,26 +222,39 @@ for i in range(len(fields)):
 			spwmap = msinfo['SPECTRAL_WINDOW']['nspws']*[0]
 		else:
 			spwmap=[]
-		gaintables = append_gaintable(gaintables,[caltable,'',spwmap,'linear'])
-		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],[caltable,'',spwmap,'linear'])
+		caltable_params = [caltable,'',spwmap,'linear']
+		gaintables = append_gaintable(gaintables,caltable_params)
+		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],
+													  caltable_params+[list(fields[i])])
 
-		applycal(vis=msfile,
-			     field=','.join(fields[i]),
-			     gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'],
-				 calwt=params['phase_referencing']['cal_weights'])
-		if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+		## Applied one calibrator field at a time, restricting any
+		## phase_referencing caltable to the calibrator(s) in its own group
+		## (calibrator_groups): a pass can combine several independent
+		## target/calibrator pairs together (and, when a chain coexists with
+		## other groups, several groups can also share a generation), so
+		## gainfield='' across the whole pass would let an unrelated pair's
+		## solution be picked up by nearest-in-time guesswork.
+		for f in fields[i]:
+			field_gaintables = restrict_gaintables_for_target(gaintables, gt_r['phase_referencing'], calibrator_groups, f)
 			applycal(vis=msfile,
-			     field=','.join(fields[i+1]),
-			     gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'],
-				 calwt=params['phase_referencing']['cal_weights'])
+				     field=f,
+				     gaintable=field_gaintables['gaintable'],
+					 gainfield=field_gaintables['gainfield'],
+					 interp=field_gaintables['interp'],
+					 spwmap=field_gaintables['spwmap'],
+					 parang=gaintables['parang'],
+					 calwt=params['phase_referencing']['cal_weights'])
+		if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+			for f in fields[i+1]:
+				field_gaintables = restrict_gaintables_for_target(gaintables, gt_r['phase_referencing'], calibrator_groups, f)
+				applycal(vis=msfile,
+					     field=f,
+					     gaintable=field_gaintables['gaintable'],
+						 gainfield=field_gaintables['gainfield'],
+						 interp=field_gaintables['interp'],
+						 spwmap=field_gaintables['spwmap'],
+						 parang=gaintables['parang'],
+						 calwt=params['phase_referencing']['cal_weights'])
 		save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 		
 		## Establish image parameters

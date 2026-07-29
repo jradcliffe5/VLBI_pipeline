@@ -378,9 +378,62 @@ def fringe_search_snr(vis):
 	return float(np.median(snrs)), float(np.median(peaks))
 
 
-def measure_calibrator_snr(info, sources, edge_frac=0.1, verbose=True):
+def _scan_baseline_snr(entries, source_id, start, end, nband, nchan, npol,
+						edge_frac, antennas):
+	"""Per-baseline fringe SNR from the rows of one scan of one source."""
+	snr_baseline = {}
+	for entry in entries:
+		rows = ((entry['source_ids'] == source_id)
+				& (entry['times'] >= start) & (entry['times'] <= end))
+		if not rows.any():
+			continue
+
+		hdu = fits.open(entry['file'], memmap=True)
+		flux = hdu['UV_DATA'].data['FLUX'][rows]
+		hdu.close()
+
+		## FLUX is (band, channel, stokes, [real, imag, weight]), which
+		## astropy hands back either flat or already shaped by TDIM
+		nvis = nband * nchan * max(npol, 1)
+		ncomplex = int(flux.size / (flux.shape[0] * nvis))
+		if ncomplex < 2:
+			continue
+		flux = flux.reshape(-1, nband, nchan, npol, ncomplex)
+		vis = flux[..., 0] + 1j * flux[..., 1]
+		if ncomplex > 2:
+			vis[flux[..., 2] <= 0] = 0.
+		## Parallel hands only, averaged into an approximate Stokes I
+		vis = vis[:, :, :, 0:min(2, npol)].mean(axis=-1)
+
+		edge = int(round(edge_frac * nchan))
+		if nchan - 2 * edge >= 4:
+			vis = vis[:, :, edge:nchan - edge]
+
+		baselines = entry['baselines'][rows]
+		for code in np.unique(baselines):
+			a1, a2 = int(code) // 256, int(code) % 256
+			if a1 == a2:
+				continue
+			snr, _ = fringe_search_snr(vis[baselines == code])
+			name = (antennas.get(a1, str(a1)), antennas.get(a2, str(a2)))
+			snr_baseline[name] = max(snr_baseline.get(name, 0.), snr)
+	return snr_baseline
+
+
+def measure_calibrator_snr(info, sources, edge_frac=0.1, average_scans=False,
+							verbose=True):
 	"""
-	Measure the fringe SNR of each calibrator from one scan of raw data.
+	Measure the fringe SNR of each calibrator from raw data.
+
+	By default only the longest scan of each source is used, so the
+	measurement has the most to work on for the least I/O. With
+	'average_scans' every scan is measured instead and the per-baseline SNRs
+	are combined in quadrature (equivalent to the SNR a fringe fit would
+	reach on their concatenated data) - slower, but it no longer matters if
+	an antenna happened to be off source (parked, slewing, flagged) on
+	whichever single scan would otherwise have been picked, since it is
+	simply absent from that one scan's contribution rather than from the
+	whole measurement.
 
 	Returns, per source, the median per-baseline SNR, the SNR of the weakest
 	antenna (the one that limits the solution) and the length and bandwidth
@@ -393,64 +446,40 @@ def measure_calibrator_snr(info, sources, edge_frac=0.1, verbose=True):
 	spw_bw = info.get('bandwidth', 0.) / max(nband, 1)
 	antennas = info.get('antenna_numbers', {})
 
-	## Longest scan of each source, so the measurement has the most to work on
-	best_scan = {}
+	scans_by_source = {}
 	for scan in info['scans']:
 		if scan['source'] not in sources:
 			continue
-		if scan['duration'] > best_scan.get(scan['source'],
-											{'duration': -1})['duration']:
-			best_scan[scan['source']] = scan
+		scans_by_source.setdefault(scan['source'], []).append(scan)
 
 	results = OrderedDict()
 	for source in sources:
-		scan = best_scan.get(source)
+		source_scans = scans_by_source.get(source)
 		source_id = info.get('source_ids', {}).get(source)
-		if scan is None or source_id is None:
+		if not source_scans or source_id is None:
 			continue
 
-		start = scan['start_mjd'] + 2400000.5
-		end = start + scan['duration'] / 86400.
+		if not average_scans:
+			source_scans = [max(source_scans, key=lambda s: s['duration'])]
 
-		snr_baseline = {}
-		for entry in info['row_index']:
-			rows = ((entry['source_ids'] == source_id)
-					& (entry['times'] >= start) & (entry['times'] <= end))
-			if not rows.any():
+		snr_baseline_sq = {}
+		tau = 0.0
+		for scan in source_scans:
+			start = scan['start_mjd'] + 2400000.5
+			end = start + scan['duration'] / 86400.
+			scan_snr = _scan_baseline_snr(info['row_index'], source_id,
+										  start, end, nband, nchan, npol,
+										  edge_frac, antennas)
+			if not scan_snr:
 				continue
+			tau += scan['duration']
+			for name, snr in scan_snr.items():
+				snr_baseline_sq[name] = snr_baseline_sq.get(name, 0.) + snr ** 2
 
-			hdu = fits.open(entry['file'], memmap=True)
-			flux = hdu['UV_DATA'].data['FLUX'][rows]
-			hdu.close()
-
-			## FLUX is (band, channel, stokes, [real, imag, weight]), which
-			## astropy hands back either flat or already shaped by TDIM
-			nvis = nband * nchan * max(npol, 1)
-			ncomplex = int(flux.size / (flux.shape[0] * nvis))
-			if ncomplex < 2:
-				continue
-			flux = flux.reshape(-1, nband, nchan, npol, ncomplex)
-			vis = flux[..., 0] + 1j * flux[..., 1]
-			if ncomplex > 2:
-				vis[flux[..., 2] <= 0] = 0.
-			## Parallel hands only, averaged into an approximate Stokes I
-			vis = vis[:, :, :, 0:min(2, npol)].mean(axis=-1)
-
-			edge = int(round(edge_frac * nchan))
-			if nchan - 2 * edge >= 4:
-				vis = vis[:, :, edge:nchan - edge]
-
-			baselines = entry['baselines'][rows]
-			for code in np.unique(baselines):
-				a1, a2 = int(code) // 256, int(code) % 256
-				if a1 == a2:
-					continue
-				snr, _ = fringe_search_snr(vis[baselines == code])
-				name = (antennas.get(a1, str(a1)), antennas.get(a2, str(a2)))
-				snr_baseline[name] = max(snr_baseline.get(name, 0.), snr)
-
-		if not snr_baseline:
+		if not snr_baseline_sq:
 			continue
+		snr_baseline = dict([(k, np.sqrt(v))
+							 for k, v in snr_baseline_sq.items()])
 
 		## A fringe fit solves per antenna, combining every baseline to it
 		snr_antenna = {}
@@ -465,15 +494,17 @@ def measure_calibrator_snr(info, sources, edge_frac=0.1, verbose=True):
 			'snr_antenna': float(snr_antenna[weakest]),
 			'weakest_antenna': weakest,
 			'nantenna': len(snr_antenna),
-			'tau': scan['duration'],
+			'tau': tau,
 			'spw_bw': spw_bw}
 
 	if verbose and results:
 		print('')
-		print('Fringe SNR measured on one scan of each calibrator '
-			  '(per %.1f MHz spw):' % (spw_bw / 1e6))
+		print('Fringe SNR measured on %s of each calibrator '
+			  '(per %.1f MHz spw):'
+			  % ('every scan' if average_scans else 'one scan',
+				 spw_bw / 1e6))
 		print('%-20s %10s %12s %14s %10s'
-			  % ('CALIBRATOR', 'SCAN', 'SNR/BASELINE', 'SNR/ANTENNA',
+			  % ('CALIBRATOR', 'TIME USED', 'SNR/BASELINE', 'SNR/ANTENNA',
 				 'WEAKEST'))
 		print('-' * 72)
 		for source, r in results.items():
@@ -1013,26 +1044,33 @@ def calibration_passes(roles):
 	"""
 	Split the phase calibrators into the fringe-fit passes of select_calibrators.
 
-	Every caltable written by run_phase_referencing is appended with
-	gainfield='', and apply_target then applies all of them to every target,
-	which picks up the nearest solution in time from each pass. Independent
-	target/calibrator pairs therefore have to be solved together in a single
-	pass: giving each its own pass would transfer every other pair's
-	solutions onto every target, from a completely different part of the sky.
-
-	Only a chain of calibrators serving the same field can be split over
-	successive passes, because there that transfer is exactly the intent -
-	the outer calibrator is solved first and its solutions are carried onto
-	the inner one before it is solved in turn.
+	Passes are generations: pass k holds the k-th calibrator of every group
+	that has one, so a chain of N calibrators serving one target is still
+	solved N times in sequence - the outer calibrator first, with its
+	solutions carried onto the next link (run_phase_referencing applies each
+	pass to the next one's field, restricted to that target's own group via
+	calibrator_groups/target_calibrators) before that link is solved in turn.
+	Independent target/calibrator pairs occupying the same generation are
+	solved together in one pass (gaincal/fringefit solve each field
+	independently regardless of how many are given at once), rather than each
+	getting its own pass, which would otherwise multiply the number of
+	caltables an unrestricted apply would have to pick a nearest-in-time
+	solution from.
 	"""
 	groups = roles.get('groups') or []
 	calibrators = list(roles['phase_calibrators'])
 
-	if len(groups) == 1 and len(groups[0]['calibrators']) > 1:
-		return [[c] for c in groups[0]['calibrators']]
-	if calibrators:
-		return [calibrators]
-	return []
+	if not groups:
+		return [calibrators] if calibrators else []
+
+	max_len = max(len(group['calibrators']) for group in groups)
+	passes = []
+	for k in range(max_len):
+		generation = [group['calibrators'][k] for group in groups
+					 if k < len(group['calibrators'])]
+		if generation:
+			passes.append(generation)
+	return passes
 
 
 def phase_referencing_lists(template, ncals):
@@ -1185,11 +1223,32 @@ def build_parset(template, info, roles, args):
 	passes = calibration_passes(roles)
 	phaseref['select_calibrators'] = passes or 'default'
 	phaseref.update(phase_referencing_lists(phaseref, len(passes)))
-	if len(passes) == 1 and len(passes[0]) > 1:
-		notes.append('%d target/phase calibrator pairs are solved in one '
-					 'phase_referencing pass so that each target picks up its '
-					 'own calibrator - do not split them into separate passes'
-					 % len(roles.get('groups') or []))
+	ngroups = len(roles.get('groups') or [])
+	if ngroups > 1:
+		notes.append('%d independent target/phase calibrator pairs are present; '
+					 'any pass they share is applied per-target restricted to '
+					 'its own calibrator(s) (see target_calibrators/'
+					 'calibrator_groups) rather than by nearest-in-time alone'
+					 % ngroups)
+
+	## Record which calibrator(s) actually serve each target, so that
+	## apply_target can restrict gainfield per target instead of letting an
+	## edge scan pick up the nearest-in-time solution from an unrelated
+	## target/calibrator pair. A chained group simply lists every link, so
+	## the whole chain is still applied together to the one target it serves.
+	phaseref['target_calibrators'] = OrderedDict(
+		(t, list(group['calibrators']))
+		for group in (roles.get('groups') or [])
+		for t in group['targets'])
+
+	## Same idea, but keyed by calibrator rather than target: run_phase_referencing
+	## uses this while a chain is being solved, to restrict the self-/forward-apply
+	## of each generation to just the calibrators sharing its own target, in case
+	## that generation also happens to include an unrelated group's calibrator(s).
+	phaseref['calibrator_groups'] = OrderedDict(
+		(c, list(group['calibrators']))
+		for group in (roles.get('groups') or [])
+		for c in group['calibrators'])
 
 	## Scale the measured SNR onto each pass: the template sequence keeps its
 	## shape, and only the intervals the calibrators cannot support are
@@ -1365,6 +1424,13 @@ def parse_args(argv=None):
 						help='measure the fringe SNR of each calibrator from '
 							 'one scan of raw data and size the solution '
 							 'intervals from it (needs the FITS-IDI files)')
+	parser.add_argument('--average-scans', action='store_true',
+						help='use every scan of each calibrator instead of '
+							 'just the longest one, combining their SNRs in '
+							 'quadrature (implies --estimate-snr); slower, '
+							 'but not thrown off by an antenna that was off '
+							 'source on whichever single scan would '
+							 'otherwise have been picked')
 	parser.add_argument('--tune-cal-types', action='store_true',
 						help='also drop self-calibration steps the calibrators '
 							 'are too weak to solve, amplitude steps first '
@@ -1486,13 +1552,14 @@ def main(argv=None):
 			print('%s <- %s' % (', '.join(group['targets']),
 								', '.join(group['calibrators'])))
 
-	if args.tune_cal_types:
+	if args.tune_cal_types or args.average_scans:
 		args.estimate_snr = True
 
 	if args.estimate_snr:
 		if info.get('row_index'):
 			roles['snr'] = measure_calibrator_snr(
-				info, roles['fringe_finders'] + roles['phase_calibrators'])
+				info, roles['fringe_finders'] + roles['phase_calibrators'],
+				average_scans=args.average_scans)
 		else:
 			print('WARNING: --estimate-snr needs the FITS-IDI files, and only '
 				  'a vex file was read - skipping')

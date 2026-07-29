@@ -1073,6 +1073,44 @@ def load_gaintables(params,casa6):
 		gaintables=load_json('%s/vp_gaintables.json'%(cwd),Odict=True,casa6=casa6)
 	return gaintables
 
+def restrict_gaintables_for_target(gaintables, phase_ref_tables, target_calibrators, target):
+	"""
+	Build the gaintable/gainfield/spwmap/interp lists to apply to one target.
+
+	Any phase_referencing caltable is restricted to only the calibrator(s)
+	recorded against this target in 'target_calibrators' (phase_ref_tables
+	tags each such caltable with the calibrator field(s) it was solved from,
+	via 'cal_fields'). Without this, gainfield='' lets CASA pick whichever
+	solution is nearest in time regardless of which target/calibrator pair it
+	came from, so an edge scan of one pair could silently interpolate onto a
+	completely different pair's calibrator. A chained group lists every link
+	against the same target, so the whole chain is still applied together.
+	Caltables from earlier, array-wide stages (apriori_cal, bandpass_cal,
+	sub_band_delay...) are left untouched, since they carry no sky-position
+	dependence. Targets absent from 'target_calibrators' (an isolated target,
+	or a parset written before this mapping existed) fall back to the
+	original, unrestricted behaviour.
+	"""
+	own_cals = set(target_calibrators.get(target, []))
+	phase_ref_fields = dict(zip(phase_ref_tables.get('gaintable', []),
+								 phase_ref_tables.get('cal_fields', [])))
+
+	out = {'gaintable': [], 'gainfield': [], 'spwmap': [], 'interp': []}
+	for table, gainfield, spwmap, interp in zip(gaintables['gaintable'], gaintables['gainfield'],
+												 gaintables['spwmap'], gaintables['interp']):
+		if table not in phase_ref_fields or not own_cals:
+			match_gainfield = gainfield
+		else:
+			matching = [f for f in phase_ref_fields[table] if f in own_cals]
+			if not matching:
+				continue
+			match_gainfield = ','.join(matching)
+		out['gaintable'].append(table)
+		out['gainfield'].append(match_gainfield)
+		out['spwmap'].append(spwmap)
+		out['interp'].append(interp)
+	return out
+
 def find_refants(pref_ant,msinfo):
 	"""Return a comma-separated list of preferred reference antennas present."""
 	antennas = msinfo['ANTENNAS']['anttoID'].keys()
@@ -2638,17 +2676,26 @@ def apply_to_all(	prefix,
 				)
 				archive.close()
 
-		# Apply all calibration tables
-		casalog.post(priority="INFO",origin=func_name,message='Applying %d gaintable(s) to target %s, field(s) %s'%(len(gaintables['gaintable']),i,",".join(targets)))
-		applycal(
-			vis=msfile,
-			field=",".join(targets),
-			gaintable=gaintables['gaintable'],
-			gainfield=gaintables['gainfield'],
-			interp=gaintables['interp'],
-			spwmap=gaintables['spwmap'],
-			parang=gaintables['parang']
-		)
+		# Apply calibration tables one target field at a time, restricting any
+		# phase_referencing caltable to the calibrator(s) that actually serve
+		# that target (see restrict_gaintables_for_target) so an edge scan
+		# cannot silently pick up the nearest-in-time solution from an
+		# unrelated target/calibrator pair
+		gt_r = load_json(f'{cwd}/vp_gaintables.last.json')
+		gt_r_phaseref = gt_r.get('phase_referencing', {'gaintable':[],'cal_fields':[]})
+		target_calibrators = params.get('phase_referencing', {}).get('target_calibrators', {})
+		for t in targets:
+			target_gaintables = restrict_gaintables_for_target(gaintables, gt_r_phaseref, target_calibrators, t)
+			casalog.post(priority="INFO",origin=func_name,message='Applying %d gaintable(s) to target %s, field %s (phase calibrator(s): %s)'%(len(target_gaintables['gaintable']),i,t,", ".join(target_calibrators.get(t, [])) or 'unrestricted'))
+			applycal(
+				vis=msfile,
+				field=t,
+				gaintable=target_gaintables['gaintable'],
+				gainfield=target_gaintables['gainfield'],
+				interp=target_gaintables['interp'],
+				spwmap=target_gaintables['spwmap'],
+				parang=gaintables['parang']
+			)
 
 		if params['apply_target']['flag_target']:
 			casalog.post(priority="INFO",origin=func_name,message='Running tfcrop flagging on calibrated target %s'%i)

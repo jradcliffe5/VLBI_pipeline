@@ -44,18 +44,29 @@ if steps_run['apply_target'] == 1:
 else:
 	flagmanager(vis=msfile,mode='save',versionname='vp_apply_target')
 
-## Apply to standard files
-casalog.post(origin=filename,message='Applying %d gaintable(s) to target field(s): %s'%(len(gaintables['gaintable']),",".join(params['global']['targets'])),priority='INFO')
-applycal(vis='%s%s'%(cwd,msfile),
-	     field=",".join(params['global']['targets']),
-	     gaintable=gaintables['gaintable'],
-		 gainfield=gaintables['gainfield'],
-		 interp=gaintables['interp'],
-		 spwmap=gaintables['spwmap'],
-		 parang=gaintables['parang'])
+## Apply to standard files, one target at a time so that any phase_referencing
+## caltable is restricted to the calibrator(s) that actually serve that target
+gt_r_phaseref = gt_r.get('phase_referencing', {'gaintable':[],'cal_fields':[]})
+target_calibrators = params.get('phase_referencing', {}).get('target_calibrators', {})
 
 for i in params['global']['targets']:
 	casalog.post(origin=filename,message='Processing target field: %s'%i,priority='INFO')
+
+	target_gaintables = restrict_gaintables_for_target(gaintables, gt_r_phaseref, target_calibrators, i)
+	casalog.post(origin=filename,
+				 message='Applying %d gaintable(s) to target field %s (phase calibrator(s): %s)'
+						 %(len(target_gaintables['gaintable']), i,
+						   ", ".join(target_calibrators.get(i, [])) or 'unrestricted'),
+				 priority='INFO')
+	applycal(vis='%s%s'%(cwd,msfile),
+		     field=i,
+		     gaintable=target_gaintables['gaintable'],
+			 gainfield=target_gaintables['gainfield'],
+			 interp=target_gaintables['interp'],
+			 spwmap=target_gaintables['spwmap'],
+			 parang=gaintables['parang'])
+	gt_r['apply_target'] = target_gaintables
+
 	rmdirs(['%s/%s_calibrated.ms'%(cwd,i),'%s/%s_calibrated.ms.flagversions'%(cwd,i)])
 
 	if params['apply_target']["flag_target"] == True:

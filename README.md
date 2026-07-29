@@ -58,12 +58,14 @@ Useful options: `-v <vexfile>` to add/force a schedule (auto-detected next to th
 With `--estimate-snr` it reads one scan of each calibrator and runs a coarse delay/rate FFT per baseline, which gives the SNR a fringe fit would reach without needing a flux scale or Tsys - correlator amplitudes are already normalised correlation coefficients, so `SNR = rho*sqrt(2*bandwidth*time)`.
 
 ```
-CALIBRATOR                 SCAN SNR/BASELINE    SNR/ANTENNA    WEAKEST
+CALIBRATOR             TIME USED SNR/BASELINE    SNR/ANTENNA    WEAKEST
 J0530+1331              4.0 min        382.2          734.1         NT
 J1031+7441              1.6 min         28.9           45.9         NT
 ```
 
 The per-antenna value (every baseline to that antenna combined, as a fringe fit does) is scaled by `sqrt(interval)` and by `sqrt(nspw)` if the spws are combined, and any solution interval in the template that cannot reach `1.5 x min_snr` is lengthened until it can. Intervals the calibrators already support are left untouched, `inf` is never shortened, and if a pass only works with the spws combined then `combine` is set to `spw` for it. A calibrator too weak even for a whole scan with every spw combined is reported as needing in-beam calibration or the `mssc` step. Costs a few seconds per FITS-IDI file.
+
+By default only the single longest scan of each calibrator is measured. Add `--average-scans` (implies `--estimate-snr`) to measure every scan instead and combine their per-baseline SNRs in quadrature - slower, but the result no longer depends on whichever one scan happened to be picked, so an antenna that was off source (parked, slewing, flagged) for just that scan doesn't drop out of the measurement entirely.
 
 Adding `--tune-cal-types` (which implies `--estimate-snr`) also drops self-calibration steps the calibrators cannot solve, holding amplitude steps to twice the SNR of a phase-only solve. Dropped steps are removed from `cal_type`, `sol_interval`, `combine` and `interp_flagged` together so the lists stay aligned, and at least one step is always kept.
 
