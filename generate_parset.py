@@ -84,6 +84,12 @@ COHERENCE_TIME_GHZ_S = 1000.
 COHERENCE_LADDER = [10., 15., 20., 30., 45., 60., 90., 120., 180., 300.,
 					600., 900.]
 
+## How many standard errors a decorrelation dip (or its absence) must clear
+## to be trusted, on top of the plain fractional 'decorrelation_frac' test -
+## keeps a fainter calibrator's noisier per-rung SNR from either faking a
+## dip that isn't there or, just as importantly, masking a real one
+DECORRELATION_SIGNIFICANCE = 2.0
+
 ## Solution types that carry phase, and are therefore limited by coherence.
 ## 'ap' is included because gaincal solves it as a vector average, so losing
 ## coherence biases the amplitude low as well as scrambling the phase.
@@ -515,6 +521,184 @@ def measure_calibrator_snr(info, sources, edge_frac=0.1, average_scans=False,
 	return results
 
 
+def _scan_coherence_time(info, source_id, scan, edge_frac, decorrelation_frac):
+	"""
+	Empirical coherence time (s) from one scan, or None if it cannot support
+	a reliable measurement. See measure_coherence_time for the method.
+	"""
+	nband = info.get('nspw', 1)
+	nchan = info.get('nchan', 1)
+	npol = info.get('npol', 1)
+	antennas = info.get('antenna_numbers', {})
+	start = scan['start_mjd'] + 2400000.5
+	duration = scan['duration']
+
+	rungs = [t for t in COHERENCE_LADDER if t <= duration]
+	if len(rungs) < 3:
+		return None, []
+
+	def rung_snr(tau):
+		## the median per-baseline SNR of ONE tau-length solve, not the
+		## total power pooled across blocks - that is what a solint=tau
+		## self-cal step would actually see, block by block. Also returns
+		## the standard error of that median across blocks (None if too few
+		## blocks to estimate one), so the caller can tell a genuine
+		## decorrelation dip from one too small to have been resolved at
+		## this rung's noise level.
+		nblocks = int(duration // tau)
+		block_snrs = []
+		for b in range(nblocks):
+			t0 = start + b * tau / 86400.
+			t1 = t0 + tau / 86400.
+			block = _scan_baseline_snr(info['row_index'], source_id, t0, t1,
+									   nband, nchan, npol, edge_frac, antennas)
+			if block:
+				block_snrs.append(float(np.median(list(block.values()))))
+		if not block_snrs:
+			return None, None
+		sem = (np.std(block_snrs, ddof=1) / np.sqrt(len(block_snrs))
+			   if len(block_snrs) > 1 else None)
+		return float(np.median(block_snrs)), sem
+
+	measured = [(t,) + rung_snr(t) for t in rungs]
+	measured = [(t, s, sem) for t, s, sem in measured if s]
+	## the shortest rung anchors the ideal curve, so it has to be trustworthy
+	## itself - too few blocks, or too little SNR, and the whole comparison
+	## is just noise
+	if len(measured) < 3 or measured[0][1] < 5.0:
+		return None, measured
+
+	def dip_and_noise(t, s, sem, t0, s0, sem0):
+		"""Shortfall below the sqrt(tau) ideal, and its propagated 1-sigma
+		uncertainty, for one rung against the anchor rung."""
+		ideal = s0 * np.sqrt(t / t0)
+		dip = ideal - s
+		noise = np.hypot(sem0 * np.sqrt(t / t0) if sem0 else 0., sem or 0.)
+		return ideal, dip, noise
+
+	def confirmed_dip(t, s, sem, t0, s0, sem0):
+		"""A dip counts as real decorrelation only if it is both a
+		physically meaningful fraction of the ideal curve AND large enough,
+		relative to this rung's own measurement noise, to be distinguished
+		from a noise fluctuation - the second condition is what stops a
+		fainter calibrator's noisier rungs from either faking a dip or
+		(via the caller's power check below) rubber-stamping a real one as
+		'no decorrelation' just because it could not have seen it either
+		way."""
+		ideal, dip, noise = dip_and_noise(t, s, sem, t0, s0, sem0)
+		if dip <= (1. - decorrelation_frac) * ideal:
+			return False
+		return noise <= 0. or dip > DECORRELATION_SIGNIFICANCE * noise
+
+	t0, s0, sem0 = measured[0]
+	coherence = None
+	for idx in range(1, len(measured)):
+		t, s, sem = measured[idx]
+		if not confirmed_dip(t, s, sem, t0, s0, sem0):
+			continue
+		if idx + 1 < len(measured):
+			t_next, s_next, sem_next = measured[idx + 1]
+			if not confirmed_dip(t_next, s_next, sem_next, t0, s0, sem0):
+				continue
+		coherence = t
+		break
+
+	if coherence is None:
+		## nothing along the ladder ever confirmed a decorrelation - only
+		## trust that as "coherent out to the last rung" if the last rung's
+		## own noise was tight enough that a real decorrelation_frac-sized
+		## dip would actually have been caught; otherwise this measurement
+		## simply lacked the sensitivity to say either way, and reporting
+		## its longest rung as the coherence time would be over-confident
+		t_last, s_last, sem_last = measured[-1]
+		ideal_last, _, noise_last = dip_and_noise(t_last, s_last, sem_last,
+												  t0, s0, sem0)
+		detectable = (1. - decorrelation_frac) * ideal_last
+		if noise_last > 0. and DECORRELATION_SIGNIFICANCE * noise_last > detectable:
+			return None, measured
+		coherence = t_last
+
+	return coherence, measured
+
+
+def measure_coherence_time(info, source, edge_frac=0.1, decorrelation_frac=0.7,
+							n_samples=5, verbose=True):
+	"""
+	Empirical tropospheric coherence time (s), measured from raw visibilities
+	instead of assumed from frequency alone.
+
+	Uncalibrated SNR should grow as sqrt(tau) for any interval short enough
+	that the atmosphere stays coherent across it - fringe_search_snr already
+	relies on exactly that when it forms its coarse delay/rate peak. Once tau
+	approaches the coherence time the residual phase starts to wind within
+	the interval, so the straight average loses coherence and measured SNR
+	falls below that sqrt(tau) trend. For one scan, this walks the coherence
+	ladder, measures the per-baseline SNR of one solve at each rung (the
+	median over as many independent, non-overlapping blocks of that length as
+	the scan offers), and takes the first rung whose SNR undershoots the
+	sqrt(tau) prediction anchored at the shortest rung by more than
+	'decorrelation_frac' - confirmed by the following rung too, so one noisy
+	block does not masquerade as decorrelation.
+
+	A single scan only samples one elevation, and coherence time genuinely
+	gets shorter at low elevation (more atmosphere along the line of sight),
+	so this repeats the measurement on up to 'n_samples' of the source's
+	scans spread evenly across its own time range (the longest scan in each
+	time bucket, for the most reliable read at that point in the track), and
+	returns the shortest of the valid measurements - the conservative,
+	worst-elevation cap, applied as one number for the whole parset.
+
+	Returns None if none of the sampled scans can support a reliable
+	measurement (too weak or too short to offer enough rungs), so the caller
+	can fall back to the frequency-based rule of thumb.
+	"""
+	source_id = info.get('source_ids', {}).get(source)
+	scans = sorted([s for s in info['scans'] if s['source'] == source],
+				   key=lambda s: s['start_mjd'])
+	if source_id is None or not scans:
+		return None
+
+	if len(scans) <= n_samples:
+		candidates = scans
+	else:
+		step = len(scans) / float(n_samples)
+		candidates, seen = [], set()
+		for i in range(n_samples):
+			lo = int(round(i * step))
+			hi = max(int(round((i + 1) * step)), lo + 1)
+			bucket = scans[lo:hi] or [scans[min(lo, len(scans) - 1)]]
+			pick = max(bucket, key=lambda s: s['duration'])
+			if pick['start_mjd'] not in seen:
+				seen.add(pick['start_mjd'])
+				candidates.append(pick)
+
+	results = []
+	for scan in candidates:
+		coherence, measured = _scan_coherence_time(info, source_id, scan,
+												   edge_frac, decorrelation_frac)
+		if coherence is not None:
+			results.append((scan, coherence, measured))
+
+	if verbose and results:
+		print('')
+		print('Coherence time measured on %s (%d of %d scan(s) sampled '
+			  'across the track):' % (source, len(candidates), len(scans)))
+		print('%12s %10s %14s' % ('START (MJD)', 'SCAN (s)', 'COHERENCE (s)'))
+		for scan, coherence, measured in results:
+			print('%12.4f %10.0f %14s'
+				  % (scan['start_mjd'], scan['duration'], format_time(coherence)))
+
+	if not results:
+		return None
+
+	worst = min(results, key=lambda r: r[1])
+	if verbose:
+		print('-> shortest (worst-elevation) coherence time: %s, at MJD %.4f'
+			  % (format_time(worst[1]), worst[0]['start_mjd']))
+
+	return worst[1]
+
+
 def scaled_snr(measurement, tau, nspw=1, combine_spw=False):
 	"""SNR the measurement implies for a different solution interval."""
 	gain = np.sqrt(nspw) if combine_spw else 1.
@@ -560,19 +744,23 @@ def fix_solints(sequence, scan_length, measurement, int_time, threshold, nspw,
 	longer than the coherence time is pulled back to it - solving for phase
 	beyond that gains no SNR, it only averages the atmosphere away. When the
 	two cannot be satisfied at once the spws are combined instead, which buys
-	SNR with bandwidth rather than time.
+	SNR with bandwidth rather than time; if even that is not enough, the
+	interval is allowed past the scan boundary (combine='scan'), which buys
+	SNR from however often the calibrator is actually revisited, still
+	without exceeding the coherence time.
 
 	The template sequence carries the intent of the calibration, so intervals
 	that already work are left exactly as they are. Without a measurement only
 	the coherence cap is applied, since that depends on frequency alone.
-	Returns the new sequence, whether the spws have to be combined, and a list
-	of what changed.
+	Returns the new sequence, the CASA combine axes needed ('spw'/'scan', a
+	tuple of both, or empty), and a list of what changed.
 	"""
-	combine, replacement = False, None
+	combine, replacement = (), None
 	if measurement is not None:
 		shortest, combine = recommend_solint(measurement, int_time, threshold,
 											 nspw, scan_length, max_tau=max_tau)
-		replacement = format_solint(shortest, scan_length)
+		replacement = format_solint(shortest, scan_length,
+									combine_scan='scan' in combine)
 
 	fixed, changes = [], []
 	for j, interval in enumerate(sequence):
@@ -591,7 +779,7 @@ def fix_solints(sequence, scan_length, measurement, int_time, threshold, nspw,
 				changes.append('%s -> %s (coherence)' % (interval, capped))
 
 		if measurement is None \
-		   or scaled_snr(measurement, tau, nspw, combine) >= threshold:
+		   or scaled_snr(measurement, tau, nspw, 'spw' in combine) >= threshold:
 			fixed.append(capped)
 		else:
 			fixed.append(replacement)
@@ -607,31 +795,156 @@ def recommend_solint(measurement, int_time, threshold, nspw, scan_length,
 
 	SNR grows as the square root of the solution interval, and by another
 	sqrt(nspw) if the spectral windows are combined, so the measured value is
-	simply scaled. 'max_tau' caps how far the interval may be stretched, as
-	nothing is gained by averaging past the coherence time. Returns
-	(seconds, combine_spw), or (None, True) when even the longest usable
-	interval with every spw combined falls short.
+	simply scaled. Everything up to a whole scan is tried first - alone, then
+	with the spws pooled - since that keeps the calibrator's own time
+	resolution. Only once neither helps is the interval allowed past the scan
+	boundary (CASA combine='scan'): solint itself still bounds the averaging
+	window, so this only pays off where the calibrator is actually revisited
+	inside that window, and is a no-op otherwise. 'max_tau' caps how far any
+	solve may be stretched either way, as nothing is gained by averaging past
+	the coherence time. Returns (seconds, combine), where combine is a tuple
+	of the CASA combine axes needed (any of 'spw'/'scan', or empty), or
+	(max_tau or None, ('spw', 'scan')) when even that falls short.
+
+	Orphan-timestep safety (a concrete solint leaving a scan's last chunk too
+	narrow for fringefit's FFT) is deliberately not this function's job - it
+	is handled at solve time instead, by splitting any affected scan(s) out
+	to their own solint='inf' fringefit call; see orphan_safe_scan_split in
+	VLBI_pipe_functions.py and its use in run_phase_referencing.py. That
+	keeps the fine time resolution SNR alone would support, rather than
+	backing every step off to whatever the raggedest scan in the pass can
+	tolerate.
 	"""
 	floor = max(3 * int_time, 10.)
-	options = [t for t in SOLINT_CHOICES if floor <= t < scan_length] \
+	within_scan = [t for t in SOLINT_CHOICES if floor <= t < scan_length] \
 		+ [scan_length]
+	beyond_scan = [t for t in SOLINT_CHOICES if t > scan_length]
 	if max_tau is not None:
-		options = [t for t in options if t <= max_tau] or [min(floor, max_tau)]
+		within_scan = [t for t in within_scan if t <= max_tau] \
+			or [min(floor, max_tau)]
+		beyond_scan = [t for t in beyond_scan if t <= max_tau]
+		if max_tau > scan_length:
+			beyond_scan = sorted(set(beyond_scan + [max_tau]))
 
-	for combine in (False, True):
-		for tau in options:
-			if scaled_snr(measurement, tau, nspw, combine) >= threshold:
-				return tau, combine
-	return None, True
+	for combine_spw in (False, True):
+		for tau in within_scan:
+			if scaled_snr(measurement, tau, nspw, combine_spw) >= threshold:
+				return tau, (('spw',) if combine_spw else ())
+
+	for combine_spw in (False, True):
+		for tau in beyond_scan:
+			if scaled_snr(measurement, tau, nspw, combine_spw) >= threshold:
+				return tau, (('scan', 'spw') if combine_spw else ('scan',))
+
+	return (max_tau, ('spw', 'scan'))
 
 
-def format_solint(seconds, scan_length):
-	"""CASA solution interval string for a length in seconds."""
-	if seconds is None or seconds >= scan_length:
+def format_solint(seconds, scan_length, combine_scan=False):
+	"""
+	CASA solution interval string for a length in seconds.
+
+	'combine_scan' marks an interval meant to reach past a single scan
+	(combine='scan' downstream): it must stay a concrete number, since with
+	combine='scan' 'inf' does not mean "one scan" but "every scan of the
+	selection", which would swallow far more time than intended.
+	"""
+	if seconds is None:
+		return 'inf'
+	if not combine_scan and seconds >= scan_length:
 		return 'inf'
 	if seconds >= 60 and seconds % 60 == 0:
 		return '%dmin' % int(seconds / 60)
 	return '%ds' % int(round(seconds))
+
+
+def build_cal_sequence(measurement, int_time, threshold, nspw, scan_length,
+					   max_tau):
+	"""
+	Build a phase-referencing self-cal sequence for one pass from scratch,
+	sized purely by the calibrator's measured SNR - no template involved.
+
+	Follows the standard bootstrap, in order:
+
+	  1. a multi-band delay ('f' with combine forced to include 'spw') - the
+	     widest-bandwidth, most robust delay/rate lock available, and the
+	     only thing that can be solved before anything else means anything;
+	  2. a per-spw fringe fit ('f', combine sized by SNR as usual) refining
+	     delay/rate within the narrower search window the multi-band delay
+	     already established (run_phase_referencing.py tightens the search
+	     window itself for any 'f' step after the pass's first);
+	  3. a phase-only alignment ('p') at the same interval as step 2, since
+	     fringefit's own phase is a by-product of the delay/rate search
+	     rather than a proper solve;
+	  4. amplitude self-calibration ('ap'), only where the SNR clears
+	     AMPLITUDE_SNR_FACTOR times the phase threshold, so it lands on a
+	     longer (or equal) interval than steps 2/3;
+	  5. if step 4 needed a longer interval, one final re-solve back at
+	     steps 2/3's shorter interval, recovering the time resolution
+	     amplitude self-cal had to give up - a fringe fit ('f') if the SNR
+	     that supported steps 2/3 supports it (which, since 'f' and 'p'
+	     share one threshold in this model, it always does whenever this
+	     step is reached at all), otherwise a phase-only realign ('p').
+
+	Every interval/combine setting other than the forced multi-band delay
+	comes straight out of recommend_solint, so it already respects the
+	coherence-time ceiling exactly as fix_solints does; forcing 'spw' onto
+	the multi-band delay can only raise its achieved SNR, never lower it, so
+	it cannot need a longer interval than recommend_solint already found.
+
+	Returns (cal_type, sol_interval, combine, interp_flagged, notes), or
+	None if the calibrator cannot even support a multi-band delay solve.
+	"""
+	def solve(needed):
+		tau, combine = recommend_solint(measurement, int_time, needed, nspw,
+										scan_length, max_tau=max_tau)
+		ok = tau is not None \
+			and scaled_snr(measurement, tau, nspw, 'spw' in combine) >= needed
+		return tau, combine, ok
+
+	tau_mbd, combine_mbd, ok_mbd = solve(threshold)
+	if tau_mbd is None:
+		return None
+	combine_mbd = tuple(sorted(set(combine_mbd) | {'spw'}))
+
+	notes = []
+	steps = [('f', tau_mbd, combine_mbd)]
+
+	if not ok_mbd:
+		notes.append('too weak for even a multi-band delay to clear SNR '
+					 '%.0f (best %.0f) - solution will likely be flagged'
+					 % (threshold, scaled_snr(measurement, tau_mbd, nspw, True)))
+	else:
+		tau_p, combine_p, ok_p = solve(threshold)
+		steps.append(('f', tau_p, combine_p))
+		steps.append(('p', tau_p, combine_p))
+
+		if not ok_p:
+			notes.append('too weak for a per-spw fringe fit/phase alignment '
+						 'to clear SNR %.0f (best %.0f) - solution will '
+						 'likely be flagged'
+						 % (threshold, scaled_snr(measurement, tau_p, nspw,
+												  'spw' in combine_p)))
+		else:
+			amp_needed = threshold * AMPLITUDE_SNR_FACTOR
+			tau_ap, combine_ap, ok_ap = solve(amp_needed)
+			if ok_ap:
+				steps.append(('ap', tau_ap, combine_ap))
+				if tau_ap > tau_p:
+					steps.append(('f' if ok_p else 'p', tau_p, combine_p))
+			else:
+				notes.append('amplitude self-calibration skipped - needs '
+							 'SNR %.1f, only reaches %.1f'
+							 % (amp_needed,
+								scaled_snr(measurement, tau_ap, nspw,
+										  'spw' in combine_ap)
+								if tau_ap is not None else 0.))
+
+	cal_type = [s[0] for s in steps]
+	sol_interval = [format_solint(s[1], scan_length,
+								  combine_scan='scan' in s[2]) for s in steps]
+	combine = [','.join(sorted(s[2])) for s in steps]
+	interp_flagged = [True] * len(steps)
+	return cal_type, sol_interval, combine, interp_flagged, notes
 
 
 def read_vex(vexfile):
@@ -959,12 +1272,31 @@ def classify_sources(info, max_sep=10.0, min_transitions=3, verbose=True):
 							  if c not in phase_calibrators]
 
 	## A pipeline run needs something to fringe fit on - fall back to the
-	## brightest looking calibrator if the schedule had no obvious one
+	## brightest phase calibrator if the schedule had no obvious one, judged
+	## by the same raw-data fringe SNR measurement used elsewhere
 	if not fringe_finders and phase_calibrators:
-		print('WARNING: no fringe finder identified, using the phase '
-			  'calibrator(s) with the longest scans instead')
-		fringe_finders = [sorted(phase_calibrators,
-								 key=lambda n: -stats[n]['median_duration'])[0]]
+		candidate_snr = measure_calibrator_snr(info, phase_calibrators,
+											   verbose=False) \
+			if info.get('row_index') else {}
+		if candidate_snr:
+			brightest = max(candidate_snr,
+							key=lambda n: candidate_snr[n]['snr_antenna'])
+			print('WARNING: no fringe finder identified, using the phase '
+				  'calibrator with the highest measured fringe SNR (%s, '
+				  '%.0f) instead' % (brightest,
+									 candidate_snr[brightest]['snr_antenna']))
+		else:
+			## no raw visibilities to measure brightness from at all (e.g. a
+			## vex-only run) - fall back to the first calibrator of the
+			## most-observed phase-referencing group, already the front of
+			## this list; an arbitrary but deterministic choice, not a
+			## brightness proxy
+			brightest = phase_calibrators[0]
+			print('WARNING: no fringe finder identified and no raw '
+				  'visibilities available to measure fringe SNR - using %s '
+				  '(from the most-observed phase-referencing group) instead, '
+				  'with no way to judge its brightness' % brightest)
+		fringe_finders = [brightest]
 
 	if verbose:
 		def row(name, role, indent=0):
@@ -1097,6 +1429,7 @@ def build_parset(template, info, roles, args):
 	params = json.loads(json.dumps(template), object_pairs_hook=OrderedDict)
 	notes = []
 	tune_cal_types = getattr(args, 'tune_cal_types', False)
+	estimate_cal_types = getattr(args, 'estimate_cal_types', False)
 
 	project_code = (args.project_code or info.get('project_code') or '').lower()
 	cwd = os.path.abspath(args.cwd)
@@ -1197,7 +1530,46 @@ def build_parset(template, info, roles, args):
 	int_time = info.get('int_time', 2.)
 	nspw = info.get('nspw', 1)
 	freq = info.get('ref_freq') or 0.
-	t_coh = coherence_time(freq)
+
+	t_coh_cache = {}
+	def measured_t_coh(candidates, verbose=False):
+		"""
+		Empirical coherence time from the best of 'candidates' (by measured
+		SNR) that yields a reliable measurement, or (None, None) if none do.
+		Memoised so a source shared between the parset-wide default and one
+		or more passes is only ever read from raw data once.
+		"""
+		for candidate in sorted(candidates, key=lambda s: -snr[s]['snr_antenna']):
+			if candidate not in t_coh_cache:
+				t_coh_cache[candidate] = measure_coherence_time(
+					info, candidate, verbose=verbose)
+			if t_coh_cache[candidate] is not None:
+				return t_coh_cache[candidate], candidate
+		return None, None
+
+	coherence_time_mode = getattr(args, 'coherence_time', 'auto')
+
+	if coherence_time_mode == 'estimated':
+		t_coh = coherence_time(freq)
+		t_coh_note = 'the %.2f GHz frequency-based rule of thumb' % (freq / 1e9) \
+			if freq > 0 else 'an unknown-frequency default'
+	else:
+		t_coh = None if coherence_time_mode == 'measured' else coherence_time(freq)
+		t_coh_note = 'no reliable empirical coherence-time measurement ' \
+			'available for any calibrator' if coherence_time_mode == 'measured' \
+			else ('the %.2f GHz frequency-based rule of thumb' % (freq / 1e9)
+				  if freq > 0 else 'an unknown-frequency default')
+		if snr and info.get('row_index'):
+			## a measurement beats the frequency-only rule of thumb whenever the
+			## data can actually support one - try the strongest calibrator
+			## first, falling back down the ranking if its scan turns out too
+			## short or too weak to give a reliable measurement
+			measured, candidate = measured_t_coh(list(snr), verbose=True)
+			if measured is not None:
+				t_coh = measured
+				t_coh_note = 'measured on %s' % candidate
+	notes.append('phase-bearing solves capped at the ~%s coherence time (%s)'
+				 % (format_time(t_coh) if t_coh else 'unbounded', t_coh_note))
 	threshold = SNR_MARGIN * float(np.atleast_1d(sbd['min_snr'])[0])
 	measured = [snr[f] for f in roles['fringe_finders'] if f in snr]
 	## the whole pass is solved together, so the weakest one sets the pace
@@ -1209,9 +1581,10 @@ def build_parset(template, info, roles, args):
 	if changes:
 		notes.append('sub_band_delay solution interval %s' % ', '.join(changes))
 	if combine:
-		notes.append('the fringe finder(s) reach SNR %.0f only with the '
-					 'spws combined, but sub_band_delay has to solve per '
-					 'spw - expect flagged solutions' % threshold)
+		notes.append('the fringe finder(s) only reach SNR %.0f with the %s '
+					 'combined, but sub_band_delay always solves per spw and '
+					 'per scan - expect flagged solutions'
+					 % (threshold, ' and '.join(sorted(combine))))
 
 	bpass = params['bandpass_cal']
 	bpass['same_as_sbd_cal'] = True
@@ -1263,11 +1636,45 @@ def build_parset(template, info, roles, args):
 								 for c in pass_calibrators
 								 if c in roles['stats']] or [60.])
 
+		## This pass's own calibrator(s) sit on their own line of sight, so
+		## prefer a coherence time measured on them over the parset-wide
+		## default measured on whichever source ranked best overall -
+		## skipped entirely in 'estimated' mode, which never touches raw data
+		pass_t_coh, pass_t_coh_source = \
+			measured_t_coh(measured) if coherence_time_mode != 'estimated' \
+			else (None, None)
+		if pass_t_coh is None:
+			pass_t_coh = t_coh
+		elif t_coh is None or abs(pass_t_coh - t_coh) > 1e-6:
+			notes.append('pass %d coherence time measured on %s: %s (parset '
+						 'default %s)'
+						 % (i + 1, pass_t_coh_source, format_time(pass_t_coh),
+							format_time(t_coh) if t_coh is not None
+							else 'unknown'))
+
+		if estimate_cal_types and weakest is not None:
+			built = build_cal_sequence(weakest, int_time, threshold, nspw,
+									   scan_length, pass_t_coh)
+			if built is not None:
+				cal_type, sol_interval, combine_list, interp_flagged, seq_notes = built
+				phaseref['cal_type'][i] = cal_type
+				phaseref['sol_interval'][i] = sol_interval
+				phaseref['combine'][i] = combine_list
+				phaseref['interp_flagged'][i] = interp_flagged
+				notes.append('pass %d built from scratch from %s (SNR %.0f): %s'
+							 % (i + 1, weakest_name, weakest['snr_antenna'],
+								' -> '.join('%s(%s%s)' % (c, s, ',' + cb if cb else '')
+										   for c, s, cb in zip(cal_type, sol_interval,
+															   combine_list))))
+				for n in seq_notes:
+					notes.append('pass %d: %s' % (i + 1, n))
+				continue
+
 		fixed, combine, changes = fix_solints(phaseref['sol_interval'][i],
 											  scan_length, weakest, int_time,
 											  threshold, nspw,
 											  phaseref['cal_type'][i],
-											  max_tau=t_coh)
+											  max_tau=pass_t_coh)
 		phaseref['sol_interval'][i] = fixed
 		if changes:
 			notes.append('phase_referencing pass %d intervals: %s'
@@ -1275,17 +1682,32 @@ def build_parset(template, info, roles, args):
 		if weakest is None:
 			continue
 		if combine:
-			phaseref['combine'][i] = ['spw'] * len(phaseref['combine'][i])
-			notes.append('pass %d combines the spws throughout - %s only '
-						 'reaches SNR %.0f per spw, against the %.0f needed'
-						 % (i + 1, weakest_name,
-							scaled_snr(weakest, weakest['tau']), threshold))
-		if scaled_snr(weakest, weakest['tau'], nspw, True) < threshold:
-			notes.append('%s is too weak to fringe fit even with every spw '
-						 'combined over a whole scan (SNR %.0f) - consider '
-						 'in-beam calibration or the mssc step'
+			combine_str = ','.join(sorted(combine))
+			phaseref['combine'][i] = [combine_str] * len(phaseref['combine'][i])
+			notes.append('pass %d combines %s throughout - %s only reaches '
+						 'SNR %.0f at its natural cadence, against the %.0f '
+						 'needed%s'
+						 % (i + 1, combine_str, weakest_name,
+							scaled_snr(weakest, weakest['tau']), threshold,
+							' (relies on being revisited inside the coherence '
+							'time - a no-op otherwise)'
+							if 'scan' in combine else ''))
+
+		## The hard ceiling: the most any solve is ever allowed to average
+		## over is the coherence time (unbounded only if the frequency, and
+		## so the coherence time, is unknown) - if pooling both spw and scan
+		## up to there still falls short, no combine setting will save it
+		ceiling_tau = pass_t_coh if pass_t_coh is not None \
+			else max(scan_length, weakest['tau'])
+		best_possible = scaled_snr(weakest, ceiling_tau, nspw, True)
+		if best_possible < threshold:
+			notes.append('%s is too weak to fringe fit even %scombining '
+						 'spw and scan (SNR %.0f) - consider in-beam '
+						 'calibration or the mssc step'
 						 % (weakest_name,
-							scaled_snr(weakest, weakest['tau'], nspw, True)))
+							('at the %s coherence time, ' % format_time(ceiling_tau))
+							if pass_t_coh is not None else '',
+							best_possible))
 
 		## Steps the calibrator cannot actually solve are dropped rather than
 		## left to produce flagged solutions. Amplitude self-calibration is
@@ -1298,7 +1720,7 @@ def build_parset(template, info, roles, args):
 			needed = threshold * (AMPLITUDE_SNR_FACTOR
 								  if cal_type in ('a', 'ap') else 1.)
 			if tau is not None and \
-			   scaled_snr(weakest, tau, nspw, combine) >= needed:
+			   scaled_snr(weakest, tau, nspw, 'spw' in combine) >= needed:
 				keep.append(j)
 		if not keep:
 			keep = [0]
@@ -1354,13 +1776,11 @@ def build_parset(template, info, roles, args):
 		sbd['do_disp_delays'] = bool(dispersive)
 
 		notes.append('at %.2f GHz: %s a dispersive delay term (%s in the phase '
-					 'referencing), %s an ionospheric TEC correction, and phase '
-					 'solves capped at the ~%s coherence time'
+					 'referencing), and %s an ionospheric TEC correction'
 					 % (freq / 1e9,
 						'fitting' if dispersive else 'not fitting',
 						'fitted' if phase_ref_dispersive else 'not fitted',
-						'applying' if freq < IONOSPHERE_MAX_FREQ else 'skipping',
-						format_time(t_coh) if t_coh else 'unknown'))
+						'applying' if freq < IONOSPHERE_MAX_FREQ else 'skipping'))
 
 	# ---------------------------------------------------------- apply_to_all
 	apply_all = params['apply_to_all']
@@ -1435,6 +1855,27 @@ def parse_args(argv=None):
 						help='also drop self-calibration steps the calibrators '
 							 'are too weak to solve, amplitude steps first '
 							 '(implies --estimate-snr)')
+	parser.add_argument('--estimate-cal-types', action='store_true',
+						help='build each phase-referencing self-cal sequence '
+							 'from scratch from the measured SNR alone '
+							 '(fringe fit, phase align, then amplitude+phase '
+							 'and a final phase realign where the SNR '
+							 'supports them), instead of pruning the template '
+							 'sequence (implies --estimate-snr; overrides '
+							 '--tune-cal-types for any pass with a '
+							 'measurement)')
+	parser.add_argument('--coherence-time', choices=('auto', 'measured', 'estimated'),
+						default='auto',
+						help="how to set the coherence-time ceiling that caps "
+							 "phase-bearing solution intervals: 'auto' prefers "
+							 "an empirical measurement from raw data (needs "
+							 "--estimate-snr) and falls back to the frequency-"
+							 "based rule of thumb wherever no calibrator can "
+							 "support one (default); 'measured' uses only the "
+							 "empirical measurement, leaving the ceiling "
+							 "unbounded wherever it cannot be made; "
+							 "'estimated' always uses the frequency-based rule "
+							 "of thumb and skips the raw-data read entirely")
 	parser.add_argument('--max-separation', type=float, default=10.0,
 						help='maximum separation (deg) for two sources to be '
 							 'considered a phase-referencing pair')
@@ -1552,7 +1993,7 @@ def main(argv=None):
 			print('%s <- %s' % (', '.join(group['targets']),
 								', '.join(group['calibrators'])))
 
-	if args.tune_cal_types or args.average_scans:
+	if args.tune_cal_types or args.average_scans or args.estimate_cal_types:
 		args.estimate_snr = True
 
 	if args.estimate_snr:

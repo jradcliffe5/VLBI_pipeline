@@ -130,25 +130,57 @@ for i in range(len(fields)):
 			else:
 				delaywindow=[]
 				ratewindow = []
+
+			combine_ij = params['phase_referencing']['combine'][i][j]
+			tau = parse_solint_seconds(params['phase_referencing']['sol_interval'][i][j])
+			safe_scans, ragged_scans = [], []
+			if tau is not None and 'scan' not in combine_ij:
+				field_ids = [msinfo['FIELD']['fieldtoID'][f] for f in fields[i]
+							 if f in msinfo['FIELD']['fieldtoID']]
+				safe_scans, ragged_scans = orphan_safe_scan_split(msfile, field_ids, tau)
+
+			## Solve most scans at the fine solint the parset asked for; any
+			## scan whose length would leave fringefit's FFT an orphan
+			## timestep at that solint is re-solved at solint='inf' instead,
+			## appended into the same caltable - see orphan_safe_scan_split.
+			## Applies equally to the MPI branch below, since MMS partitions
+			## split by spw share the same scan/time structure as the parent MS.
+			calls = [{'scan': '',
+					 'solint': params['phase_referencing']['sol_interval'][i][j]}]
+			if ragged_scans:
+				casalog.post(origin=filename, priority='WARN',
+							message='solint=%s leaves an orphan timestep on scan(s) '
+									'%s of %s - solving those at solint=inf instead'
+									% (params['phase_referencing']['sol_interval'][i][j],
+									   ','.join(str(s) for s in ragged_scans),
+									   ','.join(fields[i])))
+				calls = ([{'scan': ','.join(str(s) for s in safe_scans),
+						  'solint': params['phase_referencing']['sol_interval'][i][j]}]
+						 if safe_scans else []) \
+					+ [{'scan': ','.join(str(s) for s in ragged_scans), 'solint': 'inf'}]
+
 			if parallel==False:
-				fringefit(vis=msfile,
-						caltable=caltable,
-						field=','.join(fields[i]),
-						solint=params['phase_referencing']['sol_interval'][i][j],
-						zerorates=False,
-						niter=params['phase_referencing']['fringe_niter'],
-						refant=refant,
-						combine=params['phase_referencing']['combine'][i][j],
-						minsnr=params['phase_referencing']['min_snr'],
-						paramactive=paramactive,
-						delaywindow=delaywindow,
-						ratewindow=ratewindow,
-						gaintable=gaintables['gaintable'],
-						gainfield=gaintables['gainfield'],
-						interp=gaintables['interp'],
-						spwmap=gaintables['spwmap'],
-						corrdepflags=True,
-						parang=gaintables['parang'])
+				for k, call in enumerate(calls):
+					fringefit(vis=msfile,
+							caltable=caltable,
+							field=','.join(fields[i]),
+							scan=call['scan'],
+							solint=call['solint'],
+							zerorates=False,
+							niter=params['phase_referencing']['fringe_niter'],
+							refant=refant,
+							combine=combine_ij,
+							minsnr=params['phase_referencing']['min_snr'],
+							paramactive=paramactive,
+							delaywindow=delaywindow,
+							ratewindow=ratewindow,
+							gaintable=gaintables['gaintable'],
+							gainfield=gaintables['gainfield'],
+							interp=gaintables['interp'],
+							spwmap=gaintables['spwmap'],
+							corrdepflags=True,
+							parang=gaintables['parang'],
+							append=(k > 0))
 			else:
 				subms = natural_sort(os.listdir('%s/SUBMSS'%msfile))
 				rmdirs(['%s_temp'%(caltable)])
@@ -156,7 +188,17 @@ for i in range(len(fields)):
 				subcaltable=[]
 				for s in subms:
 					subcaltable.append('%s_temp/%s_%s'%(caltable,caltable.split("/")[-1],s))
-					cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); fringefit(vis='%s/SUBMSS/%s',caltable='%s_temp/%s_%s',field='%s',solint=params['phase_referencing']['sol_interval'][%d][%d],zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant='%s',combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'])" %(mpipath,msfile,s,caltable,caltable.split("/")[-1],s,','.join(fields[i]),i,j,refant,i,j,str(paramactive),str(delaywindow),str(ratewindow))
+					## Each call in 'calls' becomes its own fringefit statement,
+					## chained in order on the same remote server so a ragged-scan
+					## call (append=True) lands in the same sub-caltable as the
+					## fine-solint call that created it.
+					fringefit_calls = '; '.join(
+						"fringefit(vis='%s/SUBMSS/%s',caltable='%s_temp/%s_%s',field='%s',scan='%s',solint='%s',zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant='%s',combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'],append=%s)"
+						% (msfile,s,caltable,caltable.split("/")[-1],s,','.join(fields[i]),
+						   call['scan'],call['solint'],refant,i,j,str(paramactive),
+						   str(delaywindow),str(ratewindow),str(k>0))
+						for k, call in enumerate(calls))
+					cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); " %(mpipath) + fringefit_calls
 					cmdId = client.push_command_request(cmd1,block=False,target_server=None,parameters=None)
 					cmd.append(cmdId[0])
 				resultList = client.get_command_response(cmd,block=True)

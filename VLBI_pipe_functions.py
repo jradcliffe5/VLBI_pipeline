@@ -774,6 +774,74 @@ def get_ms_info(msfile):
 	'''
 	return msinfo
 
+def parse_solint_seconds(value):
+	"""
+	Length of a CASA solution interval string in seconds, or None for a whole
+	scan ('inf'/'int'/''). Mirrors generate_parset.parse_solint, since the
+	orphan-timestep check below needs to reason about the same concrete
+	solint the pipeline is about to hand to fringefit.
+	"""
+	if isinstance(value, (int, float)):
+		return float(value)
+	value = str(value).strip().lower()
+	if value in ('', 'inf', 'int'):
+		return None
+	match = re.match(r'^([\d\.]+)\s*(s|sec|min|m|h)?$', value)
+	if match is None:
+		return None
+	scale = {'min': 60., 'm': 60., 'h': 3600.}.get(match.group(2), 1.)
+	return float(match.group(1)) * scale
+
+def orphan_safe_scan_split(msfile, field_ids, tau):
+	"""
+	Split a field's scans by whether a concrete fringefit solint of 'tau'
+	seconds can tile them safely.
+
+	fringefit chunks each scan into fixed-width solint bins starting from
+	that scan's own start, and a bin only one dump wide is not enough for
+	fringefit's per-bin FFT, which fails with "Can't do a 2-dimensional FFT
+	on a single timestep!". This is not just a matter of the scan dividing
+	evenly by 'tau': a scan whose duration is an exact multiple of 'tau' is
+	actually a worst case, since its very last dump then sits exactly on the
+	next bin's boundary, alone, with no scan left to give it company. So
+	rather than reasoning about the continuous duration, this walks the
+	scan's actual dump grid backwards from its last dump and counts how many
+	dumps share that final dump's bin. Real schedules commonly stretch or
+	clip a scan or two near the end of a track, so a solint sized purely from
+	the calibrator's SNR can tile most scans cleanly and still hit this on
+	the odd one out.
+
+	Returns (safe_scan_ids, ragged_scan_ids), both sorted lists of ints -
+	'ragged' scans are the ones that should be solved separately (e.g. at
+	solint='inf') rather than at 'tau'.
+	"""
+	ms = casatools.ms()
+	ms.open(msfile)
+	summary = ms.getscansummary()
+	ms.close()
+
+	safe, ragged = [], []
+	for scan_id, sub in summary.items():
+		info = sub['0']
+		if info['FieldId'] not in field_ids:
+			continue
+		duration = (info['EndTime'] - info['BeginTime']) * 86400.
+		int_time = info.get('IntegrationTime') or 2.0
+		ndump = int(round(duration / int_time)) + 1
+
+		last_bin = int((ndump - 1) * int_time // tau)
+		company = 0
+		n = ndump - 1
+		while n >= 0 and int(n * int_time // tau) == last_bin:
+			company += 1
+			n -= 1
+
+		if company < 2:
+			ragged.append(int(scan_id))
+		else:
+			safe.append(int(scan_id))
+	return sorted(safe), sorted(ragged)
+
 def fill_flagged_soln(caltable='', fringecal=False):
 	"""
 	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
