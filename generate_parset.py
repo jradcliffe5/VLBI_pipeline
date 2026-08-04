@@ -360,10 +360,28 @@ def fringe_search_snr(vis):
 	the SNR a fringe fit would reach on that baseline, per band, over the
 	length of data supplied - no flux scale or Tsys needed, because the
 	correlator amplitudes are already normalised correlation coefficients.
+
+	The peak is corrected for search bias before it is returned. Maximising
+	over a grid of M independent noise-only cells reliably turns up a peak
+	around sigma*sqrt(2 ln M) above the noise floor even with no signal at
+	all, and this search covers thousands of delay/rate cells - so, left
+	uncorrected, a baseline with no real detection still reports a near-
+	constant few-sigma "SNR" on every single scan. measure_calibrator_snr
+	then sums scans in quadrature over a whole track, which turns that bias
+	floor into an apparently strong detection purely because there were many
+	scans to sum, regardless of whether any of them actually saw the source
+	(worse the more scans a calibrator has). Subtracting the expected bias in
+	quadrature (clipped at zero) leaves a genuine non-detection at ~0 both
+	per scan and once summed, while barely touching a real, strong one.
 	"""
 	ntime, nband, nchan = vis.shape
 	if ntime < 2 or nchan < 4:
 		return 0.0, 0.0
+
+	## Independent complex samples the search actually has to work with - the
+	## FFT is zero-padded 2x per axis for interpolation, which does not add
+	## real information, so the bias is set by the unpadded grid size.
+	bias = np.sqrt(2. * np.log(max(ntime * nchan, 2)))
 
 	snrs, peaks = [], []
 	for b in range(nband):
@@ -376,7 +394,8 @@ def fringe_search_snr(vis):
 		## sigma*sqrt(2 ln 2), so this converts the robust median into a sigma
 		sigma = np.median(amp) / 1.177
 		if sigma > 0:
-			snrs.append(amp.max() / sigma)
+			raw = amp.max() / sigma
+			snrs.append(float(np.sqrt(max(raw ** 2 - bias ** 2, 0.))))
 			peaks.append(amp.max())
 
 	if not snrs:
