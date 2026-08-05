@@ -44,12 +44,16 @@ Jack Radcliffe, (2024). jradcliffe5/VLBI_pipeline: v1.1 (v1.1). Zenodo. https://
 ./helper_scripts/install_shadems.sh                                  # modular CASA (activate your env first)
 ```
 
-This pulls in shadeMS's full dependency chain (dask, numba, bokeh, pandas, python-casacore, etc. - around 50 packages), which can take 10-20+ minutes on networked/parallel filesystems; that is I/O time, not a hang. It leaves `casatools`/`casatasks` untouched but may upgrade CASA's bundled `matplotlib` to satisfy shadeMS's requirement, so it's worth a quick check of any matplotlib-based plotting elsewhere in your workflow after installing. For self-contained CASA it also writes a `bin/shadems` wrapper next to `bin/casa` (shadeMS's own launcher skips the `LD_LIBRARY_PATH` setup CASA needs, so calling `lib/py/bin/shadems` directly fails with `libffi.so.6: cannot open shared object file`; the wrapper fixes that). Run it as:
+This pulls in shadeMS's full dependency chain (dask, numba, bokeh, pandas, python-casacore, etc. - around 50 packages), which can take 10-20+ minutes on networked/parallel filesystems; that is I/O time, not a hang. It leaves `casatools`/`casatasks` untouched but may upgrade CASA's bundled `matplotlib` to satisfy shadeMS's requirement, so it's worth a quick check of any matplotlib-based plotting elsewhere in your workflow after installing. For self-contained CASA it also writes a `bin/shadems` wrapper next to `bin/casa` (shadeMS's own launcher skips the `LD_LIBRARY_PATH` setup CASA needs, so calling `lib/py/bin/shadems` directly fails with `libffi.so.6: cannot open shared object file`; the wrapper fixes that). Ad-hoc use looks like:
 
 ```
-<CASA_DIR>/bin/shadems --xaxis TIME --yaxis amp --corr XX,YY -o qa_amp_vs_time /path/to.ms   # self-contained CASA
-shadems --xaxis TIME --yaxis amp --corr XX,YY -o qa_amp_vs_time /path/to.ms                  # modular CASA
+<CASA_DIR>/bin/shadems --xaxis TIME --yaxis amp --corr RR,LL --dir qa_plots /path/to.ms   # self-contained CASA
+shadems --xaxis TIME --yaxis amp --corr RR,LL --dir qa_plots /path/to.ms                  # modular CASA
 ```
+
+(shadeMS has no `-o`/output-file flag - `--dir` sends every plot to that directory, auto-named from the MS/axes/correlation.)
+
+Once installed, `shadems_qa` is also a step in the pipeline itself (see [Quality assessment (`shadems_qa`)](#quality-assessment-shadems_qa) below) rather than something you only run by hand.
 
 ## Usage Instructions
 Before starting to use the pipeline, it is highly advised that you check the wiki which will give you all the information regarding the parameters that need to be set or can be changed. The pipeline is designed to be highly customisable so the inputs lists are fairly long. 
@@ -90,6 +94,18 @@ These are applied whether or not the SNR is measured, from the reference frequen
 * `ionex_options/run` is switched on below 8 GHz and off above, where the ionosphere stops mattering.
 * `do_disp_delays` is switched on below 5 GHz for `sub_band_delay`. For `phase_referencing` it additionally requires the weakest calibrator to have SNR to spare, since a dispersive term is another free parameter.
 * Any solve carrying phase (`f`, `p`, `ap`, `k`) is capped at a rule-of-thumb tropospheric coherence time of roughly `1000/nu_GHz` seconds - about 10 min at L band, 2 min at X band and 20 s at Q band. Averaging phase past this gains nothing, so when a calibrator is too weak the spws are combined rather than the interval stretched further. Pure amplitude solves are not capped.
+
+### Quality assessment (shadems_qa)
+`shadems_qa` is a pipeline step (`run_shadems_qa.py`) rather than just a command-line tool - toggle it on in `vlbi_pipe_inputs.txt` like any other step, wherever in the step list you want a QA snapshot taken (it produces no gaintables, so it doesn't interact with the calibration chain). Install shadeMS first, see [Optional: quality assessment with shadeMS](#optional-quality-assessment-with-shadems) above.
+
+It follows the same before/after, per-field idea as the [e-MERLIN CASA pipeline](https://github.com/e-merlin/eMERLIN_CASA_pipeline)'s `plot_data`/`plot_corrected` steps, but as a single step rather than two:
+
+* **Before/after**: `params['shadems_qa']['columns']` (default `["DATA","CORRECTED_DATA"]`) is looped over - each column present in the MS gets its own labelled batch of plots (`--suffix data` / `--suffix corrected_data`). `CORRECTED_DATA` only exists once something has run `applycal`, so run this step early (DATA only, a WARN in the log notes CORRECTED_DATA isn't there yet) and again later once calibration has been applied, for an instant before/after comparison.
+* **Per field**: rather than looping per field in Python (one MS scan each), it uses shadeMS's own `--iter-field` (`params['shadems_qa']['per_field']`, default `true`) so a single dask-parallel pass over the MS produces one plot per field.
+* Unlike `plotms` (which eMCP has to iterate per-baseline to stay legible), shadeMS rasterises via `datashader`, so by default all baselines/antennas are overlaid in one panel, coloured by correlation (`params['shadems_qa']['colour_by']`) - no per-baseline panel grid needed.
+* The default plot set mirrors eMCP's four: amp/phase vs time and amp/phase vs frequency (`params['shadems_qa']['plots']`, each `{"xaxis":...,"yaxis":...}`, with optional per-plot `corr`/`field`/`colour_by`/`per_field` overrides). Add or remove entries freely - anything valid for shadeMS's `--xaxis`/`--yaxis` works (e.g. `uv`, `chan`, `real`, `imag`).
+* `corr` defaults to whatever correlations are actually in the data (e.g. `RR,LL` for circular-polarisation VLBI); `fields` defaults to all fields.
+* Plots land in `params['shadems_qa']['outdir']` (default `plots/shadems`, relative to `cwd`).
 
 ### For CASA 5
 4. Run CASA to generate the bash scripts that will run the pipeline using `casa -c <path to VLBI pipeline repo>/run_vlbi_pipe.py <path to input file>/vlbi_pipe_inputs.txt`

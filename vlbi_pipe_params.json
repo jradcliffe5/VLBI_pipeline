@@ -18,6 +18,7 @@
         "singularity"       :  false,
         "AOflag_command"    : ["/Users/jackradcliffe/Documents/anaconda3/envs/aoflag/bin/aoflagger"],
         "wsclean_command"   : ["/usr/bin/wsclean"],
+        "shadems_command"   : ["shadems"],
         "fitsidi_files"     : ["auto"],
         "fitsidi_path"      :  "data/phscal",
         "refant"            : ["EF","SR","O8","WB","T6","IR","TR","SV","BD","JB","ZC","DA","PI","KN","JM","UR","DE","CM","HH"],
@@ -236,7 +237,32 @@
             "nodetype"      :  "default"
         }
     },
-    "apply_to_all":{  
+    "shadems_qa":{
+        "ms_path"           :  "default",
+        "outdir"            :  "plots/shadems",
+        "corr"              :  "default",
+        "fields"            : ["default"],
+        "per_field"         :  true,
+        "colour_by"         :  "CORR",
+        "columns"           : ["DATA","CORRECTED_DATA"],
+        "extra_args"        :  "",
+        "plots": [
+            {"xaxis":"TIME","yaxis":"amp"},
+            {"xaxis":"TIME","yaxis":"phase"},
+            {"xaxis":"FREQ","yaxis":"amp"},
+            {"xaxis":"FREQ","yaxis":"phase"}
+        ],
+        "hpc_options":{
+            "partition"     :  "default",
+            "walltime"      :  "default",
+            "nodes"         :    -1,
+            "cpus"          :    -1,
+            "mpiprocs"      :    -1,
+            "mem"           :    -1,
+            "nodetype"      :  "default"
+        }
+    },
+    "apply_to_all":{
         "target_path"       : "/home/jradcliffe5/scratch/EG078B/data",
         "target_outpath"    : "/home/jradcliffe5/scratch/EG078B/output",
         "tar_output"        : true,
