@@ -71,6 +71,10 @@ SOLINT_CHOICES = [10., 15., 30., 60., 120., 300.]
 ## before it is trusted - solutions right on the threshold fail half the time
 SNR_MARGIN = 1.5
 
+## A ladder rung this close to the whole scan is snapped up to the scan
+## itself rather than left as a concrete interval - see recommend_solint
+SCAN_SNAP_FRACTION = 0.5
+
 ## Amplitude self-calibration needs roughly twice the SNR of a phase-only solve
 AMPLITUDE_SNR_FACTOR = 2.0
 
@@ -833,6 +837,14 @@ def recommend_solint(measurement, int_time, threshold, nspw, scan_length,
 	keeps the fine time resolution SNR alone would support, rather than
 	backing every step off to whatever the raggedest scan in the pass can
 	tolerate.
+
+	A ladder rung within SCAN_SNAP_FRACTION of the scan length is snapped up
+	to the scan itself (solint='inf') rather than returned as-is: splitting
+	off a short leftover chunk buys little extra time resolution there, so
+	it is not worth the ragged remainder for what is essentially already a
+	whole-scan solve. This only fires when the whole scan itself already
+	clears the coherence cap, since it must not be used to sneak a solve
+	past 'max_tau'.
 	"""
 	floor = max(3 * int_time, 10.)
 	within_scan = [t for t in SOLINT_CHOICES if floor <= t < scan_length] \
@@ -844,10 +856,14 @@ def recommend_solint(measurement, int_time, threshold, nspw, scan_length,
 		beyond_scan = [t for t in beyond_scan if t <= max_tau]
 		if max_tau > scan_length:
 			beyond_scan = sorted(set(beyond_scan + [max_tau]))
+	snap_to_scan = scan_length in within_scan
 
 	for combine_spw in (False, True):
 		for tau in within_scan:
 			if scaled_snr(measurement, tau, nspw, combine_spw) >= threshold:
+				if snap_to_scan and tau < scan_length \
+				   and tau >= SCAN_SNAP_FRACTION * scan_length:
+					tau = scan_length
 				return tau, (('spw',) if combine_spw else ())
 
 	for combine_spw in (False, True):
