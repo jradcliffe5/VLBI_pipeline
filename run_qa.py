@@ -96,9 +96,15 @@ for column in qa['columns']:
 	else:
 		casalog.post(origin=filename,message='Column %s not found in %s - skipping (run this step again once it exists, e.g. after applycal)'%(column,msfile),priority='WARN')
 
-## Correlations: fall back to whatever is actually present in the data (e.g. RR,LL for VLBI)
+## Correlations: default to whatever parallel-hand pols are present (RR,LL or XX,YY) - routine
+## amp/phase QA doesn't need cross-hand (RL,LR), and on full-Stokes/polarimetric VLBI data
+## including it roughly doubles the bytes shadeMS has to read for no QA benefit. Cross-hand is
+## still available via an explicit params['qa']['corr'] (or per-plot 'corr') override, e.g. for a
+## polarization-calibration-specific check.
 if qa['corr'] in ['default','']:
-	default_corr = ",".join(sorted(set(msinfo['SPECTRAL_WINDOW']['spw_pols'])))
+	spw_pols = set(msinfo['SPECTRAL_WINDOW']['spw_pols'])
+	parallel_hand = sorted(p for p in ('RR','LL','XX','YY') if p in spw_pols)
+	default_corr = ",".join(parallel_hand) if parallel_hand else ",".join(sorted(spw_pols))
 else:
 	default_corr = qa['corr']
 
