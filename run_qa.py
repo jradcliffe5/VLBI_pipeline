@@ -43,6 +43,17 @@ casalog.origin('vp_qa')
 ## looks like a hang (ps -T on the shadems PID will show every thread idle except one blocked in
 ## the kernel, e.g. wchan ceph_mdsc_wait_request on CephFS). Set this to something larger (e.g.
 ## 50000-100000) on large MSs/busy filesystems to cut the task count down.
+##
+## shadeMS indexes/builds its dataframes once per invocation, then reuses that for every
+## --xaxis/--yaxis pair given in that same call (repeated flags, not separate calls) - and on a
+## large MS over a networked filesystem, that indexing pass is what dominates the runtime, not the
+## actual plotting. So per column, plots that share the same corr/field/per_field selection and
+## either all want a --colour-by or all skip it are batched into a single shadeMS call (repeated
+## --xaxis/--yaxis/--colour-by), rather than one call per plot - the indexing cost is then paid
+## once per batch instead of once per plot. Columns are kept as separate calls regardless (shadeMS
+## can embed a column directly in an axis spec, e.g. 'amp:CORRECTED_DATA', but two plots that only
+## differ by column can then produce the same default output filename, silently overwriting one
+## another - --suffix per column-call sidesteps that instead).
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file_path'])
@@ -105,24 +116,36 @@ shadems_cmd = params['global']['shadems_command'][0]
 casalog.post(origin=filename,message='Running QA plots (shadeMS) on %s -> %s (columns: %s)'%(msfile,outdir,", ".join(columns)),priority='INFO')
 
 n_ok = 0
-n_total = 0
+n_batches = 0
+n_plots = 0
 for column in columns:
+	## Resolve each plot's selection, then group plots that can share one shadeMS invocation:
+	## same (corr, field, per_field), and either all wanting a --colour-by or all skipping it
+	## (skipping is done by omitting the flag entirely, which only works cleanly when every
+	## plot in the call agrees on that).
+	groups = OrderedDict()
 	for plot in qa['plots']:
-		n_total += 1
-		xaxis = plot['xaxis']
-		yaxis = plot['yaxis']
 		corr = plot.get('corr', default_corr) or default_corr
 		field = plot.get('field', default_field)
-		colour_by = plot.get('colour_by', qa.get('colour_by','CORR'))
 		per_field = plot.get('per_field', qa.get('per_field',True))
+		colour_by = plot.get('colour_by', qa.get('colour_by','CORR'))
+		has_colour_by = colour_by not in ['',None,'none']
+		key = (corr, field, per_field, has_colour_by)
+		groups.setdefault(key, []).append((plot['xaxis'], plot['yaxis'], colour_by if has_colour_by else None))
 
-		cmd = '%s --xaxis %s --yaxis %s --col %s --dir %s --suffix %s'%(shadems_cmd,xaxis,yaxis,column,outdir,column.lower())
+	for (corr, field, per_field, has_colour_by), plots in groups.items():
+		n_batches += 1
+		n_plots += len(plots)
+
+		cmd = '%s --col %s --dir %s --suffix %s'%(shadems_cmd,column,outdir,column.lower())
+		for xaxis, yaxis, colour_by in plots:
+			cmd += ' --xaxis %s --yaxis %s'%(xaxis,yaxis)
+			if colour_by is not None:
+				cmd += ' --colour-by %s'%colour_by
 		if corr not in ['',None]:
 			cmd += ' --corr %s'%corr
 		if field not in ['',None]:
 			cmd += ' --field %s'%field
-		if colour_by not in ['',None,'none']:
-			cmd += ' --colour-by %s'%colour_by
 		if per_field == True:
 			cmd += ' --iter-field'
 		if qa.get('row_chunk_size',''):
@@ -131,10 +154,10 @@ for column in columns:
 			cmd += ' %s'%qa['extra_args']
 		cmd += ' %s'%msfile
 
-		casalog.post(origin=filename,message='shadeMS: %s'%cmd,priority='INFO')
+		casalog.post(origin=filename,message='shadeMS (%d plot(s) in one pass): %s'%(len(plots),cmd),priority='INFO')
 		ret = os.system(cmd)
 		if ret != 0:
-			casalog.post(origin=filename,message='shadeMS returned a non-zero exit code (%s) for column=%s xaxis=%s yaxis=%s - continuing with remaining plots'%(ret,column,xaxis,yaxis),priority='WARN')
+			casalog.post(origin=filename,message='shadeMS returned a non-zero exit code (%s) for column=%s, plots=%s - continuing with remaining batches'%(ret,column,[(x,y) for x,y,_ in plots]),priority='WARN')
 		else:
 			n_ok += 1
 
@@ -142,4 +165,4 @@ steps_run['qa'] = 1
 save_json(filename='%s/vp_steps_run.json'%(cwd), array=steps_run, append=False)
 save_json(filename='%s/vp_gaintables.last.json'%(cwd), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(cwd), array=gaintables, append=False)
-casalog.post(origin=filename,message='qa complete: %d/%d plot batch(es) written to %s'%(n_ok,n_total,outdir),priority='INFO')
+casalog.post(origin=filename,message='qa complete: %d/%d shadeMS call(s) succeeded (%d plot(s) total) written to %s'%(n_ok,n_batches,n_plots,outdir),priority='INFO')
