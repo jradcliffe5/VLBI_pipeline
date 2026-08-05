@@ -36,6 +36,21 @@ Jack Radcliffe, (2024). jradcliffe5/VLBI_pipeline: v1.1 (v1.1). Zenodo. https://
 2. Install astropy and/or pyfits using `pip install pyfits astropy`
 3. Clone this repository in any directory required.
 
+### Optional: quality assessment with shadeMS
+[shadeMS](https://github.com/ratt-ru/shadeMS) makes rapid rasterised amp/phase-vs-time/uvdist plots straight off a Measurement Set (via `dask-ms`/`datashader`), which is handy for QA after flagging or calibration steps. It is not part of CASA, but it can be installed into either of the CASA environments above with:
+
+```
+./helper_scripts/install_shadems.sh /path/to/casa-6.x.x-pyX.Y.elJ   # self-contained CASA
+./helper_scripts/install_shadems.sh                                  # modular CASA (activate your env first)
+```
+
+This pulls in shadeMS's full dependency chain (dask, numba, bokeh, pandas, python-casacore, etc. - around 50 packages), which can take 10-20+ minutes on networked/parallel filesystems; that is I/O time, not a hang. It leaves `casatools`/`casatasks` untouched but may upgrade CASA's bundled `matplotlib` to satisfy shadeMS's requirement, so it's worth a quick check of any matplotlib-based plotting elsewhere in your workflow after installing. For self-contained CASA it also writes a `bin/shadems` wrapper next to `bin/casa` (shadeMS's own launcher skips the `LD_LIBRARY_PATH` setup CASA needs, so calling `lib/py/bin/shadems` directly fails with `libffi.so.6: cannot open shared object file`; the wrapper fixes that). Run it as:
+
+```
+<CASA_DIR>/bin/shadems --xaxis TIME --yaxis amp --corr XX,YY -o qa_amp_vs_time /path/to.ms   # self-contained CASA
+shadems --xaxis TIME --yaxis amp --corr XX,YY -o qa_amp_vs_time /path/to.ms                  # modular CASA
+```
+
 ## Usage Instructions
 Before starting to use the pipeline, it is highly advised that you check the wiki which will give you all the information regarding the parameters that need to be set or can be changed. The pipeline is designed to be highly customisable so the inputs lists are fairly long. 
 
