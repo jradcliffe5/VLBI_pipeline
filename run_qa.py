@@ -1,4 +1,4 @@
-import inspect, os, sys, json, re
+import inspect, os, sys, json, re, subprocess, time
 from collections import OrderedDict
 
 filename = inspect.getframeinfo(inspect.currentframe()).filename
@@ -42,8 +42,13 @@ casalog.origin('vp_qa')
 ## how much work it does to get there. Instead, this step calls shadeMS once per field (--field
 ## <id>, no --iter-field) for the same total work, but with two real benefits: a stall or failure on
 ## one field doesn't lose the plots already written for the others (a single --iter-field call would
-## lose everything built up so far), and each field's call is independent, so they could be run
-## concurrently for a real wall-clock speedup (not implemented here - currently strictly sequential).
+## lose everything built up so far), and each field's call is independent, so up to
+## params['qa']['max_parallel'] of them (default 1 = sequential) run concurrently for a real
+## wall-clock speedup, rather than one after another. Each concurrent call's output goes to its own
+## log file under <outdir>/call_logs/ (interleaving several processes' stdout would be unreadable),
+## referenced from the main pipeline log. Keep this modest - each shadeMS call already parallelises
+## its own dask reads internally (see row_chunk_size above), and this run's real stall (see git log)
+## came from too much concurrent I/O against the same networked filesystem, not too little.
 ##
 ## params['qa']['row_chunk_size'] (blank by default) maps to shadeMS's --row-chunk-size: dask-ms
 ## splits the MS into this many rows per task, so a large MS with the default (5000) can fan out
@@ -128,11 +133,12 @@ else:
 
 shadems_cmd = params['global']['shadems_command'][0]
 
-casalog.post(origin=filename,message='Running QA plots (shadeMS) on %s -> %s (columns: %s)'%(msfile,outdir,", ".join(columns)),priority='INFO')
+## Build the full list of shadeMS calls (every column x selection-group x field) before running
+## any of them, so they can be handed to the worker pool below as one flat batch.
+call_logdir = '%s/call_logs'%outdir
+os.system('mkdir -p %s'%call_logdir)
 
-n_ok = 0
-n_calls = 0
-n_plots = 0
+calls = []  # list of (description, cmd, logfile, n_plots_in_call)
 for column in columns:
 	## Resolve each plot's selection, then group plots that can share one shadeMS invocation:
 	## same (corr, field, per_field), and either all wanting a --colour-by or all skipping it
@@ -160,9 +166,6 @@ for column in columns:
 			field_ids = [field]
 
 		for field_id in field_ids:
-			n_calls += 1
-			n_plots += len(plots)
-
 			cmd = '%s --col %s --dir %s --suffix %s'%(shadems_cmd,column,outdir,column.lower())
 			for xaxis, yaxis, colour_by in plots:
 				cmd += ' --xaxis %s --yaxis %s'%(xaxis,yaxis)
@@ -178,15 +181,45 @@ for column in columns:
 				cmd += ' %s'%qa['extra_args']
 			cmd += ' %s'%msfile
 
-			casalog.post(origin=filename,message='shadeMS (%d plot(s), field=%s): %s'%(len(plots),field_id or 'all',cmd),priority='INFO')
-			ret = os.system(cmd)
-			if ret != 0:
-				casalog.post(origin=filename,message='shadeMS returned a non-zero exit code (%s) for column=%s, field=%s, plots=%s - continuing with remaining calls'%(ret,column,field_id,[(x,y) for x,y,_ in plots]),priority='WARN')
-			else:
-				n_ok += 1
+			desc = 'column=%s field=%s (%d plot(s))'%(column,field_id or 'all',len(plots))
+			logfile = '%s/%s_field%s.log'%(call_logdir,column.lower(),field_id or 'all')
+			calls.append((desc,cmd,logfile,len(plots)))
+
+max_parallel = max(1, int(qa.get('max_parallel',1) or 1))
+n_total = len(calls)
+n_plots = sum(c[3] for c in calls)
+casalog.post(origin=filename,message='Running %d shadeMS call(s) (%d plot(s) total) on %s -> %s, up to %d in parallel'%(n_total,n_plots,msfile,outdir,max_parallel),priority='INFO')
+
+## Run the call list through a small worker pool (max_parallel=1 is plain sequential execution,
+## same as before). Each call's own stdout/stderr goes to its logfile rather than interleaving on
+## the shared CASA log, which would be unreadable with more than one process running at once.
+n_ok = 0
+pending = list(calls)
+running = {}  # Popen -> (desc, logfile, filehandle)
+
+while pending or running:
+	while pending and len(running) < max_parallel:
+		desc, cmd, logfile, _ = pending.pop(0)
+		casalog.post(origin=filename,message='shadeMS start: %s -> %s'%(desc,logfile),priority='INFO')
+		fh = open(logfile,'w')
+		proc = subprocess.Popen(cmd, shell=True, stdout=fh, stderr=subprocess.STDOUT)
+		running[proc] = (desc,logfile,fh)
+
+	time.sleep(2)
+	for proc in list(running.keys()):
+		ret = proc.poll()
+		if ret is None:
+			continue
+		desc, logfile, fh = running.pop(proc)
+		fh.close()
+		if ret != 0:
+			casalog.post(origin=filename,message='shadeMS FAILED (exit %s): %s - see %s - continuing with remaining calls'%(ret,desc,logfile),priority='WARN')
+		else:
+			n_ok += 1
+			casalog.post(origin=filename,message='shadeMS done: %s'%desc,priority='INFO')
 
 steps_run['qa'] = 1
 save_json(filename='%s/vp_steps_run.json'%(cwd), array=steps_run, append=False)
 save_json(filename='%s/vp_gaintables.last.json'%(cwd), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(cwd), array=gaintables, append=False)
-casalog.post(origin=filename,message='qa complete: %d/%d shadeMS call(s) succeeded (%d plot(s) total) written to %s'%(n_ok,n_calls,n_plots,outdir),priority='INFO')
+casalog.post(origin=filename,message='qa complete: %d/%d shadeMS call(s) succeeded (%d plot(s) total) written to %s'%(n_ok,n_total,n_plots,outdir),priority='INFO')

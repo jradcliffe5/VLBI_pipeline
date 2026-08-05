@@ -246,6 +246,7 @@
         "colour_by"         :  "CORR",
         "columns"           : ["DATA","CORRECTED_DATA"],
         "row_chunk_size"    :  "",
+        "max_parallel"      :  1,
         "extra_args"        :  "",
         "plots": [
             {"xaxis":"TIME","yaxis":"amp"},
