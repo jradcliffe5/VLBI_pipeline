@@ -31,6 +31,7 @@ gt_r['apriori_cal'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
+os.system('mkdir -p %s/plots/caltables'%cwd)
 
 if steps_run['apriori_cal'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_apriori_cal')
@@ -93,8 +94,8 @@ gencal(vis=msfile,\
        uniform=False)
 
 if casa6 == True:
-	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsys_vs_time.pdf'%(cwd,p_c))
-	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsys_vs_freq.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-tsys_vs_time.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-tsys_vs_freq.pdf'%(cwd,p_c))
 
 gaintables = append_gaintable(gaintables,['%s/caltables/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
 gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.tsys'%(cwd,p_c),'',[],params['apriori_cal']['tsys_options']['interp']])
@@ -124,8 +125,8 @@ if params['apriori_cal']['tsys_options']['algorithm'] != "":
 		interpgain(caltable='%s/caltables/%s.tsys'%(cwd,p_c),obsid='0',field='*',interp='nearest',extrapolate=True,fringecal=True)
 
 if casa6 == True:
-	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsysfiltered_vs_time.pdf'%(cwd,p_c))
-	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-tsysfiltered_vs_freq.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-tsysfiltered_vs_time.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.tsys'%(cwd,p_c),yaxis='tsys',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-tsysfiltered_vs_freq.pdf'%(cwd,p_c))
 
 if params['apriori_cal']["make_gaincurve"] == True:
 	casalog.post(origin=filename,message='Generating gaincurve calibration table (prep_type=%s)'%params['prepare_data']['gaincurve']['prep_type'],priority='INFO')
