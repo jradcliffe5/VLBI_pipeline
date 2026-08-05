@@ -38,7 +38,7 @@ params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
-gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
+gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[],'cal_fields':[]}
 
 cwd = params['global']['cwd']
 msfile= '%s/%s.ms'%(cwd,params['global']['project_code'])
@@ -60,6 +60,7 @@ else:
 
 
 cal_type = params['phase_referencing']["cal_type"]
+calibrator_groups = params.get('phase_referencing', {}).get('calibrator_groups', {})
 
 if steps_run['phase_referencing'] == 1:
 	flagmanager(vis=msfile,mode='restore',versionname='vp_phase_referencing')
@@ -129,25 +130,57 @@ for i in range(len(fields)):
 			else:
 				delaywindow=[]
 				ratewindow = []
+
+			combine_ij = params['phase_referencing']['combine'][i][j]
+			tau = parse_solint_seconds(params['phase_referencing']['sol_interval'][i][j])
+			safe_scans, ragged_scans = [], []
+			if tau is not None and 'scan' not in combine_ij:
+				field_ids = [msinfo['FIELD']['fieldtoID'][f] for f in fields[i]
+							 if f in msinfo['FIELD']['fieldtoID']]
+				safe_scans, ragged_scans = orphan_safe_scan_split(msfile, field_ids, tau)
+
+			## Solve most scans at the fine solint the parset asked for; any
+			## scan whose length would leave fringefit's FFT an orphan
+			## timestep at that solint is re-solved at solint='inf' instead,
+			## appended into the same caltable - see orphan_safe_scan_split.
+			## Applies equally to the MPI branch below, since MMS partitions
+			## split by spw share the same scan/time structure as the parent MS.
+			calls = [{'scan': '',
+					 'solint': params['phase_referencing']['sol_interval'][i][j]}]
+			if ragged_scans:
+				casalog.post(origin=filename, priority='WARN',
+							message='solint=%s leaves an orphan timestep on scan(s) '
+									'%s of %s - solving those at solint=inf instead'
+									% (params['phase_referencing']['sol_interval'][i][j],
+									   ','.join(str(s) for s in ragged_scans),
+									   ','.join(fields[i])))
+				calls = ([{'scan': ','.join(str(s) for s in safe_scans),
+						  'solint': params['phase_referencing']['sol_interval'][i][j]}]
+						 if safe_scans else []) \
+					+ [{'scan': ','.join(str(s) for s in ragged_scans), 'solint': 'inf'}]
+
 			if parallel==False:
-				fringefit(vis=msfile,
-						caltable=caltable,
-						field=','.join(fields[i]),
-						solint=params['phase_referencing']['sol_interval'][i][j],
-						zerorates=False,
-						niter=params['phase_referencing']['fringe_niter'],
-						refant=refant,
-						combine=params['phase_referencing']['combine'][i][j],
-						minsnr=params['phase_referencing']['min_snr'],
-						paramactive=paramactive,
-						delaywindow=delaywindow,
-						ratewindow=ratewindow,
-						gaintable=gaintables['gaintable'],
-						gainfield=gaintables['gainfield'],
-						interp=gaintables['interp'],
-						spwmap=gaintables['spwmap'],
-						corrdepflags=True,
-						parang=gaintables['parang'])
+				for k, call in enumerate(calls):
+					fringefit(vis=msfile,
+							caltable=caltable,
+							field=','.join(fields[i]),
+							scan=call['scan'],
+							solint=call['solint'],
+							zerorates=False,
+							niter=params['phase_referencing']['fringe_niter'],
+							refant=refant,
+							combine=combine_ij,
+							minsnr=params['phase_referencing']['min_snr'],
+							paramactive=paramactive,
+							delaywindow=delaywindow,
+							ratewindow=ratewindow,
+							gaintable=gaintables['gaintable'],
+							gainfield=gaintables['gainfield'],
+							interp=gaintables['interp'],
+							spwmap=gaintables['spwmap'],
+							corrdepflags=True,
+							parang=gaintables['parang'],
+							append=(k > 0))
 			else:
 				subms = natural_sort(os.listdir('%s/SUBMSS'%msfile))
 				rmdirs(['%s_temp'%(caltable)])
@@ -155,7 +188,17 @@ for i in range(len(fields)):
 				subcaltable=[]
 				for s in subms:
 					subcaltable.append('%s_temp/%s_%s'%(caltable,caltable.split("/")[-1],s))
-					cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); fringefit(vis='%s/SUBMSS/%s',caltable='%s_temp/%s_%s',field='%s',solint=params['phase_referencing']['sol_interval'][%d][%d],zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant='%s',combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'])" %(mpipath,msfile,s,caltable,caltable.split("/")[-1],s,','.join(fields[i]),i,j,refant,i,j,str(paramactive),str(delaywindow),str(ratewindow))
+					## Each call in 'calls' becomes its own fringefit statement,
+					## chained in order on the same remote server so a ragged-scan
+					## call (append=True) lands in the same sub-caltable as the
+					## fine-solint call that created it.
+					fringefit_calls = '; '.join(
+						"fringefit(vis='%s/SUBMSS/%s',caltable='%s_temp/%s_%s',field='%s',scan='%s',solint='%s',zerorates=False,niter=params['phase_referencing']['fringe_niter'],refant='%s',combine=params['phase_referencing']['combine'][%d][%d],minsnr=params['phase_referencing']['min_snr'],paramactive=%s,delaywindow=%s,ratewindow=%s,gaintable=gaintables['gaintable'],gainfield=gaintables['gainfield'],interp=gaintables['interp'],spwmap=gaintables['spwmap'],corrdepflags=True,parang=gaintables['parang'],append=%s)"
+						% (msfile,s,caltable,caltable.split("/")[-1],s,','.join(fields[i]),
+						   call['scan'],call['solint'],refant,i,j,str(paramactive),
+						   str(delaywindow),str(ratewindow),str(k>0))
+						for k, call in enumerate(calls))
+					cmd1 = "import inspect, os, sys; sys.path.append('%s'); from VLBI_pipe_functions import *; inputs = load_json('vp_inputs.json'); params = load_json(inputs['parameter_file_path']); gaintables = load_json('vp_gaintables.json', Odict=True, casa6=casa6); " %(mpipath) + fringefit_calls
 					cmdId = client.push_command_request(cmd1,block=False,target_server=None,parameters=None)
 					cmd.append(cmdId[0])
 				resultList = client.get_command_response(cmd,block=True)
@@ -221,26 +264,39 @@ for i in range(len(fields)):
 			spwmap = msinfo['SPECTRAL_WINDOW']['nspws']*[0]
 		else:
 			spwmap=[]
-		gaintables = append_gaintable(gaintables,[caltable,'',spwmap,'linear'])
-		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],[caltable,'',spwmap,'linear'])
+		caltable_params = [caltable,'',spwmap,'linear']
+		gaintables = append_gaintable(gaintables,caltable_params)
+		gt_r['phase_referencing'] = append_gaintable(gt_r['phase_referencing'],
+													  caltable_params+[list(fields[i])])
 
-		applycal(vis=msfile,
-			     field=','.join(fields[i]),
-			     gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'],
-				 calwt=params['phase_referencing']['cal_weights'])
-		if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+		## Applied one calibrator field at a time, restricting any
+		## phase_referencing caltable to the calibrator(s) in its own group
+		## (calibrator_groups): a pass can combine several independent
+		## target/calibrator pairs together (and, when a chain coexists with
+		## other groups, several groups can also share a generation), so
+		## gainfield='' across the whole pass would let an unrelated pair's
+		## solution be picked up by nearest-in-time guesswork.
+		for f in fields[i]:
+			field_gaintables = restrict_gaintables_for_target(gaintables, gt_r['phase_referencing'], calibrator_groups, f)
 			applycal(vis=msfile,
-			     field=','.join(fields[i+1]),
-			     gaintable=gaintables['gaintable'],
-				 gainfield=gaintables['gainfield'],
-				 interp=gaintables['interp'],
-				 spwmap=gaintables['spwmap'],
-				 parang=gaintables['parang'],
-				 calwt=params['phase_referencing']['cal_weights'])
+				     field=f,
+				     gaintable=field_gaintables['gaintable'],
+					 gainfield=field_gaintables['gainfield'],
+					 interp=field_gaintables['interp'],
+					 spwmap=field_gaintables['spwmap'],
+					 parang=gaintables['parang'],
+					 calwt=params['phase_referencing']['cal_weights'])
+		if (j == (len(cal_type[i])-1)) and (i<(len(fields)-1)):
+			for f in fields[i+1]:
+				field_gaintables = restrict_gaintables_for_target(gaintables, gt_r['phase_referencing'], calibrator_groups, f)
+				applycal(vis=msfile,
+					     field=f,
+					     gaintable=field_gaintables['gaintable'],
+						 gainfield=field_gaintables['gainfield'],
+						 interp=field_gaintables['interp'],
+						 spwmap=field_gaintables['spwmap'],
+						 parang=gaintables['parang'],
+						 calwt=params['phase_referencing']['cal_weights'])
 		save_json(filename='%s/vp_gaintables.json'%(params['global']['cwd']), array=gaintables, append=False)
 		
 		## Establish image parameters

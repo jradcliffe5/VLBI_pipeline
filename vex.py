@@ -32,6 +32,8 @@ import numpy as np
 import re
 import math
 
+from collections import OrderedDict
+
 
 import os
 
@@ -113,27 +115,53 @@ class Vex(object):
 		self.source = source
 
 		# FREQ ==========================================================
+		# A vex file usually holds several $FREQ defs, one per group of
+		# stations sharing a setup, so keep them all keyed on the def name.
+		# The channels of a def are listed once per polarisation, hence a
+		# sub-band is a unique (sky frequency, net sideband) pair.
 		FREQ = self.get_sector('FREQ')
+		freq_defs = OrderedDict()
+		def_name = ''
 		indef = False
-		nfreq = 0
-		for i in range(len(FREQ)):
+
+		for i in range(len(FREQ) if FREQ else 0):
 
 			line = FREQ[i]
 			if line[0:3] == "def":
-				if nfreq > 0:
-					print("Not implemented yet.")
-				nfreq += 1
+				def_name = line[3:].split(';')[0].strip()
+				freq_defs[def_name] = []
 				indef = True
 
 			if indef:
 				idx = line.find('chan_def')
 				if idx >= 0 and line[0] != '*':
-					chan_def = re.findall(r"[-+]?\d+[\.]?\d*", line)
-					self.freq = float(chan_def[0]) * 1.e6
-					self.bw_hz = float(chan_def[1]) * 1.e6
+					chan_def = self.get_chan_def(line)
+					if chan_def is not None:
+						freq_defs[def_name].append(chan_def)
 
 				if line[0:6] == "enddef":
 					indef = False
+
+		self.freq_defs = freq_defs
+
+		# The first def is the one used by the bulk of the array. Its lowest
+		# sky frequency and channel bandwidth are exposed as self.freq and
+		# self.bw_hz for backwards compatibility.
+		self.freq = 0.
+		self.bw_hz = 0.
+		self.nsubband = 0
+		self.total_bw_hz = 0.
+		for chans in freq_defs.values():
+			if len(chans) == 0:
+				continue
+			subbands = OrderedDict()
+			for chan in chans:
+				subbands[(chan['freq'], chan['sideband'])] = chan['bw']
+			self.freq = min([c['freq'] for c in chans])
+			self.bw_hz = chans[0]['bw']
+			self.nsubband = len(subbands)
+			self.total_bw_hz = float(sum(subbands.values()))
+			break
 
 		# SITE ==========================================================
 		SITE = self.get_sector('SITE')
@@ -212,10 +240,10 @@ class Vex(object):
 				if len(ret) > 0:
 					site_ID = ret
 					site_name = site_ID_dict[site_ID]  # convert to more familier site name
-					sdur = re.findall(r"[-+]?\d+[\.]?\d*", line)
-					s_st = float(sdur[0])  # start time in sec
-					s_en = float(sdur[1])  # end time in sec
-					d_size = float(sdur[2])  # data size(?) in GB
+					sdur = self.get_station_values(line)
+					s_st = sdur[0]  # start time in sec
+					s_en = sdur[1]  # end time in sec
+					d_size = sdur[2]  # data size(?) in GB
 					temp['scan'][cnt] = {'site': site_name, 'site_id': site_ID,
 										 'scan_sec_start': s_st, 'scan_sec': s_en, 'data_size': d_size}
 					cnt += 1
@@ -259,6 +287,56 @@ class Vex(object):
 				if line[i] == '=':
 					start = True
 		return name
+
+	# Read a $FREQ 'chan_def' line, e.g.
+	#     chan_def = &U_cal : 4980.49 MHz : U : 16.00 MHz : &CH01 : &BBC01 : &NoCal;
+	# The colon separated fields are the band ID, sky frequency, net sideband,
+	# bandwidth, channel ID, BBC ID and phase-cal ID. As with station lines the
+	# values have to be read field by field, otherwise a digit in the band or
+	# channel ID is mistaken for one of the frequencies.
+	def get_chan_def(self, line):
+		"""Parse a chan_def line into a dict, or return None if malformed."""
+		fields = line.split(':')
+		if len(fields) < 4:
+			return None
+		freq = re.findall(r"[-+]?\d+[\.]?\d*", fields[1])
+		bw = re.findall(r"[-+]?\d+[\.]?\d*", fields[3])
+		if len(freq) == 0 or len(bw) == 0:
+			return None
+		return {'freq': self.to_hz(fields[1], float(freq[0])),
+				'bw': self.to_hz(fields[3], float(bw[0])),
+				'sideband': fields[2].strip(),
+				'chan_id': fields[4].strip() if len(fields) > 4 else '',
+				'bbc_id': fields[5].strip() if len(fields) > 5 else ''}
+
+	# Convert a frequency field to Hz. vex quotes frequencies in MHz unless
+	# stated otherwise, which is what the unit of the field is checked for.
+	def to_hz(self, field, value):
+		"""Scale a frequency/bandwidth to Hz using the unit given in the field."""
+		field = field.lower()
+		if 'ghz' in field:
+			return value * 1.e9
+		if 'khz' in field:
+			return value * 1.e3
+		return value * 1.e6
+
+	# Read the values of a $SCHED 'station' line, e.g.
+	#     station = O8 : 0 sec : 360 sec : 46.375 GB :  :  : 1;
+	# The fields are colon separated and have to be read one by one: searching
+	# the whole line for numbers picks up the digit in site IDs such as O8, T6
+	# or Y1 and shifts the start time, stop time and data size by one field.
+	def get_station_values(self, line, nvalues=3):
+		"""Return the first 'nvalues' numeric fields of a station line.
+
+		Missing or empty fields come back as 0.0 so that the caller always
+		gets 'nvalues' floats.
+		"""
+		values = []
+		for field in line.split(':')[1:nvalues + 1]:
+			number = re.findall(r"[-+]?\d+[\.]?\d*", field)
+			values.append(float(number[0]) if len(number) > 0 else 0.0)
+		values += [0.0] * (nvalues - len(values))
+		return values
 
 	# check if a variable 'vname' exists by itself in a line.
 	# returns index of vname[0] in a line, or -1

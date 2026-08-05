@@ -774,6 +774,74 @@ def get_ms_info(msfile):
 	'''
 	return msinfo
 
+def parse_solint_seconds(value):
+	"""
+	Length of a CASA solution interval string in seconds, or None for a whole
+	scan ('inf'/'int'/''). Mirrors generate_parset.parse_solint, since the
+	orphan-timestep check below needs to reason about the same concrete
+	solint the pipeline is about to hand to fringefit.
+	"""
+	if isinstance(value, (int, float)):
+		return float(value)
+	value = str(value).strip().lower()
+	if value in ('', 'inf', 'int'):
+		return None
+	match = re.match(r'^([\d\.]+)\s*(s|sec|min|m|h)?$', value)
+	if match is None:
+		return None
+	scale = {'min': 60., 'm': 60., 'h': 3600.}.get(match.group(2), 1.)
+	return float(match.group(1)) * scale
+
+def orphan_safe_scan_split(msfile, field_ids, tau):
+	"""
+	Split a field's scans by whether a concrete fringefit solint of 'tau'
+	seconds can tile them safely.
+
+	fringefit chunks each scan into fixed-width solint bins starting from
+	that scan's own start, and a bin only one dump wide is not enough for
+	fringefit's per-bin FFT, which fails with "Can't do a 2-dimensional FFT
+	on a single timestep!". This is not just a matter of the scan dividing
+	evenly by 'tau': a scan whose duration is an exact multiple of 'tau' is
+	actually a worst case, since its very last dump then sits exactly on the
+	next bin's boundary, alone, with no scan left to give it company. So
+	rather than reasoning about the continuous duration, this walks the
+	scan's actual dump grid backwards from its last dump and counts how many
+	dumps share that final dump's bin. Real schedules commonly stretch or
+	clip a scan or two near the end of a track, so a solint sized purely from
+	the calibrator's SNR can tile most scans cleanly and still hit this on
+	the odd one out.
+
+	Returns (safe_scan_ids, ragged_scan_ids), both sorted lists of ints -
+	'ragged' scans are the ones that should be solved separately (e.g. at
+	solint='inf') rather than at 'tau'.
+	"""
+	ms = casatools.ms()
+	ms.open(msfile)
+	summary = ms.getscansummary()
+	ms.close()
+
+	safe, ragged = [], []
+	for scan_id, sub in summary.items():
+		info = sub['0']
+		if info['FieldId'] not in field_ids:
+			continue
+		duration = (info['EndTime'] - info['BeginTime']) * 86400.
+		int_time = info.get('IntegrationTime') or 2.0
+		ndump = int(round(duration / int_time)) + 1
+
+		last_bin = int((ndump - 1) * int_time // tau)
+		company = 0
+		n = ndump - 1
+		while n >= 0 and int(n * int_time // tau) == last_bin:
+			company += 1
+			n -= 1
+
+		if company < 2:
+			ragged.append(int(scan_id))
+		else:
+			safe.append(int(scan_id))
+	return sorted(safe), sorted(ragged)
+
 def fill_flagged_soln(caltable='', fringecal=False):
 	"""
 	This is to replace the gaincal solution of flagged/failed solutions by the nearest valid 
@@ -1072,6 +1140,44 @@ def load_gaintables(params,casa6):
 	else:
 		gaintables=load_json('%s/vp_gaintables.json'%(cwd),Odict=True,casa6=casa6)
 	return gaintables
+
+def restrict_gaintables_for_target(gaintables, phase_ref_tables, target_calibrators, target):
+	"""
+	Build the gaintable/gainfield/spwmap/interp lists to apply to one target.
+
+	Any phase_referencing caltable is restricted to only the calibrator(s)
+	recorded against this target in 'target_calibrators' (phase_ref_tables
+	tags each such caltable with the calibrator field(s) it was solved from,
+	via 'cal_fields'). Without this, gainfield='' lets CASA pick whichever
+	solution is nearest in time regardless of which target/calibrator pair it
+	came from, so an edge scan of one pair could silently interpolate onto a
+	completely different pair's calibrator. A chained group lists every link
+	against the same target, so the whole chain is still applied together.
+	Caltables from earlier, array-wide stages (apriori_cal, bandpass_cal,
+	sub_band_delay...) are left untouched, since they carry no sky-position
+	dependence. Targets absent from 'target_calibrators' (an isolated target,
+	or a parset written before this mapping existed) fall back to the
+	original, unrestricted behaviour.
+	"""
+	own_cals = set(target_calibrators.get(target, []))
+	phase_ref_fields = dict(zip(phase_ref_tables.get('gaintable', []),
+								 phase_ref_tables.get('cal_fields', [])))
+
+	out = {'gaintable': [], 'gainfield': [], 'spwmap': [], 'interp': []}
+	for table, gainfield, spwmap, interp in zip(gaintables['gaintable'], gaintables['gainfield'],
+												 gaintables['spwmap'], gaintables['interp']):
+		if table not in phase_ref_fields or not own_cals:
+			match_gainfield = gainfield
+		else:
+			matching = [f for f in phase_ref_fields[table] if f in own_cals]
+			if not matching:
+				continue
+			match_gainfield = ','.join(matching)
+		out['gaintable'].append(table)
+		out['gainfield'].append(match_gainfield)
+		out['spwmap'].append(spwmap)
+		out['interp'].append(interp)
+	return out
 
 def find_refants(pref_ant,msinfo):
 	"""Return a comma-separated list of preferred reference antennas present."""
@@ -2638,17 +2744,26 @@ def apply_to_all(	prefix,
 				)
 				archive.close()
 
-		# Apply all calibration tables
-		casalog.post(priority="INFO",origin=func_name,message='Applying %d gaintable(s) to target %s, field(s) %s'%(len(gaintables['gaintable']),i,",".join(targets)))
-		applycal(
-			vis=msfile,
-			field=",".join(targets),
-			gaintable=gaintables['gaintable'],
-			gainfield=gaintables['gainfield'],
-			interp=gaintables['interp'],
-			spwmap=gaintables['spwmap'],
-			parang=gaintables['parang']
-		)
+		# Apply calibration tables one target field at a time, restricting any
+		# phase_referencing caltable to the calibrator(s) that actually serve
+		# that target (see restrict_gaintables_for_target) so an edge scan
+		# cannot silently pick up the nearest-in-time solution from an
+		# unrelated target/calibrator pair
+		gt_r = load_json(f'{cwd}/vp_gaintables.last.json')
+		gt_r_phaseref = gt_r.get('phase_referencing', {'gaintable':[],'cal_fields':[]})
+		target_calibrators = params.get('phase_referencing', {}).get('target_calibrators', {})
+		for t in targets:
+			target_gaintables = restrict_gaintables_for_target(gaintables, gt_r_phaseref, target_calibrators, t)
+			casalog.post(priority="INFO",origin=func_name,message='Applying %d gaintable(s) to target %s, field %s (phase calibrator(s): %s)'%(len(target_gaintables['gaintable']),i,t,", ".join(target_calibrators.get(t, [])) or 'unrestricted'))
+			applycal(
+				vis=msfile,
+				field=t,
+				gaintable=target_gaintables['gaintable'],
+				gainfield=target_gaintables['gainfield'],
+				interp=target_gaintables['interp'],
+				spwmap=target_gaintables['spwmap'],
+				parang=gaintables['parang']
+			)
 
 		if params['apply_target']['flag_target']:
 			casalog.post(priority="INFO",origin=func_name,message='Running tfcrop flagging on calibrated target %s'%i)
