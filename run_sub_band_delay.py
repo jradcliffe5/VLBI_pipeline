@@ -29,6 +29,7 @@ gt_r['sub_band_delay'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 cwd = params['global']['cwd']
 msfile= '%s.ms'%(params['global']['project_code'])
 p_c=params['global']['project_code']
+os.system('mkdir -p %s/plots/caltables'%cwd)
 
 if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
 	msinfo = get_ms_info(msfile)
@@ -140,7 +141,7 @@ if casa6 == True:
 	casalog.post(origin=filename,message='Plotting sub-band delay solutions',priority='INFO')
 	for i in ['delay','phase']:
 		for j in ['freq','time']:
-			plotcaltable(caltable='%s/caltables/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-sbd_%s_vs_%s.pdf'%(cwd,p_c,i,j))
+			plotcaltable(caltable='%s/caltables/%s.sbd'%(cwd,p_c),yaxis='%s'%i,xaxis='%s'%j,plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-sbd_%s_vs_%s.pdf'%(cwd,p_c,i,j))
 
 gaintables = append_gaintable(gaintables,['%s/caltables/%s.sbd'%(cwd,p_c),'',[],'linear'])
 gt_r['sub_band_delay'] = append_gaintable(gt_r['sub_band_delay'],['%s/caltables/%s.sbd'%(cwd,p_c),'',[],'linear'])

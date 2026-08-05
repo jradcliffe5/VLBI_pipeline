@@ -28,6 +28,7 @@ gt_r['fit_autocorrs'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 p_c=params['global']['project_code']
+os.system('mkdir -p %s/plots/caltables'%cwd)
 
 if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
 	casalog.post(origin=filename,message='No cached msinfo found ... generating %s/%s_msinfo.json'%(cwd,p_c),priority='INFO')
@@ -58,8 +59,8 @@ if params['fit_autocorrs']["interp_bad_solutions"] == True:
 
 if casa6 == True:
 	casalog.post(origin=filename,message='Plotting autocorrelation bandpass solutions',priority='INFO')
-	plotcaltable(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-autobpass_amp_vs_freq.pdf'%(cwd,p_c))
-	plotcaltable(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-autobpass_amp_vs_time.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='freq',plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-autobpass_amp_vs_freq.pdf'%(cwd,p_c))
+	plotcaltable(caltable='%s/caltables/%s.auto.bpass'%(cwd,p_c),yaxis='amp',xaxis='time',plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-autobpass_amp_vs_time.pdf'%(cwd,p_c))
 
 gaintables = append_gaintable(gaintables,['%s/caltables/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])
 gt_r['fit_autocorrs'] = append_gaintable(gt_r['fit_autocorrs'],['%s/caltables/%s.auto.bpass'%(cwd,p_c),'',[],'linear,linear'])

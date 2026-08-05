@@ -43,6 +43,7 @@ gt_r['phase_referencing'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':
 cwd = params['global']['cwd']
 msfile= '%s/%s.ms'%(cwd,params['global']['project_code'])
 p_c=params['global']['project_code']
+os.system('mkdir -p %s/plots/caltables'%cwd)
 
 if os.path.exists('%s/%s_msinfo.json'%(cwd,p_c))==False:
 	msinfo = get_ms_info(msfile)
@@ -216,7 +217,7 @@ for i in range(len(fields)):
 					xax = ['time']
 				for k in ['delay','phase','rate']:
 					for l in xax:
-						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable.split('/')[-1],k,l))
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-%s_vs_%s.pdf'%(cwd,caltable.split('/')[-1],k,l))
 		elif cal_type[i][j] == 'p' or cal_type[i][j] == 'ap' or cal_type[i][j] == 'k' or cal_type[i][j] == 'a':
 			if cal_type[i][j] == 'k':
 				gaintype='K'
@@ -256,7 +257,7 @@ for i in range(len(fields)):
 					yax = ['phase']
 				for k in yax:
 					for l in xax:
-						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/%s-%s_vs_%s.pdf'%(cwd,caltable.split("/")[-1],k,l))
+						plotcaltable(caltable=caltable,yaxis='%s'%k,xaxis='%s'%l,plotflag=True,msinfo=msinfo,figfile='%s/plots/caltables/%s-%s_vs_%s.pdf'%(cwd,caltable.split("/")[-1],k,l))
 		else:
 			casalog.post(origin=filename, priority='SEVERE',message='Wrong sort of caltype - can only be f - fringe fit, p - phase, ap - amp and phase, a - amp, or k - delay')
 			sys.exit()
