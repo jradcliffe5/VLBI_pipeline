@@ -17,33 +17,35 @@ except:
 	from casac import casac as casatools
 	from taskinit import casalog
 	casa6=False
-casalog.origin('vp_shadems_qa')
+casalog.origin('vp_qa')
 
-## Runs shadeMS (https://github.com/ratt-ru/shadeMS) over the current project MS to produce a
-## fixed/configurable set of QA rasters (see helper_scripts/install_shadems.sh for how to install
-## shadeMS into this CASA). This step produces no gaintables and can be toggled on in
+## Runs shadeMS (https://github.com/ratt-ru/shadeMS - must be installed into this CASA first, see
+## helper_scripts/install_shadems.sh) over the current project MS to produce a fixed/configurable
+## set of QA rasters. This step produces no gaintables and can be toggled on in
 ## vlbi_pipe_inputs.txt wherever a QA snapshot of the data is wanted - move it in the step list to
 ## change when it runs relative to the other steps.
 ##
 ## Follows the same before/after, per-field QA idea as the e-MERLIN CASA pipeline's plot_data/
 ## plot_corrected steps (github.com/e-merlin/eMERLIN_CASA_pipeline): each entry in
-## params['shadems_qa']['columns'] present in the MS gets its own labelled set of plots (typically
+## params['qa']['columns'] present in the MS gets its own labelled set of plots (typically
 ## DATA = "before" and CORRECTED_DATA = "after" calibration/flagging), so a single run of this step,
 ## called once CORRECTED_DATA exists, gives an instant before/after comparison. Unlike plotms (which
 ## eMCP has to iterate per-baseline to stay legible), shadeMS rasterises via datashader, so all
 ## baselines/antennas are overlaid in one panel and per-field separation is handled natively with
-## --iter-field rather than one MS scan per field.
+## --iter-field rather than one MS scan per field. The default plot set mirrors eMCP's make_4plots
+## (amp/phase vs time/freq) plus its make_uvcov; eMCP's elevation-vs-time plot isn't included since
+## elevation isn't an MS column - it needs ephemeris, not something shadeMS (or this step) does.
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file_path'])
 steps_run = load_json('vp_steps_run.json', Odict=True, casa6=casa6)
 gaintables = load_gaintables(params, casa6=casa6)
 gt_r = load_json('vp_gaintables.last.json', Odict=True, casa6=casa6)
-gt_r['shadems_qa'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
+gt_r['qa'] = {'gaintable':[],'gainfield':[],'spwmap':[],'interp':[]}
 
 cwd = params['global']['cwd']
 p_c = params['global']['project_code']
-qa = params['shadems_qa']
+qa = params['qa']
 
 if qa['ms_path'] == 'default':
 	msfile = '%s/%s.ms'%(cwd,p_c)
@@ -92,7 +94,7 @@ else:
 
 shadems_cmd = params['global']['shadems_command'][0]
 
-casalog.post(origin=filename,message='Running shadeMS QA plots on %s -> %s (columns: %s)'%(msfile,outdir,", ".join(columns)),priority='INFO')
+casalog.post(origin=filename,message='Running QA plots (shadeMS) on %s -> %s (columns: %s)'%(msfile,outdir,", ".join(columns)),priority='INFO')
 
 n_ok = 0
 n_total = 0
@@ -126,8 +128,8 @@ for column in columns:
 		else:
 			n_ok += 1
 
-steps_run['shadems_qa'] = 1
+steps_run['qa'] = 1
 save_json(filename='%s/vp_steps_run.json'%(cwd), array=steps_run, append=False)
 save_json(filename='%s/vp_gaintables.last.json'%(cwd), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(cwd), array=gaintables, append=False)
-casalog.post(origin=filename,message='shadems_qa complete: %d/%d plot batch(es) written to %s'%(n_ok,n_total,outdir),priority='INFO')
+casalog.post(origin=filename,message='qa complete: %d/%d plot batch(es) written to %s'%(n_ok,n_total,outdir),priority='INFO')

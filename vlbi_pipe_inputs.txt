@@ -14,8 +14,8 @@ sub_band_delay = 0
 bandpass_cal = 0
 phase_referencing = 0
 apply_target = 0
-## Quality assessment ##
-shadems_qa = 0
+## Quality assessment (requires shadeMS - see helper_scripts/install_shadems.sh) ##
+qa = 0
 ## Wide-field steps ##
 apply_to_all = 0
 mssc = 0

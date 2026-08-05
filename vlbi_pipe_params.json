@@ -237,9 +237,9 @@
             "nodetype"      :  "default"
         }
     },
-    "shadems_qa":{
+    "qa":{
         "ms_path"           :  "default",
-        "outdir"            :  "plots/shadems",
+        "outdir"            :  "plots/qa",
         "corr"              :  "default",
         "fields"            : ["default"],
         "per_field"         :  true,
@@ -250,7 +250,8 @@
             {"xaxis":"TIME","yaxis":"amp"},
             {"xaxis":"TIME","yaxis":"phase"},
             {"xaxis":"FREQ","yaxis":"amp"},
-            {"xaxis":"FREQ","yaxis":"phase"}
+            {"xaxis":"FREQ","yaxis":"phase"},
+            {"xaxis":"u",   "yaxis":"v","colour_by":"none"}
         ],
         "hpc_options":{
             "partition"     :  "default",

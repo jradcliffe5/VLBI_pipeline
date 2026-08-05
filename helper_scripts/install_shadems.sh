@@ -103,11 +103,11 @@ WRAP
 	"$WRAPPER" --version
 
 	echo ""
-	echo "==> Done. Call it in the pipeline (or from the shell) as:"
-	echo "    $WRAPPER --xaxis TIME --yaxis amp --corr XX,YY -o qa_amp_vs_time /path/to.ms"
+	echo "==> Done. Ad-hoc use: $WRAPPER --xaxis TIME --yaxis amp --corr RR,LL --dir qa_plots /path/to.ms"
+	echo "    Or set qa = 1 in vlbi_pipe_inputs.txt to run it as a pipeline step (see README: Quality assessment (qa))."
 else
 	shadems --version
 	echo ""
-	echo "==> Done. Call it in the pipeline (or from the shell) as:"
-	echo "    shadems --xaxis TIME --yaxis amp --corr XX,YY -o qa_amp_vs_time /path/to.ms"
+	echo "==> Done. Ad-hoc use: shadems --xaxis TIME --yaxis amp --corr RR,LL --dir qa_plots /path/to.ms"
+	echo "    Or set qa = 1 in vlbi_pipe_inputs.txt to run it as a pipeline step (see README: Quality assessment (qa))."
 fi

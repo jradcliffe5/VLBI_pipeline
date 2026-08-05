@@ -53,7 +53,7 @@ shadems --xaxis TIME --yaxis amp --corr RR,LL --dir qa_plots /path/to.ms        
 
 (shadeMS has no `-o`/output-file flag - `--dir` sends every plot to that directory, auto-named from the MS/axes/correlation.)
 
-Once installed, `shadems_qa` is also a step in the pipeline itself (see [Quality assessment (`shadems_qa`)](#quality-assessment-shadems_qa) below) rather than something you only run by hand.
+Once installed, `qa` is also a step in the pipeline itself (see [Quality assessment (`qa`)](#quality-assessment-qa) below) rather than something you only run by hand. **The `qa` step requires shadeMS to be installed as above - it will not run without it.**
 
 ## Usage Instructions
 Before starting to use the pipeline, it is highly advised that you check the wiki which will give you all the information regarding the parameters that need to be set or can be changed. The pipeline is designed to be highly customisable so the inputs lists are fairly long. 
@@ -95,17 +95,17 @@ These are applied whether or not the SNR is measured, from the reference frequen
 * `do_disp_delays` is switched on below 5 GHz for `sub_band_delay`. For `phase_referencing` it additionally requires the weakest calibrator to have SNR to spare, since a dispersive term is another free parameter.
 * Any solve carrying phase (`f`, `p`, `ap`, `k`) is capped at a rule-of-thumb tropospheric coherence time of roughly `1000/nu_GHz` seconds - about 10 min at L band, 2 min at X band and 20 s at Q band. Averaging phase past this gains nothing, so when a calibrator is too weak the spws are combined rather than the interval stretched further. Pure amplitude solves are not capped.
 
-### Quality assessment (shadems_qa)
-`shadems_qa` is a pipeline step (`run_shadems_qa.py`) rather than just a command-line tool - toggle it on in `vlbi_pipe_inputs.txt` like any other step, wherever in the step list you want a QA snapshot taken (it produces no gaintables, so it doesn't interact with the calibration chain). Install shadeMS first, see [Optional: quality assessment with shadeMS](#optional-quality-assessment-with-shadems) above.
+### Quality assessment (qa)
+`qa` is a pipeline step (`run_qa.py`) rather than just a command-line tool - toggle it on in `vlbi_pipe_inputs.txt` like any other step, wherever in the step list you want a QA snapshot taken (it produces no gaintables, so it doesn't interact with the calibration chain). It is named generically because it's the pipeline's one QA step, not because it's tool-agnostic - **it needs [shadeMS](https://github.com/ratt-ru/shadeMS) installed first**, see [Optional: quality assessment with shadeMS](#optional-quality-assessment-with-shadems) above; the step will fail immediately (shadeMS not found on `PATH`) if it isn't.
 
-It follows the same before/after, per-field idea as the [e-MERLIN CASA pipeline](https://github.com/e-merlin/eMERLIN_CASA_pipeline)'s `plot_data`/`plot_corrected` steps, but as a single step rather than two:
+It follows the same before/after, per-field idea as the [e-MERLIN CASA pipeline](https://github.com/e-merlin/eMERLIN_CASA_pipeline) (eMCP)'s `plot_data`/`plot_corrected` steps, but as a single step rather than two:
 
-* **Before/after**: `params['shadems_qa']['columns']` (default `["DATA","CORRECTED_DATA"]`) is looped over - each column present in the MS gets its own labelled batch of plots (`--suffix data` / `--suffix corrected_data`). `CORRECTED_DATA` only exists once something has run `applycal`, so run this step early (DATA only, a WARN in the log notes CORRECTED_DATA isn't there yet) and again later once calibration has been applied, for an instant before/after comparison.
-* **Per field**: rather than looping per field in Python (one MS scan each), it uses shadeMS's own `--iter-field` (`params['shadems_qa']['per_field']`, default `true`) so a single dask-parallel pass over the MS produces one plot per field.
-* Unlike `plotms` (which eMCP has to iterate per-baseline to stay legible), shadeMS rasterises via `datashader`, so by default all baselines/antennas are overlaid in one panel, coloured by correlation (`params['shadems_qa']['colour_by']`) - no per-baseline panel grid needed.
-* The default plot set mirrors eMCP's four: amp/phase vs time and amp/phase vs frequency (`params['shadems_qa']['plots']`, each `{"xaxis":...,"yaxis":...}`, with optional per-plot `corr`/`field`/`colour_by`/`per_field` overrides). Add or remove entries freely - anything valid for shadeMS's `--xaxis`/`--yaxis` works (e.g. `uv`, `chan`, `real`, `imag`).
+* **Before/after**: `params['qa']['columns']` (default `["DATA","CORRECTED_DATA"]`) is looped over - each column present in the MS gets its own labelled batch of plots (`--suffix data` / `--suffix corrected_data`). `CORRECTED_DATA` only exists once something has run `applycal`, so run this step early (DATA only, a WARN in the log notes CORRECTED_DATA isn't there yet) and again later once calibration has been applied, for an instant before/after comparison.
+* **Per field**: rather than looping per field in Python (one MS scan each), it uses shadeMS's own `--iter-field` (`params['qa']['per_field']`, default `true`) so a single dask-parallel pass over the MS produces one plot per field.
+* Unlike `plotms` (which eMCP has to iterate per-baseline to stay legible), shadeMS rasterises via `datashader`, so by default all baselines/antennas are overlaid in one panel, coloured by correlation (`params['qa']['colour_by']`) - no per-baseline panel grid needed.
+* The default plot set mirrors eMCP's `make_4plots` (amp/phase vs time and amp/phase vs frequency) plus its `make_uvcov` (`params['qa']['plots']`, each `{"xaxis":...,"yaxis":...}`, with optional per-plot `corr`/`field`/`colour_by`/`per_field` overrides - the uv-coverage entry overrides `colour_by` to `none` so it shows plain sampling density). Add or remove entries freely - anything valid for shadeMS's `--xaxis`/`--yaxis` works (e.g. `chan`, `real`, `imag`). eMCP's elevation-vs-time plot has no equivalent here - elevation isn't an MS column, it needs an ephemeris calculation shadeMS doesn't do.
 * `corr` defaults to whatever correlations are actually in the data (e.g. `RR,LL` for circular-polarisation VLBI); `fields` defaults to all fields.
-* Plots land in `params['shadems_qa']['outdir']` (default `plots/shadems`, relative to `cwd`).
+* Plots land in `params['qa']['outdir']` (default `plots/qa`, relative to `cwd`).
 
 ### For CASA 5
 4. Run CASA to generate the bash scripts that will run the pipeline using `casa -c <path to VLBI pipeline repo>/run_vlbi_pipe.py <path to input file>/vlbi_pipe_inputs.txt`
