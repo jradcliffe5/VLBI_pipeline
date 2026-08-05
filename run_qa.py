@@ -31,10 +31,19 @@ casalog.origin('vp_qa')
 ## DATA = "before" and CORRECTED_DATA = "after" calibration/flagging), so a single run of this step,
 ## called once CORRECTED_DATA exists, gives an instant before/after comparison. Unlike plotms (which
 ## eMCP has to iterate per-baseline to stay legible), shadeMS rasterises via datashader, so all
-## baselines/antennas are overlaid in one panel and per-field separation is handled natively with
-## --iter-field rather than one MS scan per field. The default plot set mirrors eMCP's make_4plots
+## baselines/antennas are overlaid in one panel. The default plot set mirrors eMCP's make_4plots
 ## (amp/phase vs time/freq) plus its make_uvcov; eMCP's elevation-vs-time plot isn't included since
 ## elevation isn't an MS column - it needs ephemeris, not something shadeMS (or this step) does.
+##
+## params['qa']['per_field'] (default true) gives one plot per field rather than one combined plot.
+## This is NOT implemented via shadeMS's own --iter-field: shadeMS always groups/indexes internally
+## by FIELD_ID regardless of that flag (it's hardcoded into its group_cols, see shade_ms/main.py),
+## so --iter-field only changes whether the output is split per field or combined at the end - not
+## how much work it does to get there. Instead, this step calls shadeMS once per field (--field
+## <id>, no --iter-field) for the same total work, but with two real benefits: a stall or failure on
+## one field doesn't lose the plots already written for the others (a single --iter-field call would
+## lose everything built up so far), and each field's call is independent, so they could be run
+## concurrently for a real wall-clock speedup (not implemented here - currently strictly sequential).
 ##
 ## params['qa']['row_chunk_size'] (blank by default) maps to shadeMS's --row-chunk-size: dask-ms
 ## splits the MS into this many rows per task, so a large MS with the default (5000) can fan out
@@ -122,7 +131,7 @@ shadems_cmd = params['global']['shadems_command'][0]
 casalog.post(origin=filename,message='Running QA plots (shadeMS) on %s -> %s (columns: %s)'%(msfile,outdir,", ".join(columns)),priority='INFO')
 
 n_ok = 0
-n_batches = 0
+n_calls = 0
 n_plots = 0
 for column in columns:
 	## Resolve each plot's selection, then group plots that can share one shadeMS invocation:
@@ -140,35 +149,44 @@ for column in columns:
 		groups.setdefault(key, []).append((plot['xaxis'], plot['yaxis'], colour_by if has_colour_by else None))
 
 	for (corr, field, per_field, has_colour_by), plots in groups.items():
-		n_batches += 1
-		n_plots += len(plots)
-
-		cmd = '%s --col %s --dir %s --suffix %s'%(shadems_cmd,column,outdir,column.lower())
-		for xaxis, yaxis, colour_by in plots:
-			cmd += ' --xaxis %s --yaxis %s'%(xaxis,yaxis)
-			if colour_by is not None:
-				cmd += ' --colour-by %s'%colour_by
-		if corr not in ['',None]:
-			cmd += ' --corr %s'%corr
-		if field not in ['',None]:
-			cmd += ' --field %s'%field
+		## per_field: one shadeMS call per field (see docstring above for why this isn't
+		## --iter-field). field=='' with per_field on means every field in the MS.
 		if per_field == True:
-			cmd += ' --iter-field'
-		if qa.get('row_chunk_size',''):
-			cmd += ' --row-chunk-size %s'%qa['row_chunk_size']
-		if qa.get('extra_args',''):
-			cmd += ' %s'%qa['extra_args']
-		cmd += ' %s'%msfile
-
-		casalog.post(origin=filename,message='shadeMS (%d plot(s) in one pass): %s'%(len(plots),cmd),priority='INFO')
-		ret = os.system(cmd)
-		if ret != 0:
-			casalog.post(origin=filename,message='shadeMS returned a non-zero exit code (%s) for column=%s, plots=%s - continuing with remaining batches'%(ret,column,[(x,y) for x,y,_ in plots]),priority='WARN')
+			if field in ['',None]:
+				field_ids = [str(i) for i in sorted(msinfo['FIELD']['fieldtoID'].values())]
+			else:
+				field_ids = field.split(',')
 		else:
-			n_ok += 1
+			field_ids = [field]
+
+		for field_id in field_ids:
+			n_calls += 1
+			n_plots += len(plots)
+
+			cmd = '%s --col %s --dir %s --suffix %s'%(shadems_cmd,column,outdir,column.lower())
+			for xaxis, yaxis, colour_by in plots:
+				cmd += ' --xaxis %s --yaxis %s'%(xaxis,yaxis)
+				if colour_by is not None:
+					cmd += ' --colour-by %s'%colour_by
+			if corr not in ['',None]:
+				cmd += ' --corr %s'%corr
+			if field_id not in ['',None]:
+				cmd += ' --field %s'%field_id
+			if qa.get('row_chunk_size',''):
+				cmd += ' --row-chunk-size %s'%qa['row_chunk_size']
+			if qa.get('extra_args',''):
+				cmd += ' %s'%qa['extra_args']
+			cmd += ' %s'%msfile
+
+			casalog.post(origin=filename,message='shadeMS (%d plot(s), field=%s): %s'%(len(plots),field_id or 'all',cmd),priority='INFO')
+			ret = os.system(cmd)
+			if ret != 0:
+				casalog.post(origin=filename,message='shadeMS returned a non-zero exit code (%s) for column=%s, field=%s, plots=%s - continuing with remaining calls'%(ret,column,field_id,[(x,y) for x,y,_ in plots]),priority='WARN')
+			else:
+				n_ok += 1
 
 steps_run['qa'] = 1
 save_json(filename='%s/vp_steps_run.json'%(cwd), array=steps_run, append=False)
 save_json(filename='%s/vp_gaintables.last.json'%(cwd), array=gt_r, append=False)
 save_json(filename='%s/vp_gaintables.json'%(cwd), array=gaintables, append=False)
-casalog.post(origin=filename,message='qa complete: %d/%d shadeMS call(s) succeeded (%d plot(s) total) written to %s'%(n_ok,n_batches,n_plots,outdir),priority='INFO')
+casalog.post(origin=filename,message='qa complete: %d/%d shadeMS call(s) succeeded (%d plot(s) total) written to %s'%(n_ok,n_calls,n_plots,outdir),priority='INFO')
