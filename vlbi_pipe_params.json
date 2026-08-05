@@ -245,6 +245,7 @@
         "per_field"         :  true,
         "colour_by"         :  "CORR",
         "columns"           : ["DATA","CORRECTED_DATA"],
+        "row_chunk_size"    :  "",
         "extra_args"        :  "",
         "plots": [
             {"xaxis":"TIME","yaxis":"amp"},

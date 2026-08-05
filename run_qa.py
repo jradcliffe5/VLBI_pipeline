@@ -35,6 +35,14 @@ casalog.origin('vp_qa')
 ## --iter-field rather than one MS scan per field. The default plot set mirrors eMCP's make_4plots
 ## (amp/phase vs time/freq) plus its make_uvcov; eMCP's elevation-vs-time plot isn't included since
 ## elevation isn't an MS column - it needs ephemeris, not something shadeMS (or this step) does.
+##
+## params['qa']['row_chunk_size'] (blank by default) maps to shadeMS's --row-chunk-size: dask-ms
+## splits the MS into this many rows per task, so a large MS with the default (5000) can fan out
+## into thousands of concurrent dask tasks/file reads - on a networked filesystem under metadata
+## pressure this can stall for a long time on a single stuck request rather than erroring, which
+## looks like a hang (ps -T on the shadems PID will show every thread idle except one blocked in
+## the kernel, e.g. wchan ceph_mdsc_wait_request on CephFS). Set this to something larger (e.g.
+## 50000-100000) on large MSs/busy filesystems to cut the task count down.
 
 inputs = load_json('vp_inputs.json')
 params = load_json(inputs['parameter_file_path'])
@@ -117,6 +125,8 @@ for column in columns:
 			cmd += ' --colour-by %s'%colour_by
 		if per_field == True:
 			cmd += ' --iter-field'
+		if qa.get('row_chunk_size',''):
+			cmd += ' --row-chunk-size %s'%qa['row_chunk_size']
 		if qa.get('extra_args',''):
 			cmd += ' %s'%qa['extra_args']
 		cmd += ' %s'%msfile
