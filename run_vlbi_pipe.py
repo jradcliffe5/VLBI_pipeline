@@ -28,6 +28,47 @@ except:
 	i = 1
 	pass
 
+## Optional: override which steps run directly on the command line instead of
+## hand-editing the "Steps to run" block of the inputs file, e.g.
+##   python run_vlbi_pipe.py vlbi_pipe_inputs.txt --steps bandpass_cal phase_referencing
+##   casa -c run_vlbi_pipe.py vlbi_pipe_inputs.txt --steps bandpass_cal phase_referencing
+## Any step not named after --steps is switched off for this run only; the
+## inputs file itself is left untouched. Two convenience aliases are also
+## accepted in place of (or alongside) individual step names:
+##   all       - every step
+##   phaseref  - every step except the wide-field apply_to_all and mssc steps
+## Keep this list/these aliases in sync with the "## Steps to run ##" block
+## in vlbi_pipe_inputs.txt and with STEP_KEYS/STEP_ALIASES in
+## helper_scripts/set_pipeline_steps.py.
+STEP_KEYS = [
+	'prepare_data','import_fitsidi','make_mms','apriori_cal','init_flag',
+	'fit_autocorrs','sub_band_delay','bandpass_cal','phase_referencing',
+	'apply_target','qa','apply_to_all','mssc',
+]
+STEP_ALIASES = {
+	'all': STEP_KEYS,
+	'phaseref': [s for s in STEP_KEYS if s not in ('apply_to_all','mssc')],
+}
+step_override = None
+extra_args = sys.argv[i+1:]
+if '--steps' in extra_args:
+	idx = extra_args.index('--steps')
+	step_override = []
+	for a in extra_args[idx+1:]:
+		if a.startswith('--'):
+			break
+		if a in STEP_ALIASES:
+			for s in STEP_ALIASES[a]:
+				if s not in step_override:
+					step_override.append(s)
+		elif a in STEP_KEYS:
+			if a not in step_override:
+				step_override.append(a)
+		else:
+			sys.exit('Unknown step passed to --steps: %s (choose from: %s, or alias: %s)'%(a, ', '.join(STEP_KEYS), ', '.join(STEP_ALIASES)))
+	if not step_override:
+		sys.exit('--steps given with no step names')
+
 ## Load global inputs
 inputs = headless(sys.argv[i])
 
@@ -36,6 +77,11 @@ steps = copy.deepcopy(inputs)
 for i in inputs:
 	if i in ['parameter_file_path','make_scripts','run_jobs']:
 		del steps[i]
+
+if step_override is not None:
+	casalog.post(priority='INFO',origin=filename,message='Overriding steps to run from --steps: %s'%", ".join(step_override))
+	for k in steps:
+		steps[k] = 1 if k in step_override else 0
 
 ## Load parameters
 params=load_json(inputs['parameter_file_path'])

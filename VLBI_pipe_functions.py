@@ -407,7 +407,12 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 	"""Append the command payloads for a job script based on config."""
 	func_name = inspect.stack()[0][3]
 	# Accumulate shell lines to append to job script
-	commands=[]
+	## 'casa_exit' tracks the exit code of any CASA invocation(s) below, so
+	## the job script can exit non-zero if CASA crashed - otherwise the final
+	## 'mv "casa"*"log" "logs"' line silently becomes the script's own exit
+	## status, hiding a CASA failure from SLURM's --dependency=afterok chain
+	## (and from `sacct`, which would report the job as COMPLETED anyway).
+	commands=['casa_exit=0']
 	casapath=params['global']['casapath']
 	vlbipipepath=params['global']["vlbipipe_path"]
 	if aoflag==False:
@@ -431,6 +436,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		commands.append('rc=$?; if [ $rc -ne 0 ]; then casa_exit=$rc; fi')
 	elif aoflag=='both':
 		# Run AOFlagger on specified fields, then run the CASA step
 		strategies = params[step]['AO_flag_strategy']
@@ -473,6 +479,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step))
+		commands.append('rc=$?; if [ $rc -ne 0 ]; then casa_exit=$rc; fi')
 
 	elif aoflag==True:
 		# Only run AOFlagger (no subsequent CASA script run here)
@@ -526,6 +533,7 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 0 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
+		commands.append('rc=$?; if [ $rc -ne 0 ]; then casa_exit=$rc; fi')
 		if params["init_flag"]["run_AOflag"] == True:
 			# Optionally run AOFlagger on each target before/after CASA step
 			if (params['global']['job_manager'] == 'bash'):
@@ -544,11 +552,13 @@ def write_commands(step,inputs,params,parallel,aoflag,casa6):
 			commands.append('%s %s %s %s --nologger --log2term -c %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
 		else:
 			commands.append('%s %s %s %s %s/run_%s.py 1 %s'%(mpicasapath,job_commands,singularity,casapath,vlbipipepath,step,variable))
+		commands.append('rc=$?; if [ $rc -ne 0 ]; then casa_exit=$rc; fi')
 	else:
 		casalog.post(priority='SEVERE',origin=func_name,message='Error with writing commands.')
 		sys.exit()
 
 	commands.append('mv "casa"*"log" "logs"')
+	commands.append('exit $casa_exit')
 	job_m = params['global']['job_manager']
 	with open('job_%s.%s'%(step,job_m), 'a') as filehandle:
 		for listitem in commands:
@@ -571,9 +581,13 @@ def write_job_script(steps,job_manager):
 		else:
 			# Encode inter-step dependencies per scheduler
 			if job_manager=='pbs':
-				depend='-W depend=afterany:$%s'%(steps[i-1])
+				## afterok (not afterany): only chain into the next step if
+				## the previous one actually succeeded. Needs the job script
+				## itself to exit non-zero on a CASA failure - see the
+				## casa_exit tracking in write_commands().
+				depend='-W depend=afterok:$%s'%(steps[i-1])
 			if job_manager=='slurm':
-				depend='--dependency=afterany:$%s'%(steps[i-1])
+				depend='--dependency=afterok:$%s'%(steps[i-1])
 			if job_manager=='bash':
 				depend=''
 		# Append appropriate submission command for each scheduler

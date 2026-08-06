@@ -173,30 +173,44 @@ if params['apriori_cal']['ionex_options']['run'] == True:
 		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
 
 	tec_image, tec_rms_image, plotname = tec_maps.create(vis=msfile,doplot=False)
-	if casa6 == True:
-		try:
-			plot_tec_maps(msfile=msfile,
-				          tec_image=tec_image,
-				          plotfile='%s/plots/%s_TEC.pdf'%(cwd,p_c))
-			plot_tec_maps(msfile=msfile,
-				          tec_image=tec_rms_image,
-				          plotfile='%s/plots/%s_TEC_RMS.pdf'%(cwd,p_c))
-		except:
-			casalog.post(origin=filename,message='TEC plot generation failed ... continuing without plots',priority='WARN')
-			pass
+	if not tec_image or not os.path.exists(tec_image):
+		## tec_maps.create() returns an empty tec_image (rather than raising)
+		## when it cannot fetch/build the IGS TEC map - e.g. no outbound
+		## internet access from this node. Downstream gencal(caltype='tecim')
+		## would otherwise be handed infile='/' and raise a RuntimeError that
+		## kills this whole task (and, before this fix, everything after it -
+		## including the applycal that applies accor/Tsys/gaincurve - without
+		## ever reflecting the failure in the job's exit code). Skip the TEC
+		## correction instead so the rest of apriori_cal still runs.
+		casalog.post(origin=filename,priority='WARN',
+					 message='No TEC image available (tec_maps.create() returned %r) - '
+					 'the IGS IONEX download likely failed (no internet access from '
+					 'this node?). Skipping ionospheric TEC correction.'%(tec_image,))
+	else:
+		if casa6 == True:
+			try:
+				plot_tec_maps(msfile=msfile,
+					          tec_image=tec_image,
+					          plotfile='%s/plots/%s_TEC.pdf'%(cwd,p_c))
+				plot_tec_maps(msfile=msfile,
+					          tec_image=tec_rms_image,
+					          plotfile='%s/plots/%s_TEC_RMS.pdf'%(cwd,p_c))
+			except:
+				casalog.post(origin=filename,message='TEC plot generation failed ... continuing without plots',priority='WARN')
+				pass
 
-	casalog.post(origin=filename,message='Converting TEC image %s into gaincal table'%tec_image,priority='INFO')
-	gencal(vis=msfile,
-		   caltable='%s/caltables/%s.tecim'%(cwd,p_c),
-	       caltype='tecim',
-	       infile=tec_image+'/',
-	       uniform=False)
-	rmdirs(['%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
-		    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
-	rmfiles(['%s/%s.ms.IGS_RMS_TEC.im.fits'%(cwd,p_c),
-		    '%s/%s.ms.IGS_TEC.im.fits'%(cwd,p_c)])
-	gaintables = append_gaintable(gaintables,['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
-	gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
+		casalog.post(origin=filename,message='Converting TEC image %s into gaincal table'%tec_image,priority='INFO')
+		gencal(vis=msfile,
+			   caltable='%s/caltables/%s.tecim'%(cwd,p_c),
+		       caltype='tecim',
+		       infile=tec_image+'/',
+		       uniform=False)
+		rmdirs(['%s/%s.ms.IGS_RMS_TEC.im'%(cwd,p_c),
+			    '%s/%s.ms.IGS_TEC.im'%(cwd,p_c)])
+		rmfiles(['%s/%s.ms.IGS_RMS_TEC.im.fits'%(cwd,p_c),
+			    '%s/%s.ms.IGS_TEC.im.fits'%(cwd,p_c)])
+		gaintables = append_gaintable(gaintables,['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
+		gt_r['apriori_cal'] = append_gaintable(gt_r['apriori_cal'],['%s/caltables/%s.tecim'%(cwd,p_c),'',[],'linear'])
 
 casalog.post(origin=filename,message='Applying %d a-priori gaintable(s) to the data'%len(gaintables['gaintable']),priority='INFO')
 applycal(vis=msfile,
