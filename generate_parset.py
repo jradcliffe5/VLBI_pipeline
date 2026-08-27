@@ -1267,7 +1267,7 @@ def regroup_roles(roles, positions, keep_order=False):
 	return roles
 
 
-def classify_sources(info, max_sep=10.0, min_transitions=3, verbose=True):
+def classify_sources(info, max_sep=3.5, min_transitions=3, verbose=True):
 	"""
 	Split the observed sources into fringe finders, phase calibrators and targets.
 
